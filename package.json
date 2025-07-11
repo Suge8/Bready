@@ -1,0 +1,58 @@
+{
+  "name": "bready",
+  "version": "1.0.9",
+  "description": "面宝 - AI面试伙伴",
+  "main": "out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "build:win": "npm run build && electron-builder --win",
+    "build:mac": "npm run build && electron-builder --mac",
+    "build:linux": "npm run build && electron-builder --linux",
+    "test": "npx playwright test",
+    "test:electron": "npx playwright test tests/electron-*.spec.js",
+    "release": "node scripts/release.js",
+    "clean": "rm -rf out dist-electron node_modules/.cache",
+    "lint": "echo 'Linting skipped'",
+    "start": "npm run dev"
+  },
+  "keywords": [
+    "electron",
+    "interview",
+    "ai",
+    "assistant"
+  ],
+  "author": "Bready Team",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "@electron-toolkit/preload": "^3.0.2",
+    "@electron-toolkit/utils": "^4.0.0",
+    "@google/genai": "^1.9.0",
+    "@radix-ui/react-slot": "^1.2.3",
+    "@supabase/supabase-js": "^2.50.4",
+    "@tailwindcss/typography": "^0.5.16",
+    "@tailwindcss/vite": "^4.1.11",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "@vitejs/plugin-react": "^4.6.0",
+    "autoprefixer": "^10.4.21",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "electron": "^37.2.0",
+    "electron-vite": "^4.0.0",
+    "lucide-react": "^0.525.0",
+    "postcss": "^8.5.6",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^7.6.3",
+    "tailwind-merge": "^3.3.1",
+    "tailwindcss": "^4.1.11",
+    "typescript": "^5.8.3",
+    "vite": "^7.0.4"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.54.0"
+  }
+}
