@@ -16,65 +16,56 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ onComplete }) => {
   }
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center p-6">
-      <div className="max-w-4xl mx-auto">
+    <div className="h-screen bg-white flex flex-col">
+      {/* 拖拽区域 */}
+      <div className="h-6 w-full" style={{ WebkitAppRegion: 'drag' } as any}></div>
+      <div className="flex-1 flex items-center justify-center p-6" style={{ WebkitAppRegion: 'no-drag' } as any}>
+        <div className="max-w-3xl mx-auto">
         {/* Logo 和标题 */}
-        <div className="text-center mb-16">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-black rounded-2xl mb-8">
-            <Sparkles className="w-10 h-10 text-white" />
+        <div className="text-center mb-4">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-black rounded-2xl mb-6">
+            <Sparkles className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-6xl font-bold text-black mb-6 tracking-tight">
+          <h1 className="text-4xl font-bold text-black mb-3 tracking-tight">
             面宝
           </h1>
-          <p className="text-2xl text-gray-600 mb-8">
-            您最信赖的 AI 面试伙伴
+          <p className="text-lg text-gray-600">
+            面试紧张？放轻松
           </p>
         </div>
 
         {/* 产品介绍 */}
-        <Card className="mb-16 border-gray-200">
-          <CardHeader className="text-center">
-            <CardTitle className="text-3xl mb-4 text-black">
-              开始您的首次面试准备吧！
-            </CardTitle>
-            <CardDescription className="text-lg leading-relaxed max-w-2xl mx-auto text-gray-600">
-              通过独特的"面试前准备"与"协作"功能，让每一位用户都能自信、从容地应对面试挑战，
-              将个人价值最大化，成功斩获理想 Offer。
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <Card className="mb-8 border-gray-200 rounded-3xl">
+          <CardContent className="pt-6">
+            <div className="grid grid-cols-3 gap-6 m-2">
               <div className="text-center">
-                <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                  <Zap className="w-6 h-6 text-black" />
+                <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center mx-auto mb-3">
+                  <Zap className="w-5 h-5 text-black" />
                 </div>
-                <h3 className="font-semibold text-black mb-3">智能协作</h3>
-                <ul className="space-y-2 text-sm text-gray-600">
-                  <li>实时语音协作辅助</li>
-                  <li>AI 提词器功能</li>
-                  <li>智能面试准备管理</li>
+                <h3 className="font-semibold text-black mb-2 text-sm">智能协作</h3>
+                <ul className="space-y-2 text-xs text-gray-600">
+                  <li>简历分析</li>
+                  <li>实时提词</li>
                 </ul>
               </div>
               <div className="text-center">
-                <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                  <Mic className="w-6 h-6 text-black" />
+                <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center mx-auto mb-3">
+                  <Mic className="w-5 h-5 text-black" />
                 </div>
-                <h3 className="font-semibold text-black mb-3">音频技术</h3>
-                <ul className="space-y-2 text-sm text-gray-600">
-                  <li>系统音频输入支持</li>
-                  <li>实时转录和响应</li>
-                  <li>高质量音频处理</li>
+                <h3 className="font-semibold text-black mb-2 text-sm">音频技术</h3>
+                <ul className="space-y-2 text-xs text-gray-600">
+                  <li>低延迟响应</li>
+                  <li>无损音频处理</li>
                 </ul>
               </div>
               <div className="text-center">
-                <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                  <Shield className="w-6 h-6 text-black" />
+                <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center mx-auto mb-3">
+                  <Shield className="w-5 h-5 text-black" />
                 </div>
-                <h3 className="font-semibold text-black mb-3">隐私安全</h3>
-                <ul className="space-y-2 text-sm text-gray-600">
-                  <li>无感悬浮窗体验</li>
-                  <li>反检测机制</li>
-                  <li>本地数据存储</li>
+                <h3 className="font-semibold text-black mb-2 text-sm">隐私安全</h3>
+                <ul className="space-y-2 text-xs text-gray-600">
+                  <li>反检测</li>
+                  <li>数据存于本地</li>
                 </ul>
               </div>
             </div>
@@ -82,32 +73,31 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ onComplete }) => {
         </Card>
 
         {/* 操作按钮 */}
-        <div className="text-center space-y-6">
+        <div className="text-center my-4">
           <Button
             onClick={handleGetStarted}
             size="lg"
-            className="h-14 px-8 text-base font-medium group shadow-lg hover:shadow-xl"
+            className="h-12 px-6 text-base font-medium group shadow-lg hover:shadow-xl cursor-pointer"
           >
-            <span>立即创建我的第一个准备</span>
+            <span>为我的面试做好准备</span>
             <ArrowRight className="ml-3 w-5 h-5 group-hover:translate-x-1 transition-transform" />
           </Button>
-
-          <div>
-            <Button
-              onClick={onComplete}
-              variant="ghost"
-              className="text-gray-500 hover:text-gray-700"
-            >
-              跳过，稍后设置
-            </Button>
-          </div>
         </div>
 
-        {/* 底部提示 */}
-        <div className="mt-16 text-center text-sm text-gray-400">
-          <p>面宝 v1.1.0 - 让每次面试都充满自信</p>
+        {/* 跳过按钮 */}
+        <div className="text-center">
+          <Button
+            onClick={onComplete}
+            variant="ghost"
+            className="text-gray-500 hover:text-gray-700 text-sm cursor-pointer"
+          >
+            稍后再说
+          </Button>
+        </div>
         </div>
       </div>
+
+
     </div>
   )
 }

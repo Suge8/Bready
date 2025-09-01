@@ -19,8 +19,9 @@
     "paths": {
       "@/*": ["src/renderer/src/*"],
       "@renderer/*": ["src/renderer/src/*"]
-    }
+    },
+    "types": ["vitest", "vitest/globals"]
   },
-  "include": ["src"],
+  "include": ["src", "src/**/__tests__/**"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

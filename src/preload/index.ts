@@ -10,10 +10,13 @@ interface BreadyAPI {
 
   // Gemini API
   initializeGemini: (apiKey: string, customPrompt?: string, profile?: string, language?: string) => Promise<boolean>
+  sendTextMessage: (message: string) => Promise<{ success: boolean; error?: string }>
 
   // 音频捕获
   startAudioCapture: () => Promise<boolean>
   stopAudioCapture: () => Promise<boolean>
+  switchAudioMode: (mode: 'system' | 'microphone') => Promise<boolean>
+  getAudioStatus: () => Promise<{ capturing: boolean; mode: string; options: any }>
 
   // Gemini 连接管理
   reconnectGemini: () => Promise<boolean>
@@ -30,6 +33,23 @@ interface BreadyAPI {
   testAudioCapture: () => Promise<any>
   requestMicrophonePermission: () => Promise<any>
 
+  // AI 分析
+  analyzePreparation: (preparationData: {
+    name: string
+    jobDescription: string
+    resume?: string
+  }) => Promise<{
+    success: boolean
+    analysis?: {
+      matchScore: number
+      strengths: string[]
+      weaknesses: string[]
+      suggestions: string[]
+      systemPrompt: string
+    }
+    error?: string
+  }>
+
   // 事件监听
   onStatusUpdate: (callback: (status: string) => void) => () => void
   onTranscriptionUpdate: (callback: (text: string) => void) => () => void
@@ -37,6 +57,9 @@ interface BreadyAPI {
   onSessionInitializing: (callback: (initializing: boolean) => void) => () => void
   onSessionError: (callback: (error: string) => void) => () => void
   onSessionClosed: (callback: () => void) => () => void
+  onContextCompressed: (callback: (data: {previousCount: number, newCount: number}) => void) => () => void
+  onAudioStreamInterrupted: (callback: () => void) => () => void
+  onAudioStreamRestored: (callback: () => void) => () => void
 }
 
 // 暴露给渲染进程的API
@@ -50,10 +73,13 @@ const breadyAPI: BreadyAPI = {
   // Gemini API
   initializeGemini: (apiKey, customPrompt = '', profile = 'interview', language = 'cmn-CN') =>
     ipcRenderer.invoke('initialize-gemini', apiKey, customPrompt, profile, language),
+  sendTextMessage: (message: string) => ipcRenderer.invoke('send-text-message', message),
 
   // 音频捕获
   startAudioCapture: () => ipcRenderer.invoke('start-audio-capture'),
   stopAudioCapture: () => ipcRenderer.invoke('stop-audio-capture'),
+  switchAudioMode: (mode: 'system' | 'microphone') => ipcRenderer.invoke('switch-audio-mode', mode),
+  getAudioStatus: () => ipcRenderer.invoke('get-audio-status'),
 
   // Gemini 连接管理
   reconnectGemini: () => ipcRenderer.invoke('reconnect-gemini'),
@@ -69,7 +95,10 @@ const breadyAPI: BreadyAPI = {
   openSystemPreferences: (pane: string) => ipcRenderer.invoke('open-system-preferences', pane),
   testAudioCapture: () => ipcRenderer.invoke('test-audio-capture'),
   requestMicrophonePermission: () => ipcRenderer.invoke('request-microphone-permission'),
-  
+
+  // AI 分析
+  analyzePreparation: (preparationData) => ipcRenderer.invoke('analyze-preparation', preparationData),
+
   // 事件监听
   onStatusUpdate: (callback) => {
     const listener = (_: any, status: string) => callback(status)
@@ -105,11 +134,49 @@ const breadyAPI: BreadyAPI = {
     const listener = () => callback()
     ipcRenderer.on('session-closed', listener)
     return () => ipcRenderer.removeListener('session-closed', listener)
+  },
+  
+  onAudioModeChanged: (callback) => {
+    const listener = (_: any, modeInfo: any) => callback(modeInfo)
+    ipcRenderer.on('audio-mode-changed', listener)
+    return () => ipcRenderer.removeListener('audio-mode-changed', listener)
+  },
+
+  onContextCompressed: (callback) => {
+    const listener = (_event: any, data: {previousCount: number, newCount: number}) => callback(data)
+    ipcRenderer.on('context-compressed', listener)
+    return () => ipcRenderer.removeListener('context-compressed', listener)
+  },
+
+  onAudioStreamInterrupted: (callback) => {
+    const listener = () => callback()
+    ipcRenderer.on('audio-stream-interrupted', listener)
+    return () => ipcRenderer.removeListener('audio-stream-interrupted', listener)
+  },
+
+  onAudioStreamRestored: (callback) => {
+    const listener = () => callback()
+    ipcRenderer.on('audio-stream-restored', listener)
+    return () => ipcRenderer.removeListener('audio-stream-restored', listener)
   }
 }
 
 // 使用contextBridge暴露API
-contextBridge.exposeInMainWorld('bready', breadyAPI)
+contextBridge.exposeInMainWorld('bready', {
+  ...breadyAPI,
+  // 暴露 ipcRenderer 用于数据库操作和音频事件
+  ipcRenderer: {
+    invoke: (channel: string, ...args: any[]) => ipcRenderer.invoke(channel, ...args),
+    send: (channel: string, ...args: any[]) => ipcRenderer.send(channel, ...args),
+    on: (channel: string, listener: (...args: any[]) => void) => {
+      const subscription = (_event: any, ...args: any[]) => listener(...args)
+      ipcRenderer.on(channel, subscription)
+      return () => ipcRenderer.removeListener(channel, subscription)
+    },
+    removeListener: (channel: string, listener: (...args: any[]) => void) => 
+      ipcRenderer.removeListener(channel, listener)
+  }
+})
 
 // 也可以暴露Node.js环境变量
 contextBridge.exposeInMainWorld('env', {

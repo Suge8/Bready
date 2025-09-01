@@ -1,14 +1,6 @@
 import React, { useState } from 'react'
 import { X, Check, ChevronDown } from 'lucide-react'
-
-interface Preparation {
-  id: string
-  name: string
-  jobDescription: string
-  resume?: string
-  createdAt: string
-  updatedAt: string
-}
+import { type Preparation } from '../lib/supabase'
 
 interface SelectPreparationModalProps {
   preparations: Preparation[]
@@ -51,14 +43,14 @@ const SelectPreparationModal: React.FC<SelectPreparationModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-white rounded-vercel w-full max-w-xl p-6 shadow-vercel-lg animate-fade-in">
+      <div className="bg-white rounded-xl w-full max-w-xl p-6 shadow-xl animate-fade-in border border-gray-200">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold text-vercel-black">请选择本次面试的准备项</h2>
+          <h2 className="text-xl font-semibold text-black">请选择本次面试的准备项</h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-vercel-gray-100 rounded-full transition-colors"
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
           >
-            <X className="w-5 h-5 text-vercel-gray-600" />
+            <X className="w-5 h-5 text-gray-600" />
           </button>
         </div>
 
@@ -66,19 +58,19 @@ const SelectPreparationModal: React.FC<SelectPreparationModalProps> = ({
         <div className="grid grid-cols-2 gap-4 mb-6">
           {/* 语言设置 */}
           <div className="relative">
-            <label className="block text-sm font-medium text-vercel-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               面试语言
             </label>
             <button
               onClick={() => setLanguageDropdownOpen(!languageDropdownOpen)}
-              className="w-full flex items-center justify-between px-4 py-2 bg-vercel-gray-50 border border-vercel-gray-200 rounded-lg text-sm"
+              className="w-full flex items-center justify-between px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm hover:bg-gray-100 transition-colors"
             >
-              <span>{languages.find(l => l.value === language)?.label}</span>
-              <ChevronDown className="w-4 h-4 text-vercel-gray-500" />
+              <span className="text-black">{languages.find(l => l.value === language)?.label}</span>
+              <ChevronDown className="w-4 h-4 text-gray-500" />
             </button>
-            
+
             {languageDropdownOpen && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-vercel-gray-200 rounded-lg shadow-vercel z-10">
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
                 {languages.map(lang => (
                   <button
                     key={lang.value}
@@ -86,8 +78,8 @@ const SelectPreparationModal: React.FC<SelectPreparationModalProps> = ({
                       setLanguage(lang.value)
                       setLanguageDropdownOpen(false)
                     }}
-                    className={`w-full text-left px-4 py-2 text-sm hover:bg-vercel-gray-50 ${
-                      language === lang.value ? 'bg-vercel-gray-100' : ''
+                    className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 transition-colors first:rounded-t-lg last:rounded-b-lg ${
+                      language === lang.value ? 'bg-gray-100 text-black font-medium' : 'text-gray-700'
                     }`}
                   >
                     {lang.label}
@@ -99,19 +91,19 @@ const SelectPreparationModal: React.FC<SelectPreparationModalProps> = ({
 
           {/* 目的设置 */}
           <div className="relative">
-            <label className="block text-sm font-medium text-vercel-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               使用目的
             </label>
             <button
               onClick={() => setPurposeDropdownOpen(!purposeDropdownOpen)}
-              className="w-full flex items-center justify-between px-4 py-2 bg-vercel-gray-50 border border-vercel-gray-200 rounded-lg text-sm"
+              className="w-full flex items-center justify-between px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm hover:bg-gray-100 transition-colors"
             >
-              <span>{purposes.find(p => p.value === purpose)?.label}</span>
-              <ChevronDown className="w-4 h-4 text-vercel-gray-500" />
+              <span className="text-black">{purposes.find(p => p.value === purpose)?.label}</span>
+              <ChevronDown className="w-4 h-4 text-gray-500" />
             </button>
-            
+
             {purposeDropdownOpen && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-vercel-gray-200 rounded-lg shadow-vercel z-10">
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
                 {purposes.map(p => (
                   <button
                     key={p.value}
@@ -119,8 +111,8 @@ const SelectPreparationModal: React.FC<SelectPreparationModalProps> = ({
                       setPurpose(p.value)
                       setPurposeDropdownOpen(false)
                     }}
-                    className={`w-full text-left px-4 py-2 text-sm hover:bg-vercel-gray-50 ${
-                      purpose === p.value ? 'bg-vercel-gray-100' : ''
+                    className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 transition-colors first:rounded-t-lg last:rounded-b-lg ${
+                      purpose === p.value ? 'bg-gray-100 text-black font-medium' : 'text-gray-700'
                     }`}
                   >
                     {p.label}
@@ -134,7 +126,7 @@ const SelectPreparationModal: React.FC<SelectPreparationModalProps> = ({
         {/* 准备项列表 */}
         <div className="max-h-60 overflow-y-auto mb-6">
           {preparations.length === 0 ? (
-            <div className="text-center py-8 text-vercel-gray-500">
+            <div className="text-center py-8 text-gray-500">
               <p>还没有准备项</p>
             </div>
           ) : (
@@ -143,16 +135,30 @@ const SelectPreparationModal: React.FC<SelectPreparationModalProps> = ({
                 <div
                   key={preparation.id}
                   onClick={() => handleSelectPreparation(preparation)}
-                  className={`p-4 rounded-lg cursor-pointer transition-colors ${
+                  className={`p-4 rounded-lg cursor-pointer transition-all duration-200 ${
                     selectedPreparation?.id === preparation.id
-                      ? 'bg-vercel-blue-50 border border-vercel-blue-500'
-                      : 'bg-vercel-gray-50 hover:bg-vercel-gray-100 border border-transparent'
+                      ? 'bg-black text-white border border-black shadow-md'
+                      : 'bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-gray-300 hover:shadow-sm'
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <h3 className="font-medium text-vercel-black">{preparation.name}</h3>
+                    <div className="flex-1">
+                      <h3 className={`font-medium ${
+                        selectedPreparation?.id === preparation.id ? 'text-white' : 'text-black'
+                      }`}>
+                        {preparation.name}
+                      </h3>
+                      <p className={`text-sm mt-1 ${
+                        selectedPreparation?.id === preparation.id ? 'text-gray-300' : 'text-gray-600'
+                      }`}>
+                        {preparation.job_description.length > 50
+                          ? `${preparation.job_description.substring(0, 50)}...`
+                          : preparation.job_description
+                        }
+                      </p>
+                    </div>
                     {selectedPreparation?.id === preparation.id && (
-                      <Check className="w-5 h-5 text-vercel-blue-500" />
+                      <Check className="w-5 h-5 text-white ml-3 flex-shrink-0" />
                     )}
                   </div>
                 </div>
@@ -165,13 +171,13 @@ const SelectPreparationModal: React.FC<SelectPreparationModalProps> = ({
         <div className="flex justify-end">
           <button
             onClick={handleConfirm}
-            className={`px-6 py-2 rounded-lg font-medium ${
+            className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
               selectedPreparation
-                ? 'bg-vercel-black text-white hover:bg-vercel-gray-800'
-                : 'bg-vercel-gray-100 text-vercel-gray-800 hover:bg-vercel-gray-200'
-            } transition-colors`}
+                ? 'bg-black text-white hover:bg-gray-800 shadow-md hover:shadow-lg'
+                : 'bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200'
+            }`}
           >
-            {selectedPreparation ? '确认' : '不选择，直接开始'}
+            {selectedPreparation ? '确定' : '不准备，直接开始'}
           </button>
         </div>
       </div>
