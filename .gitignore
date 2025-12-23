@@ -1,0 +1,99 @@
+# 依赖
+node_modules/
+.pnp
+.pnp.js
+
+# 构建输出
+out/
+dist/
+dist-electron/
+build/
+
+# 环境变量
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# 日志
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# 运行时数据
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# 覆盖率报告
+coverage/
+*.lcov
+
+# nyc 测试覆盖率
+.nyc_output
+
+# 缓存
+.npm
+.eslintcache
+.cache/
+.vite/
+
+# TypeScript 缓存
+*.tsbuildinfo
+
+# 可选的 npm 缓存目录
+.npm
+
+# 可选的 eslint 缓存
+.eslintcache
+
+# 系统文件
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Playwright
+test-results/
+playwright-report/
+playwright/.cache/
+
+# 临时文件
+*.tmp
+*.temp
+*.log
+
+# 调试文件
+debug/
+*.debug
+
+# 测试报告
+*_test_report_*.json
+
+# 音频调试文件
+*.pcm
+*.wav
+
+# 资料文件夹（不提交到仓库）
+资料/
+资料/*
+
+# cheating-daddy 项目（独立项目，不提交）
+assets/cheating-daddy/
+
+# SystemAudioDump 二进制文件（通过脚本自动安装）
+assets/SystemAudioDump

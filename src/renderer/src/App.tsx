@@ -1,0 +1,406 @@
+// 更新 App.tsx 以支持主题提供者
+import React, { useState, useEffect } from 'react'
+import { HashRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
+import WelcomePage from './components/WelcomePage'
+import MainPage from './components/MainPage'
+import CreatePreparationPage from './components/CreatePreparationPage'
+import PreparationDetailPage from './components/PreparationDetailPage'
+import FloatingWindow from './components/FloatingWindow'
+import CollaborationMode from './components/CollaborationMode'
+import LoginPage from './components/LoginPage'
+import ErrorBoundary from './components/ErrorBoundary'
+
+import { AuthProvider, useAuth } from './contexts/AuthContext'
+import { preparationService, type Preparation } from './lib/supabase'
+import { Loader2, Volume2, Mic, CheckCircle } from 'lucide-react'
+import { ThemeProvider } from './components/ui/theme-provider'
+import { Button } from './components/ui/button'
+
+// 声明全局类型
+declare global {
+  interface Window {
+    bready: {
+      createFloatingWindow: () => Promise<boolean>
+      closeFloatingWindow: () => Promise<boolean>
+      enterCollaborationMode: () => Promise<boolean>
+      exitCollaborationMode: () => Promise<boolean>
+      initializeGemini: (apiKey: string, customPrompt?: string, profile?: string, language?: string) => Promise<boolean>
+      sendTextMessage: (message: string) => Promise<{ success: boolean; error?: string }>
+      startAudioCapture: () => Promise<boolean>
+      stopAudioCapture: () => Promise<boolean>
+      switchAudioMode: (mode: 'system' | 'microphone') => Promise<boolean>
+      getAudioStatus: () => Promise<{ capturing: boolean; mode: string; options: any }>
+      reconnectGemini: () => Promise<boolean>
+      manualReconnect: () => Promise<boolean>
+      disconnectGemini: () => Promise<boolean>
+
+      // 权限管理
+      checkPermissions: () => Promise<any>
+      checkScreenRecordingPermission: () => Promise<any>
+      checkMicrophonePermission: () => Promise<any>
+      checkApiKeyStatus: () => Promise<any>
+      checkAudioDeviceStatus: () => Promise<any>
+      openSystemPreferences: (pane: string) => Promise<boolean>
+      testAudioCapture: () => Promise<any>
+      requestMicrophonePermission: () => Promise<any>
+
+      onStatusUpdate: (callback: (status: string) => void) => () => void
+      onTranscriptionUpdate: (callback: (text: string) => void) => () => void
+      onAIResponse: (callback: (response: string) => void) => () => void
+      onAIResponseUpdate: (callback: (response: string) => void) => () => void
+      onSessionInitializing: (callback: (initializing: boolean) => void) => () => void
+      onSessionReady: (callback: () => void) => () => void
+      onSessionError: (callback: (error: string) => void) => () => void
+      onSessionClosed: (callback: () => void) => () => void
+      onContextCompressed: (callback: (data: { previousCount: number, newCount: number }) => void) => () => void
+      onAudioStreamInterrupted: (callback: () => void) => () => void
+      onAudioStreamRestored: (callback: () => void) => () => void
+      analyzePreparation: (data: { name: string; jobDescription: string; resume?: string }) => Promise<{ success: boolean; analysis?: any; error?: string }>
+    }
+    env: {
+      GEMINI_API_KEY?: string
+      SUPABASE_URL?: string
+      SUPABASE_ANON_KEY?: string
+      DEV_MODE?: string
+    }
+  }
+}
+
+// 协作模式包装组件
+const CollaborationModeWrapper: React.FC = () => {
+  const navigate = useNavigate()
+
+  const handleExit = async () => {
+    try {
+      // 断开 Gemini API 连接
+      await window.bready.disconnectGemini()
+
+      // 停止音频捕获
+      await window.bready.stopAudioCapture()
+
+      // 退出协作模式（调整窗口大小）
+      await window.bready.exitCollaborationMode()
+
+      console.log('Successfully cleaned up collaboration mode')
+    } catch (error) {
+      console.error('Error during collaboration mode cleanup:', error)
+    } finally {
+      // 无论清理是否成功，都导航回主页
+      navigate('/')
+    }
+  }
+
+  return <CollaborationMode onExit={handleExit} />
+}
+
+// 受保护的路由组件
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user, loading } = useAuth()
+
+  console.log('ProtectedRoute: user =', user, 'loading =', loading)
+
+  if (loading) {
+    console.log('ProtectedRoute: Showing loading state')
+    return (
+      <div className="h-screen w-screen overflow-hidden bg-gray-50 dark:bg-black flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-gray-600 dark:text-gray-400" />
+          <p className="text-gray-600 dark:text-gray-400">加载中...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!user) {
+    console.log('ProtectedRoute: No user, showing LoginPage')
+    return <LoginPage />
+  }
+
+  console.log('ProtectedRoute: User authenticated, showing children')
+  return <>{children}</>
+}
+
+function AppContent() {
+  const { user } = useAuth()
+  const [isFirstTime, setIsFirstTime] = useState(true)
+  const [preparations, setPreparations] = useState<Preparation[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [showPermissionGuide, setShowPermissionGuide] = useState(false)
+  const [permissionsChecked, setPermissionsChecked] = useState(false)
+  const [permissionStatus, setPermissionStatus] = useState({
+    screenRecording: false,
+    microphone: false
+  })
+
+  // 移除全局音频初始化，改为在协作模式组件中按需初始化
+
+  const handleWelcomeComplete = () => {
+    // 标记欢迎流程已完成
+    localStorage.setItem('bready-welcome-completed', 'true')
+    setIsFirstTime(false)
+  }
+
+  // 加载准备项数据
+  const loadPreparations = async () => {
+    try {
+      // 只加载当前用户的准备项
+      const data = await preparationService.getAll(user?.id)
+      setPreparations(data)
+    } catch (error) {
+      console.error('Failed to load preparations:', error)
+      // 如果Supabase失败，回退到localStorage
+      const preparationsData = localStorage.getItem('bready-preparations')
+      if (preparationsData) {
+        setPreparations(JSON.parse(preparationsData))
+      }
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // 检查系统权限
+  const checkSystemPermissions = async () => {
+    if (!window.bready) return
+
+    try {
+      const permissions = await window.bready.checkPermissions()
+      console.log('🔐 权限检查结果:', permissions)
+
+      // 更新权限状态
+      setPermissionStatus({
+        screenRecording: permissions.screenRecording?.granted || false,
+        microphone: permissions.microphone?.granted || false
+      })
+
+      // 检查是否所有必要权限都已授予
+      const allPermissionsGranted =
+        permissions.screenRecording?.granted &&
+        permissions.microphone?.granted
+
+      // 只有当权限未全部授予时才显示引导
+      if (!allPermissionsGranted) {
+        setShowPermissionGuide(true)
+      }
+
+      setPermissionsChecked(true)
+    } catch (error) {
+      console.error('权限检查失败:', error)
+      setPermissionsChecked(true)
+    }
+  }
+
+  useEffect(() => {
+    // 检查是否已经完成欢迎流程
+    const hasCompletedWelcome = localStorage.getItem('bready-welcome-completed')
+    if (hasCompletedWelcome === 'true') {
+      setIsFirstTime(false)
+    }
+  }, [])
+
+  // 当用户变化时重新加载数据
+  useEffect(() => {
+    if (user) {
+      loadPreparations()
+      // 用户登录后检查权限
+      checkSystemPermissions()
+    } else {
+      // 如果没有用户，直接设置加载完成
+      setIsLoading(false)
+    }
+  }, [user])
+
+  // 检查当前路由是否是悬浮窗
+  const isFloatingWindow = window.location.hash === '#/floating'
+
+  if (isFloatingWindow) {
+    return <FloatingWindow />
+  }
+
+  // 如果正在加载，显示加载状态
+  if (isLoading) {
+    return (
+      <div className="h-screen w-screen overflow-hidden bg-white dark:bg-black flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-black dark:border-white border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">正在加载...</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <ErrorBoundary>
+      <Router>
+        <div className="h-screen w-screen overflow-hidden bg-white dark:bg-black">
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  {isFirstTime ? (
+                    <WelcomePage onComplete={handleWelcomeComplete} />
+                  ) : (
+                    <MainPage
+                      preparations={preparations}
+                      setPreparations={setPreparations}
+                      onReloadData={loadPreparations}
+                    />
+                  )}
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/collaboration"
+              element={
+                <ProtectedRoute>
+                  <CollaborationModeWrapper />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/create-preparation"
+              element={
+                <ProtectedRoute>
+                  <CreatePreparationPage
+                    preparations={preparations}
+                    setPreparations={setPreparations}
+                    onReloadData={loadPreparations}
+                  />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/edit-preparation/:id"
+              element={
+                <ProtectedRoute>
+                  <CreatePreparationPage
+                    preparations={preparations}
+                    setPreparations={setPreparations}
+                    onReloadData={loadPreparations}
+                  />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/preparation/:id"
+              element={
+                <ProtectedRoute>
+                  <PreparationDetailPage
+                    preparations={preparations}
+                  />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </div>
+
+        {/* 权限引导模态框 */}
+        {showPermissionGuide && (
+          <div
+            className="fixed inset-0 bg-white/30 dark:bg-black/30 backdrop-blur-md flex items-center justify-center z-[9999] p-4 cursor-pointer"
+            onClick={() => setShowPermissionGuide(false)}
+          >
+            <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md shadow-2xl cursor-auto" onClick={(e) => e.stopPropagation()}>
+              <div className="p-6">
+                <div className="mb-6">
+                  <h2 className="text-xl font-bold text-black dark:text-white">系统权限设置</h2>
+                </div>
+
+                <div className="mb-6">
+                  <p className="text-gray-600 dark:text-gray-400 mb-4">
+                    为了使用协作模式，Bready 需要以下系统权限：
+                  </p>
+
+                  <div className="space-y-3">
+                    {/* 屏幕录制权限卡片 - 可点击 */}
+                    <div
+                      onClick={async () => {
+                        if (window.bready) {
+                          await window.bready.openSystemPreferences('security')
+                        }
+                      }}
+                      className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center space-x-2">
+                          <Volume2 className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                          <span className="font-medium text-black dark:text-white">屏幕录制权限</span>
+                        </div>
+                        <CheckCircle
+                          className={`w-5 h-5 ${permissionStatus.screenRecording
+                            ? 'text-green-500 dark:text-green-400'
+                            : 'text-gray-400'
+                            }`}
+                        />
+                      </div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        用于捕获系统音频（在线面试官的声音）
+                      </p>
+                    </div>
+
+                    {/* 麦克风权限卡片 - 可点击 */}
+                    <div
+                      onClick={async () => {
+                        if (window.bready) {
+                          await window.bready.openSystemPreferences('security')
+                        }
+                      }}
+                      className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center space-x-2">
+                          <Mic className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                          <span className="font-medium text-black dark:text-white">麦克风权限</span>
+                        </div>
+                        <CheckCircle
+                          className={`w-5 h-5 ${permissionStatus.microphone
+                            ? 'text-green-500 dark:text-green-400'
+                            : 'text-gray-400'
+                            }`}
+                        />
+                      </div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        用于语音输入（可选）
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col space-y-3">
+                  <Button
+                    onClick={() => {
+                      setShowPermissionGuide(false)
+                    }}
+                    variant="outline"
+                    className="w-full border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 cursor-pointer"
+                  >
+                    稍后设置
+                  </Button>
+                </div>
+
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-4 text-center">
+                  你可以随时在协作模式中重新设置权限
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+      </Router>
+    </ErrorBoundary>
+  )
+}
+
+// 主 App 组件，包装 AuthProvider 和 ThemeProvider
+function App() {
+  return (
+    <ThemeProvider>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </ThemeProvider>
+  )
+}
+
+export default App
