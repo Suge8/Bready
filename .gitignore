@@ -97,3 +97,8 @@ assets/cheating-daddy/
 
 # SystemAudioDump 二进制文件（通过脚本自动安装）
 assets/SystemAudioDump
+
+# 开发工具
+.conductor
+.trae
+.agent
