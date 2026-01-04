@@ -53,7 +53,7 @@ export class ElectronNativeAudioCapture extends EventEmitter {
       if (debugAudio) {
         console.log('🚀 启动音频捕获协调器...')
       }
-      
+
       // 检查权限
       const hasPermission = await this.checkPermissions()
       if (!hasPermission) {
@@ -80,9 +80,9 @@ export class ElectronNativeAudioCapture extends EventEmitter {
 
       this.isCapturing = true
       this.emit('started')
-      
+
       return true
-      
+
     } catch (error) {
       console.error('❌ 音频捕获启动失败:', error)
       this.emit('error', error)
@@ -95,9 +95,16 @@ export class ElectronNativeAudioCapture extends EventEmitter {
    */
   private async checkPermissions(): Promise<boolean> {
     try {
+      if (debugAudio) {
+        console.log(`🔐 检查 ${this.options.mode} 模式所需权限...`)
+      }
+
       if (this.options.mode === 'system') {
         // 检查屏幕录制权限
         const screenPermission = systemPreferences.getMediaAccessStatus('screen')
+        if (debugAudio) {
+          console.log(`🔐 屏幕录制权限状态: ${screenPermission}`)
+        }
         if (screenPermission !== 'granted') {
           if (debugAudio) {
             console.log('🔐 需要屏幕录制权限用于系统音频捕获')
@@ -108,12 +115,21 @@ export class ElectronNativeAudioCapture extends EventEmitter {
       } else {
         // 检查麦克风权限
         const micPermission = systemPreferences.getMediaAccessStatus('microphone')
+        if (debugAudio) {
+          console.log(`🔐 麦克风权限状态: ${micPermission}`)
+        }
         if (micPermission !== 'granted') {
           if (debugAudio) {
             console.log('🔐 请求麦克风权限...')
           }
           const granted = await systemPreferences.askForMediaAccess('microphone')
+          if (debugAudio) {
+            console.log(`🔐 麦克风权限请求结果: ${granted ? '已授予' : '被拒绝'}`)
+          }
           return granted
+        }
+        if (debugAudio) {
+          console.log('✅ 麦克风权限已授予')
         }
       }
       return true
@@ -138,8 +154,10 @@ export class ElectronNativeAudioCapture extends EventEmitter {
   stopCapture(): void {
     if (debugAudio) {
       console.log('⏹️ 停止音频捕获...')
+      console.log('📊 当前模式:', this.options.mode)
     }
-    
+
+    // 发送停止事件到渲染进程
     if (this.mainWindow && !this.mainWindow.isDestroyed()) {
       if (debugAudio) {
         console.log('📡 主进程发送音频捕获停止事件到渲染进程')
@@ -153,7 +171,7 @@ export class ElectronNativeAudioCapture extends EventEmitter {
         console.warn('⚠️ 主窗口不可用，无法发送音频捕获停止事件')
       }
     }
-    
+
     this.isCapturing = false
     this.emit('stopped')
     if (debugAudio) {
@@ -166,24 +184,41 @@ export class ElectronNativeAudioCapture extends EventEmitter {
    */
   async switchMode(mode: 'system' | 'microphone'): Promise<boolean> {
     if (this.options.mode === mode) {
+      if (debugAudio) {
+        console.log(`🔄 已经是 ${mode} 模式，无需切换`)
+      }
       return true
     }
 
     if (debugAudio) {
       console.log(`🔄 切换音频模式: ${this.options.mode} → ${mode}`)
+      console.log(`🔄 当前捕获状态: ${this.isCapturing ? '运行中' : '已停止'}`)
     }
-    
+
     const wasCapturing = this.isCapturing
     if (wasCapturing) {
+      if (debugAudio) {
+        console.log('⏸️ 暂停当前音频捕获...')
+      }
       this.stopCapture()
       // 等待一小段时间确保停止完成
       await new Promise(resolve => setTimeout(resolve, 100))
     }
 
     this.options.mode = mode
+    if (debugAudio) {
+      console.log(`✅ 音频模式已更新为: ${mode}`)
+    }
 
     if (wasCapturing) {
-      return await this.startCapture()
+      if (debugAudio) {
+        console.log('▶️ 重新启动音频捕获...')
+      }
+      const result = await this.startCapture()
+      if (debugAudio) {
+        console.log(`🔄 重新启动结果: ${result ? '成功' : '失败'}`)
+      }
+      return result
     }
 
     return true

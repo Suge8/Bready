@@ -8,15 +8,18 @@ import { Card, CardContent } from './ui/card'
 import { ToastNotification, ConfirmationDialog } from './ui/notifications'
 import { TouchButton, SwipeableCard } from './ui/touch-optimized'
 import 'highlight.js/styles/github.css'
+import { useI18n } from '../contexts/I18nContext'
 
 interface CollaborationModeProps {
   onExit: () => void
 }
 
 const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
+  const { t } = useI18n()
+  const isMac = typeof navigator !== 'undefined' && /mac/i.test(navigator.platform)
   // 状态管理
   const [inputText, setInputText] = useState('')
-  const [status, setStatus] = useState('正在初始化...')
+  const [status, setStatus] = useState(t('collaboration.status.initializing'))
   const [isConnected, setIsConnected] = useState(false)
   const [conversationHistory, setConversationHistory] = useState<Array<{ type: 'user' | 'ai', content: string, timestamp: Date, source: 'voice' | 'text' }>>([])
   const [isWaitingForAI, setIsWaitingForAI] = useState(false)
@@ -38,6 +41,8 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
   } | null>(null)
   const [showPermissionsModal, setShowPermissionsModal] = useState(false)
   const [copySuccess, setCopySuccess] = useState(false)
+  const [hoveredMessageIndex, setHoveredMessageIndex] = useState<number | null>(null)
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // 复制文本到剪贴板
   const copyToClipboard = async (text: string) => {
@@ -60,6 +65,9 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
   const currentAIResponseRef = useRef('')
   const lastAIResponseRef = useRef('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
+  const rootRef = useRef<HTMLDivElement>(null)
+  const sidebarScrollRef = useRef<HTMLDivElement>(null)
 
 
   // 权限状态
@@ -74,15 +82,15 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
   const audioModeOptions = [
     {
       value: 'system' as const,
-      label: '在线面试模式',
+      label: t('collaboration.audioMode.system.label'),
       icon: <Volume2 className="w-4 h-4" />,
-      description: '捕获系统音频，适用于在线面试'
+      description: t('collaboration.audioMode.system.description')
     },
     {
       value: 'microphone' as const,
-      label: '麦克风模式',
+      label: t('collaboration.audioMode.microphone.label'),
       icon: <Mic className="w-4 h-4" />,
-      description: '使用麦克风录音，适用于直接对话'
+      description: t('collaboration.audioMode.microphone.description')
     }
   ]
 
@@ -90,17 +98,17 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
   const getErrorTitle = (errorType: string) => {
     switch (errorType) {
       case 'api-connection-failed':
-        return 'API连接失败'
+        return t('collaboration.errors.apiConnectionFailed')
       case 'audio-device-error':
-        return '音频设备错误'
+        return t('collaboration.errors.audioDeviceError')
       case 'permissions-not-set':
-        return '权限未设置'
+        return t('collaboration.errors.permissionsNotSet')
       case 'network-error':
-        return '网络错误'
+        return t('collaboration.errors.networkError')
       case 'unknown-error':
-        return '未知错误'
+        return t('collaboration.errors.unknownError')
       default:
-        return '未知错误'
+        return t('collaboration.errors.unknownError')
     }
   }
 
@@ -117,14 +125,17 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
 
   // 状态文本
   const getStatusText = (status: any) => {
-    if (status.granted) return '已授予'
-    if (status.canRequest) return '需要设置'
-    return '被拒绝'
+    if (status.granted) return t('collaboration.permissions.granted')
+    if (status.canRequest) return t('collaboration.permissions.needsSetup')
+    return t('collaboration.permissions.denied')
   }
 
   // 音频模式切换处理
   const handleAudioModeChange = async (newMode: 'system' | 'microphone') => {
     console.log('🎧 切换音频模式:', currentAudioMode, '->', newMode)
+    const modeLabel = newMode === 'system'
+      ? t('collaboration.audioMode.system.label')
+      : t('collaboration.audioMode.microphone.label')
 
     if (newMode === currentAudioMode) {
       setShowAudioModeDropdown(false)
@@ -137,40 +148,40 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
     // 在 Electron 环境中更新音频设置
     if (window.bready && isConnected) {
       try {
-        setStatus('正在切换音频模式...')
+        setStatus(t('collaboration.status.switchingAudio'))
 
         // 使用新的 API 直接切换模式
         const success = await window.bready.switchAudioMode(newMode)
 
         if (success) {
-          setStatus(`已切换到${newMode === 'system' ? '在线面试' : '麦克风'}模式`)
+          setStatus(t('collaboration.status.switched', { mode: modeLabel }))
 
           // 2秒后恢复正常状态
           setTimeout(() => {
             if (isConnected) {
-              setStatus('准备就绪')
+              setStatus(t('collaboration.status.ready'))
             }
           }, 2000)
         } else {
-          setStatus('音频模式切换失败')
+          setStatus(t('collaboration.status.switchFailed'))
           setCurrentError({
             type: 'audio-device-error',
-            message: `切换到${newMode === 'system' ? '在线面试' : '麦克风'}模式失败，请检查设备设置`
+            message: t('collaboration.errors.audioSwitchFailed', { mode: modeLabel })
           })
         }
       } catch (error) {
         console.error('音频模式切换失败:', error)
-        setStatus('音频模式切换失败')
+        setStatus(t('collaboration.status.switchFailed'))
         setCurrentError({
           type: 'audio-device-error',
-          message: '音频模式切换出错，请重试'
+          message: t('collaboration.errors.audioSwitchError')
         })
       }
     } else {
       // 浏览器模式下的模拟切换
-      setStatus(`已切换到${newMode === 'system' ? '在线面试' : '麦克风'}模式（浏览器预览）`)
+      setStatus(t('collaboration.status.browserSwitched', { mode: modeLabel }))
       setTimeout(() => {
-        setStatus('浏览器预览模式')
+        setStatus(t('collaboration.status.browserPreview'))
       }, 2000)
     }
   }
@@ -179,13 +190,13 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
   const checkPermissions = async () => {
     try {
       console.log('🔍 开始检查系统权限...')
-      setStatus('检查系统权限...')
+      setStatus(t('collaboration.status.checkingPermissions'))
 
       // 检查是否在 Electron 环境中
       if (!window.bready) {
         console.log('🌐 浏览器模式 - 跳过权限检查')
         setIsInitializing(false)
-        setStatus('浏览器预览模式')
+        setStatus(t('collaboration.status.browserPreview'))
         return
       }
 
@@ -203,27 +214,27 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
 
       if (!allGranted) {
         console.log('❌ 权限未完全授予')
-        setStatus('权限未完全设置')
+        setStatus(t('collaboration.status.permissionsIncomplete'))
         setCurrentError({
           type: 'permissions-not-set',
-          message: '请在设置中完成所有权限配置'
+          message: t('collaboration.errors.permissionsHint')
         })
         setIsInitializing(false)
         return
       }
 
       console.log('✅ 所有权限已授予，初始化 Gemini API')
-      setStatus('正在连接 AI 服务...')
+      setStatus(t('collaboration.status.connecting'))
 
       // 初始化 Gemini API
       await initializeGemini()
 
     } catch (error) {
       console.error('权限检查失败:', error)
-      setStatus('权限检查失败')
+      setStatus(t('collaboration.status.permissionsFailed'))
       setCurrentError({
         type: 'unknown-error',
-        message: `权限检查失败: ${error instanceof Error ? error.message : String(error)}`
+        message: `${t('collaboration.status.permissionsFailed')}: ${error instanceof Error ? error.message : String(error)}`
       })
       setIsInitializing(false)
     }
@@ -234,20 +245,20 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
       return
     }
     audioStartPendingRef.current = false
-    setStatus('正在启动音频捕获...')
+    setStatus(t('collaboration.status.audioStarting'))
     const audioSuccess = await window.bready.startAudioCapture()
     if (audioSuccess) {
       audioStartedRef.current = true
-      setStatus('准备就绪')
+      setStatus(t('collaboration.status.ready'))
       setIsInitializing(false)
       return
     }
     setIsInitializing(false)
     setCurrentError({
       type: 'audio-device-error',
-      message: '无法启动音频捕获，请检查系统音频权限'
+      message: t('collaboration.errors.audioStartFailed')
     })
-    setStatus('音频捕获失败')
+    setStatus(t('collaboration.status.audioFailed'))
   }
 
   // 初始化 Gemini API
@@ -275,9 +286,9 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
         setIsInitializing(false)
         setCurrentError({
           type: 'api-connection-failed',
-          message: '未找到 API 密钥，请检查 .env.local 文件中的 VITE_GEMINI_API_KEY 配置'
+          message: t('collaboration.errors.apiKeyMissing')
         })
-        setStatus('API 密钥未配置')
+        setStatus(t('collaboration.status.apiKeyMissing'))
         return
       }
 
@@ -294,7 +305,7 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
         purpose
       })
 
-      setStatus('正在连接 AI 服务...')
+      setStatus(t('collaboration.status.connecting'))
       console.log('🤖 初始化 Gemini API，API 密钥长度:', apiKey.length)
 
       // 初始化 Gemini 连接
@@ -304,7 +315,7 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
         setIsConnected(true)
         setCurrentError(null)
         audioStartPendingRef.current = true
-        setStatus('等待 AI 就绪...')
+        setStatus(t('collaboration.status.waitingReady'))
 
         if (sessionReadyRef.current) {
           await startAudioCaptureOnce()
@@ -313,10 +324,10 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
         setIsInitializing(false)
         setCurrentError({
           type: 'api-connection-failed',
-          message: '无法连接 AI 服务，请检查API密钥是否有效'
+          message: t('collaboration.errors.connectFailed')
         })
-        setStatus('连接失败')
-        setToast({ message: '连接 AI 服务失败，已返回主页', type: 'error' })
+        setStatus(t('collaboration.status.connectFailed'))
+        setToast({ message: t('collaboration.toasts.connectionFailed'), type: 'error' })
         setTimeout(() => {
           onExit()
         }, 800)
@@ -326,10 +337,10 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
       setIsInitializing(false)
       setCurrentError({
         type: 'unknown-error',
-        message: `初始化失败: ${error instanceof Error ? error.message : String(error)}`
+        message: `${t('collaboration.status.initFailed')}: ${error instanceof Error ? error.message : String(error)}`
       })
-      setStatus('初始化失败')
-      setToast({ message: '连接 AI 服务失败，已返回主页', type: 'error' })
+      setStatus(t('collaboration.status.initFailed'))
+      setToast({ message: t('collaboration.toasts.connectionFailed'), type: 'error' })
       setTimeout(() => {
         onExit()
       }, 800)
@@ -341,7 +352,7 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
     if (!window.bready) return
 
     try {
-      setStatus('正在重连...')
+      setStatus(t('collaboration.status.reconnecting'))
       setIsInitializing(true)
       setCurrentError(null)
 
@@ -350,7 +361,7 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
 
       if (success) {
         setIsConnected(true)
-        setStatus('等待 AI 就绪...')
+        setStatus(t('collaboration.status.waitingReady'))
         setCurrentError(null)
         setIsInitializing(false)
         console.log('✅ 手动重连成功')
@@ -359,22 +370,22 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
         sessionReadyRef.current = false
       } else {
         setIsConnected(false)
-        setStatus('重连失败，请稍后重试')
+        setStatus(t('collaboration.status.reconnectFailedRetry'))
         setIsInitializing(false)
         setCurrentError({
           type: 'api-connection-failed',
-          message: '重连失败，请检查网络连接后重试'
+          message: t('collaboration.errors.reconnectFailed')
         })
         console.log('❌ 手动重连失败')
       }
     } catch (error) {
       console.error('重连失败:', error)
       setIsConnected(false)
-      setStatus('重连失败')
+      setStatus(t('collaboration.status.reconnectFailed'))
       setIsInitializing(false)
       setCurrentError({
         type: 'unknown-error',
-        message: `重连错误: ${error instanceof Error ? error.message : String(error)}`
+        message: `${t('collaboration.status.reconnectFailed')}: ${error instanceof Error ? error.message : String(error)}`
       })
     }
   }
@@ -418,7 +429,7 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
       setTimeout(() => {
         const aiMessage = {
           type: 'ai' as const,
-          content: `收到您的问题：\"${messageText}\"，我正在思考如何回答...（浏览器预览模式）`,
+          content: t('collaboration.previewReply', { message: messageText }),
           timestamp: new Date(),
           source: 'text' as const
         }
@@ -433,7 +444,7 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
     if (!isConnected) {
       const errorMessage = {
         type: 'ai' as const,
-        content: '当前未连接到 AI 服务，请等待连接完成或点击重连。',
+        content: t('collaboration.errors.notConnected'),
         timestamp: new Date(),
         source: 'text' as const
       }
@@ -452,7 +463,7 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
         // 添加错误消息到对话记录
         const errorMessage = {
           type: 'ai' as const,
-          content: `抱歉，发送消息失败：${result.error || '请稍后重试'}`,
+          content: t('collaboration.errors.sendFailed', { error: result.error || t('collaboration.errors.tryAgain') }),
           timestamp: new Date(),
           source: 'text' as const
         }
@@ -464,7 +475,7 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
       console.error('❌ 发送文字消息错误:', error)
       const errorMessage = {
         type: 'ai' as const,
-        content: '发送消息时出现错误，请检查连接状态。',
+        content: t('collaboration.errors.sendError'),
         timestamp: new Date(),
         source: 'text' as const
       }
@@ -481,10 +492,22 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
 
   // 自动滚动到最新消息
   useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
-    }
+    const container = messagesContainerRef.current
+    if (!container) return
+    container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' })
   }, [conversationHistory, currentVoiceInput, currentAIResponse])
+
+  useEffect(() => {
+    const sidebar = sidebarScrollRef.current
+    if (!sidebar) return
+    sidebar.scrollTop = sidebar.scrollHeight
+  }, [conversationHistory.length])
+
+  useEffect(() => {
+    if (rootRef.current) {
+      rootRef.current.scrollTo({ top: 0, left: 0 })
+    }
+  }, [])
 
   // 组件挂载时初始化
   useEffect(() => {
@@ -498,7 +521,7 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
     if (!window.bready) {
       console.log('🌐 浏览器模式 - 跳过事件监听器设置')
       setIsInitializing(false)
-      setStatus('浏览器预览模式')
+      setStatus(t('collaboration.status.browserPreview'))
       return
     }
 
@@ -614,7 +637,7 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
     })
     const removeSessionErrorListener = window.bready.onSessionError((error) => {
       setIsConnected(false)
-      setStatus(`错误：${error}`)
+      setStatus(`${t('collaboration.errors.unknownError')}: ${error}`)
       setCurrentError({
         type: 'unknown-error',
         message: error
@@ -622,13 +645,13 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
     })
     const removeSessionClosedListener = window.bready.onSessionClosed(() => {
       setIsConnected(false)
-      setStatus('连接已断开')
+      setStatus(t('collaboration.status.disconnected'))
       sessionReadyRef.current = false
       audioStartPendingRef.current = false
       audioStartedRef.current = false
       setCurrentError({
         type: 'api-connection-failed',
-        message: '音频流已中断，请点击重连按钮恢复连接'
+        message: t('collaboration.errors.audioInterrupted')
       })
     })
 
@@ -648,86 +671,144 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
   }, [])
 
   return (
-    <div className="h-screen w-screen overflow-hidden bg-black flex flex-col">
+    <div ref={rootRef} className="h-screen w-screen overflow-hidden bg-[var(--bready-bg)] text-[var(--bready-text)] flex flex-col relative transition-colors duration-300">
+      {/* 背景光晕效果已移除，确保背景色统一 */}
+      {/* <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[720px] h-[420px] bg-[radial-gradient(circle,_var(--bready-glow)_0%,_transparent_65%)] blur-[120px]" />
+        <div className="absolute bottom-[-120px] right-[-60px] w-[360px] h-[280px] bg-[radial-gradient(circle,_var(--bready-glow)_0%,_transparent_70%)] blur-[120px]" />
+      </div> */}
       {/* 复制成功提示 */}
       {copySuccess && (
         <div className="fixed top-4 right-4 z-[9999] animate-in fade-in slide-in-from-top-2 duration-300">
-          <div className="flex items-center gap-2 px-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl">
-            <Check className="w-4 h-4 text-green-400" />
-            <span className="text-sm text-white">复制成功</span>
+          <div className="flex items-center gap-2 px-4 py-2 bg-[var(--bready-surface)] border border-[var(--bready-border)] rounded-lg shadow-xl">
+            <Check className="w-4 h-4 text-emerald-500" />
+            <span className="text-sm text-[var(--bready-text)]">{t('collaboration.copySuccess')}</span>
           </div>
         </div>
       )}
 
-      {/* 顶部控制栏 - 分为两行 */}
-      <div className="w-full bg-black z-50" style={{ WebkitAppRegion: 'drag' } as any}>
-        {/* 第一行：返回按钮 - 贴近顶部 */}
-        <div className="h-8 w-full relative flex items-center px-16">
+      {/* ==================== 顶部控制栏 ==================== */}
+      {/* 
+        外层容器：
+        - w-full: 占满整个宽度
+        - bg-[var(--bready-bg)]: 使用主题背景色
+        - z-50: 高层级，确保在其他元素之上
+        - border-b: 底部边框
+        - flex-shrink-0: 不允许收缩，保持固定高度
+        - WebkitAppRegion: 'drag': 允许拖动窗口（macOS/Windows 窗口拖动区域）
+        - paddingTop: macOS 上留出 20px 空间给系统红绿灯按钮
+      */}
+      <div
+        className="w-full bg-[var(--bready-bg)] z-50 flex-shrink-0"
+        style={{ WebkitAppRegion: 'drag', paddingTop: '15px' } as any}
+      >
+        {/* 
+          内层容器 - 三栏布局：
+          - h-8: 固定高度 32px
+          - flex items-center justify-between: 水平排列，垂直居中，两端对齐
+          - px-4: 左右内边距 16px
+          布局结构：[返回按钮] [标题+状态(居中)] [音频模式+设置按钮]
+        */}
+        <div className="h-8 w-full flex items-center justify-between" style={{ WebkitAppRegion: 'drag' } as any}>
+
+          {/* ========== 左侧：返回按钮 ========== */}
+          {/* 
+            - marginLeft: macOS 上左移 72px，避开系统红绿灯按钮
+            - WebkitAppRegion: 'no-drag': 按钮区域可点击，不触发窗口拖动
+            - onClick: 显示退出确认对话框
+          */}
           <button
             onClick={() => setShowExitConfirm(true)}
-            className="p-1 text-gray-400 hover:text-white transition-all duration-200 hover:bg-zinc-800 rounded-lg cursor-pointer"
-            style={{ marginLeft: process.platform === 'darwin' ? '90px' : '0', WebkitAppRegion: 'no-drag' } as any}
+            className="p-1.5 -mt-7 text-[var(--bready-text-muted)] hover:text-[var(--bready-text)] transition-all duration-200 hover:bg-[var(--bready-surface-2)] rounded-lg cursor-pointer"
+            style={{ marginLeft: isMac ? '68px' : '0', WebkitAppRegion: 'no-drag' } as any}
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
-        </div>
 
-        {/* 第二行：标题、状态和控制按钮 */}
-        <div className="h-6 w-full relative flex items-center justify-between px-4 -mt-3">
-          {/* 左侧占位 */}
-          <div className="w-10"></div>
+          {/* ========== 中间：标题和连接状态（居中显示） ========== */}
+          {/* 
+            - flex-1: 占据剩余空间，确保居中
+            - flex flex-col: 垂直排列（标题在上，状态在下）
+            - items-center: 水平居中
+            - pointer-events-none: 不响应鼠标事件，允许点击穿透到拖动区域
+          */}
+          <div className="flex-1 flex flex-col items-center pointer-events-none">
+            {/* 标题文字 */}
+            <h1 className="font-semibold text-[var(--bready-text)]">{t('collaboration.title')}</h1>
 
-          {/* 中间：标题和状态 */}
-          <div className="absolute left-1/2 transform -translate-x-1/2 text-center">
-            <h1 className="font-semibold text-white">协作模式</h1>
-            <div className="flex items-center justify-center space-x-2 text-xs text-gray-400">
+            {/* 连接状态指示器 */}
+            <div className="flex items-center justify-center space-x-2 text-xs text-[var(--bready-text-muted)]">
+              {/* 状态指示灯：绿色=已连接（带脉冲动画），红色=未连接 */}
               {isConnected ? (
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
               ) : (
                 <div className="w-2 h-2 bg-red-500 rounded-full"></div>
               )}
+              {/* 状态文字（如"准备就绪"、"连接中"等） */}
               <span>{status}</span>
             </div>
           </div>
 
-          {/* 右侧：控制按钮 */}
+          {/* ========== 右侧：控制按钮组 ========== */}
+          {/* 
+            包含两个按钮：
+            1. 音频模式切换（系统音频/麦克风）
+            2. 权限设置按钮
+          */}
           <div className="flex items-center space-x-2" style={{ WebkitAppRegion: 'no-drag' } as any}>
-            {/* 音频模式选择器 */}
+
+            {/* --- 音频模式切换下拉菜单 --- */}
             <div className="relative" style={{ WebkitAppRegion: 'no-drag' } as any}>
+              {/* 音频模式按钮：显示当前选中的模式（图标+文字） */}
               <button
                 onClick={() => setShowAudioModeDropdown(!showAudioModeDropdown)}
-                className="flex items-center space-x-1 px-2 py-1.5 bg-zinc-800 text-gray-300 rounded-lg text-xs hover:bg-zinc-700 transition-all duration-200 cursor-pointer"
+                className="flex items-center space-x-1 px-2 py-1.5 bg-[var(--bready-surface-2)] text-[var(--bready-text)] rounded-lg text-xs hover:bg-[var(--bready-surface-3)] transition-all duration-200 cursor-pointer"
               >
+                {/* 当前模式图标（麦克风或音量图标） */}
                 {audioModeOptions.find(option => option.value === currentAudioMode)?.icon}
+                {/* 当前模式文字（"系统音频"或"麦克风"） */}
                 <span className="font-medium whitespace-nowrap">
                   {audioModeOptions.find(option => option.value === currentAudioMode)?.label}
                 </span>
               </button>
 
-              {/* 下拉菜单 */}
+              {/* 下拉菜单：点击按钮后显示 */}
+              {/* 
+                - absolute top-full right-0: 定位在按钮正下方，右对齐
+                - mt-1: 与按钮间隔 4px
+                - z-50: 高层级，覆盖其他内容
+                - min-w-48: 最小宽度 192px
+              */}
               {showAudioModeDropdown && (
-                <div className="absolute top-full right-0 mt-1 bg-zinc-900 border border-zinc-700 rounded-lg shadow-lg z-50 min-w-48">
+                <div className="absolute top-full right-0 mt-1 bg-[var(--bready-surface)] border border-[var(--bready-border)] rounded-xl shadow-lg z-50 min-w-48">
+                  {/* 遍历音频模式选项（系统音频、麦克风） */}
                   {audioModeOptions.map((option) => (
                     <button
                       key={option.value}
                       onClick={() => handleAudioModeChange(option.value)}
-                      className={`w-full px-3 py-2.5 text-left hover:bg-zinc-800 transition-colors duration-150 first:rounded-t-lg last:rounded-b-lg ${currentAudioMode === option.value ? 'bg-blue-900/30 text-blue-400' : 'text-gray-300'
+                      className={`w-full px-3 py-2.5 text-left hover:bg-[var(--bready-surface-2)] transition-colors duration-150 first:rounded-t-lg last:rounded-b-lg cursor-pointer ${currentAudioMode === option.value
+                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300'  // 选中状态：绿色高亮
+                        : 'text-[var(--bready-text)]'  // 未选中状态：普通文字色
                         }`}
                     >
+                      {/* 选项内容布局：[图标] [标题+描述] [选中指示器] */}
                       <div className="flex items-start space-x-3">
-                        <div className={`mt-0.5 ${currentAudioMode === option.value ? 'text-blue-400' : 'text-gray-400'}`}>
+                        {/* 图标 */}
+                        <div className={`mt-0.5 ${currentAudioMode === option.value ? 'text-emerald-600 dark:text-emerald-300' : 'text-[var(--bready-text-muted)]'}`}>
                           {option.icon}
                         </div>
+                        {/* 标题和描述 */}
                         <div className="flex-1">
-                          <div className={`text-sm font-medium ${currentAudioMode === option.value ? 'text-blue-400' : 'text-white'}`}>
+                          <div className={`text-sm font-medium ${currentAudioMode === option.value ? 'text-emerald-600 dark:text-emerald-300' : 'text-[var(--bready-text)]'}`}>
                             {option.label}
                           </div>
-                          <div className="text-xs text-gray-400 mt-0.5">
+                          <div className="text-xs text-[var(--bready-text-muted)] mt-0.5">
                             {option.description}
                           </div>
                         </div>
+                        {/* 选中指示器：绿色圆点 */}
                         {currentAudioMode === option.value && (
-                          <div className="w-2 h-2 bg-blue-400 rounded-full mt-1.5" />
+                          <div className="w-2 h-2 bg-emerald-400 rounded-full mt-1.5" />
                         )}
                       </div>
                     </button>
@@ -736,22 +817,21 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
               )}
             </div>
 
-
-
-            {/* 设置按钮 */}
+            {/* --- 权限设置按钮 --- */}
+            {/* 点击后打开权限设置模态框，显示系统音频、麦克风、网络等权限状态 */}
             <button
               onClick={() => setShowPermissionsModal(true)}
-              className="p-2 text-gray-400 hover:text-white transition-all duration-200 hover:bg-zinc-800 rounded-lg cursor-pointer"
+              className="p-2 text-[var(--bready-text-muted)] hover:text-[var(--bready-text)] transition-all duration-200 hover:bg-[var(--bready-surface-2)] rounded-lg cursor-pointer"
               style={{ WebkitAppRegion: 'no-drag' } as any}
             >
-              <Settings className="w-4 h-4" />
+              <Settings className="w-5 h-5" />
             </button>
           </div>
         </div>
       </div>
 
       {/* 主要内容区域 - 左右分栏布局 */}
-      <div className="flex-1 flex p-4 gap-4 overflow-hidden" style={{ pointerEvents: 'auto' }}>
+      <div className="flex-1 flex p-4 gap-4 overflow-hidden bg-[var(--bready-bg)]" style={{ pointerEvents: 'auto' }}>
 
         {/* 左侧主区域 - 实时问答 (约3/4宽度) */}
         <div className="flex-1 flex flex-col min-w-0">
@@ -770,7 +850,7 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
                     onClick={handleReconnect}
                     className="px-3 py-1 bg-red-100 dark:bg-red-800/30 hover:bg-red-200 dark:hover:bg-red-700/50 text-red-700 dark:text-red-300 rounded-lg text-sm font-medium transition-colors cursor-pointer"
                   >
-                    重连
+                    {t('collaboration.actions.reconnect')}
                   </button>
                 </div>
                 <p className="text-red-700 dark:text-red-300 text-sm mt-2">{currentError.message}</p>
@@ -778,19 +858,24 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
             </Card>
           )}
 
-          {/* 实时问答展示区 */}
-          <div className="flex-1 flex flex-col items-center justify-center overflow-hidden">
-            {/* 空状态 */}
-            {conversationHistory.length === 0 && !currentVoiceInput.trim() && !currentAIResponse.trim() && !isWaitingForAI ? (
-              <div className="text-center text-gray-400 animate-in fade-in duration-500">
-                <div className="w-20 h-20 mx-auto mb-6 bg-zinc-800/50 rounded-full flex items-center justify-center backdrop-blur-sm animate-pulse">
-                  <Mic className="w-10 h-10 text-gray-500" />
+          {/* 实时问答展示区 - 固定布局，只有内容区域动态变化 */}
+          <div className="flex-1 flex flex-col overflow-hidden relative">
+            {/* 空状态 - 绝对定位居中，有消息时淡出 */}
+            <div className={`absolute inset-0 flex items-center justify-center transition-all duration-500 ${conversationHistory.length === 0 && !currentVoiceInput.trim() && !currentAIResponse.trim() && !isWaitingForAI ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
+              <div className="text-center text-[var(--bready-text-muted)]">
+                <div className="w-20 h-20 mx-auto mb-6 bg-[var(--bready-surface-2)] rounded-full flex items-center justify-center backdrop-blur-sm animate-pulse">
+                  <Mic className="w-10 h-10 text-[var(--bready-text-muted)]" />
                 </div>
-                <p className="text-lg font-medium text-gray-300">{currentAudioMode === 'system' ? '面宝会回复面试官提问' : '面宝会回复麦克风说话'}</p>
-                <p className="text-sm mt-2 text-gray-500">打字输入也可以哦</p>
+                <p className="text-lg font-medium text-[var(--bready-text)]">
+                  {currentAudioMode === 'system' ? t('collaboration.empty.system') : t('collaboration.empty.microphone')}
+                </p>
+                <p className="text-sm mt-2 text-[var(--bready-text-muted)]">{t('collaboration.empty.helper')}</p>
               </div>
-            ) : (
-              <div className="w-full max-w-3xl space-y-6 overflow-y-auto px-4">
+            </div>
+
+            {/* 聊天内容区域 - 绝对定位，有消息时显示 */}
+            <div ref={messagesContainerRef} className={`absolute inset-0 flex flex-col items-center justify-start pt-6 overflow-y-auto transition-all duration-500 ${conversationHistory.length > 0 || currentVoiceInput.trim() || currentAIResponse.trim() || isWaitingForAI ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
+              <div className="w-full max-w-3xl space-y-8 px-4 pb-4">
                 {/* 最新用户提问 - 从历史记录或实时输入中获取 */}
                 {(() => {
                   // 获取最新的用户消息
@@ -806,30 +891,33 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
 
                   return (
                     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
-                          <Mic className="w-4 h-4 text-white" />
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-400 via-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/40 ring-2 ring-emerald-400/20">
+                          <Mic className="w-5 h-5 text-white" />
                         </div>
-                        <span className="text-sm font-medium text-gray-300">
-                          {isTranscribing ? '转录中...' : '输入'}
-                        </span>
-                        {isTranscribing && (
-                          <div className="flex gap-1">
-                            <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" />
-                            <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0.15s' }} />
-                            <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0.3s' }} />
-                          </div>
-                        )}
+                        <div className="flex flex-col">
+                          <span className="text-sm font-semibold text-[var(--bready-text)]">
+                            {isTranscribing ? t('collaboration.labels.transcribing') : t('collaboration.labels.input')}
+                          </span>
+                          {isTranscribing && (
+                            <div className="flex gap-1 mt-1">
+                              <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce" />
+                              <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '0.15s' }} />
+                              <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '0.3s' }} />
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <div className="bg-gradient-to-br from-blue-600/20 to-indigo-600/20 backdrop-blur-xl rounded-2xl p-6 border border-blue-400/30 shadow-xl shadow-blue-500/10 relative group/user">
-                        <p className="text-lg text-gray-100 leading-relaxed font-medium">{userContent}</p>
+                      <div className="bg-gradient-to-br from-emerald-500/20 via-emerald-500/10 to-teal-500/15 backdrop-blur-2xl rounded-3xl p-7 border border-emerald-400/40 shadow-2xl shadow-emerald-500/20 relative group/user hover:shadow-emerald-500/30 transition-all duration-300">
+                        <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-emerald-400/5 to-transparent pointer-events-none" />
+                        <p className="text-xl text-[var(--bready-text)] leading-relaxed font-medium relative z-10">{userContent}</p>
                         {/* 复制按钮 */}
                         <button
                           onClick={() => copyToClipboard(userContent)}
-                          className="absolute bottom-3 right-3 p-2 bg-blue-900/50 hover:bg-blue-800/50 rounded-lg opacity-0 group-hover/user:opacity-100 transition-opacity duration-200 cursor-pointer"
-                          title="复制内容"
+                          className="absolute bottom-4 right-4 p-2.5 bg-emerald-500/15 hover:bg-emerald-500/25 rounded-xl opacity-0 group-hover/user:opacity-100 transition-all duration-200 cursor-pointer hover:scale-105"
+                          title={t('collaboration.actions.copy')}
                         >
-                          <Copy className="w-4 h-4 text-blue-300" />
+                          <Copy className="w-4 h-4 text-emerald-600 dark:text-emerald-200" />
                         </button>
                       </div>
                     </div>
@@ -849,25 +937,28 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
 
                   return (
                     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: '0.15s' }}>
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/30">
-                          <span className="text-sm">🍞</span>
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 via-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/40 ring-2 ring-amber-400/20">
+                          <span className="text-base">🍞</span>
                         </div>
-                        <span className="text-sm font-medium text-gray-300">
-                          {isWaitingForAI && !aiContent ? '思考中...' : isResponding ? '回复中...' : '面宝'}
-                        </span>
-                        {(isWaitingForAI || isResponding) && (
-                          <div className="flex gap-1">
-                            <div className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-bounce" />
-                            <div className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '0.15s' }} />
-                            <div className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '0.3s' }} />
-                          </div>
-                        )}
+                        <div className="flex flex-col">
+                          <span className="text-sm font-semibold text-[var(--bready-text)]">
+                            {isWaitingForAI && !aiContent ? t('collaboration.labels.thinking') : isResponding ? t('collaboration.labels.responding') : t('collaboration.labels.bready')}
+                          </span>
+                          {(isWaitingForAI || isResponding) && (
+                            <div className="flex gap-1 mt-1">
+                              <div className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-bounce" />
+                              <div className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '0.15s' }} />
+                              <div className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '0.3s' }} />
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <div className="bg-zinc-900/80 backdrop-blur-xl rounded-2xl p-6 border border-zinc-700/50 shadow-2xl relative group/ai">
+                      <div className="bg-[var(--bready-surface)] backdrop-blur-2xl rounded-3xl p-7 border border-[var(--bready-border)] shadow-2xl shadow-black/10 relative group/ai hover:border-[var(--bready-border)] transition-all duration-300">
+                        <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-black/[0.02] to-transparent pointer-events-none" />
                         {aiContent ? (
                           <>
-                            <div className="prose prose-lg max-w-none text-white prose-p:text-white prose-headings:text-white prose-strong:text-white prose-em:text-gray-200 prose-code:text-amber-300 prose-li:text-white prose-a:text-blue-400">
+                            <div className="prose prose-lg max-w-none text-[var(--bready-text)] prose-p:text-[var(--bready-text)] prose-p:leading-relaxed prose-headings:text-[var(--bready-text)] prose-strong:text-[var(--bready-text)] prose-em:text-[var(--bready-text-muted)] prose-code:text-amber-500 dark:prose-code:text-amber-300 prose-code:bg-black/5 dark:prose-code:bg-white/10 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-lg prose-li:text-[var(--bready-text)] prose-a:text-emerald-600 dark:prose-a:text-emerald-300 prose-a:no-underline hover:prose-a:underline relative z-10 dark:prose-invert">
                               <ReactMarkdown
                                 remarkPlugins={[remarkGfm]}
                                 rehypePlugins={[rehypeHighlight]}
@@ -878,16 +969,16 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
                             {/* 复制按钮 */}
                             <button
                               onClick={() => copyToClipboard(aiContent)}
-                              className="absolute bottom-3 right-3 p-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg opacity-0 group-hover/ai:opacity-100 transition-opacity duration-200 cursor-pointer"
-                              title="复制内容"
+                              className="absolute bottom-4 right-4 p-2.5 bg-[var(--bready-surface-2)] hover:bg-[var(--bready-surface-3)] rounded-xl opacity-0 group-hover/ai:opacity-100 transition-all duration-200 cursor-pointer hover:scale-105"
+                              title={t('collaboration.actions.copy')}
                             >
-                              <Copy className="w-4 h-4 text-zinc-400" />
+                              <Copy className="w-4 h-4 text-[var(--bready-text-muted)]" />
                             </button>
                           </>
                         ) : (
-                          <div className="flex items-center gap-3 text-white">
-                            <div className="w-5 h-5 border-2 border-zinc-600 border-t-white rounded-full animate-spin" />
-                            <span>面宝正在思考回答...</span>
+                          <div className="flex items-center gap-4 text-[var(--bready-text)]">
+                            <div className="w-6 h-6 border-2 border-[var(--bready-border)] border-t-amber-400 rounded-full animate-spin" />
+                            <span className="text-[var(--bready-text-muted)] font-medium">{t('collaboration.aiThinking')}</span>
                           </div>
                         )}
                       </div>
@@ -898,19 +989,19 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
                 {/* 滚动目标元素 */}
                 <div ref={messagesEndRef} />
               </div>
-            )}
+            </div>
           </div>
 
           {/* 输入区域 */}
-          <div className="pt-4 mt-auto">
+          <div className="pt-4 -mb-2 mt-auto">
             <div className="flex items-center space-x-3">
               <div className="flex-1 relative">
                 <input
                   type="text"
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
-                  placeholder="输入您的问题..."
-                  className="w-full px-5 py-4 bg-zinc-800/80 backdrop-blur-sm border border-zinc-700/50 rounded-2xl focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/20 text-white placeholder-gray-500 text-base transition-all duration-200"
+                  placeholder={t('collaboration.input.placeholder')}
+                  className="w-full px-5 py-4 bg-[var(--bready-surface-2)] backdrop-blur-sm border border-[var(--bready-border)] rounded-2xl focus:outline-none focus:ring-2 focus:ring-black/10 dark:focus:ring-white/20 focus:border-[var(--bready-border)] text-[var(--bready-text)] placeholder:text-[var(--bready-text-muted)] text-base transition-all duration-200"
                   onCompositionStart={() => setIsComposing(true)}
                   onCompositionEnd={() => setIsComposing(false)}
                   onKeyDown={(e) => {
@@ -923,7 +1014,7 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
                 {inputText && (
                   <button
                     onClick={() => setInputText('')}
-                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300 cursor-pointer transition-colors"
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-[var(--bready-text-muted)] hover:text-[var(--bready-text)] cursor-pointer transition-colors"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -932,49 +1023,73 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
               <TouchButton
                 onClick={handleSendMessage}
                 disabled={!inputText.trim() || isWaitingForAI}
-                className="w-12 h-12 bg-white hover:bg-gray-100 text-black rounded-xl flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer hover:scale-105"
+                className="w-12 h-12 bg-black hover:opacity-90 text-white dark:bg-white dark:text-black rounded-xl flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer hover:scale-105"
               >
                 <Send className="w-5 h-5" />
               </TouchButton>
             </div>
-            <div className="flex items-center justify-center mt-2 text-[10px] text-gray-500">
-              <span>按 Enter 发送 · Shift+Enter 换行</span>
+            <div className="flex items-center justify-center mt-2 text-[10px] text-[var(--bready-text-muted)]">
+              <span>{t('collaboration.input.helper')}</span>
             </div>
           </div>
         </div>
 
         {/* 右侧对话 - 响应式宽度 */}
-        <div className="w-1/4 min-w-[200px] max-w-[320px] flex-shrink-0 flex flex-col bg-zinc-950/80 rounded-xl border border-zinc-800/40">
+        <div className="w-1/4 min-w-[200px] max-w-[320px] flex-shrink-0 flex flex-col bg-[var(--bready-surface)] rounded-xl border border-[var(--bready-border)]">
           {/* 标题 */}
-          <div className="px-3 py-2.5 border-b border-zinc-800/40 flex items-center justify-between">
-            <h3 className="text-xs font-medium text-gray-400 tracking-wide">对话</h3>
-            <span className="text-[10px] text-zinc-500 tabular-nums">
+          <div className="px-3 py-2.5 border-b border-[var(--bready-border)] flex items-center justify-between">
+            <h3 className="text-xs font-medium text-[var(--bready-text-muted)] tracking-wide">{t('collaboration.sidebar.title')}</h3>
+            <span className="text-[10px] text-[var(--bready-text-muted)] tabular-nums">
               {conversationHistory.length}
             </span>
           </div>
 
           {/* 对话列表 */}
-          <div className="flex-1 overflow-y-auto p-2 space-y-2 scrollbar-thin">
+          <div ref={sidebarScrollRef} className="flex-1 overflow-y-auto p-2 space-y-2 scrollbar-thin">
             {conversationHistory.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-zinc-600 text-xs">
+              <div className="flex flex-col items-center justify-center h-full text-[var(--bready-text-muted)] text-xs">
                 <span className="text-lg mb-1">💬</span>
-                <p>暂无对话</p>
+                <p>{t('collaboration.sidebar.empty')}</p>
               </div>
             ) : (
               conversationHistory.map((entry, index) => {
                 const isTruncated = entry.content.length > 150
+                const isHovered = hoveredMessageIndex === index
                 return (
                   <div
                     key={index}
-                    className={`group relative p-3 rounded-lg transition-all duration-150 cursor-pointer hover:bg-zinc-800/60 active:scale-[0.98] ${entry.type === 'user' ? 'bg-zinc-900/50' : 'bg-zinc-900/30'
+                    className={`relative p-3 rounded-lg transition-all duration-150 cursor-pointer hover:bg-[var(--bready-surface-3)] active:scale-[0.98] ${entry.type === 'user' ? 'bg-[var(--bready-surface-2)]' : 'bg-[var(--bready-surface-3)]'
                       }`}
                     onClick={() => copyToClipboard(entry.content)}
-                    title="点击复制内容"
+                    onMouseEnter={() => {
+                      if (isTruncated) {
+                        // 清除之前的定时器
+                        if (hoverTimeoutRef.current) {
+                          clearTimeout(hoverTimeoutRef.current)
+                          hoverTimeoutRef.current = null
+                        }
+                        // 设置 500ms 延迟后显示
+                        hoverTimeoutRef.current = setTimeout(() => {
+                          setHoveredMessageIndex(index)
+                        }, 500)
+                      }
+                    }}
+                    onMouseLeave={() => {
+                      // 清除显示定时器
+                      if (hoverTimeoutRef.current) {
+                        clearTimeout(hoverTimeoutRef.current)
+                        hoverTimeoutRef.current = null
+                      }
+                      // 使用延迟关闭，让鼠标有时间移动到 tooltip 上
+                      hoverTimeoutRef.current = setTimeout(() => {
+                        setHoveredMessageIndex(null)
+                      }, 100)
+                    }}
                   >
                     <div className="flex gap-2.5">
                       {/* 头像和时间列 */}
                       <div className="flex flex-col items-center flex-shrink-0">
-                        <div className={`w-6 h-6 rounded-full flex items-center justify-center ${entry.type === 'user' ? 'bg-white text-black' : 'bg-zinc-700'
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center ${entry.type === 'user' ? 'bg-[var(--bready-accent)] text-[var(--bready-accent-contrast)]' : 'bg-[var(--bready-surface-3)] text-[var(--bready-text)]'
                           }`}>
                           {entry.type === 'user' ? (
                             entry.source === 'voice' ? <Mic className="w-3 h-3" /> : <span className="text-[9px]">⌨</span>
@@ -982,24 +1097,44 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
                             <span className="text-[10px]">🍞</span>
                           )}
                         </div>
-                        <span className="text-[9px] text-zinc-500 mt-1 tabular-nums">
+                        <span className="text-[9px] text-[var(--bready-text-muted)] mt-1 tabular-nums">
                           {entry.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
                       {/* 内容 - 支持 Markdown */}
-                      <div className="flex-1 min-w-0 text-xs text-zinc-300 leading-relaxed line-clamp-3 prose prose-sm prose-invert max-w-none prose-p:m-0 prose-p:text-zinc-300">
+                      <div className="flex-1 min-w-0 text-xs text-[var(--bready-text)] leading-relaxed line-clamp-3 prose prose-sm max-w-none prose-p:m-0 prose-p:text-[var(--bready-text)] dark:prose-invert">
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>
                           {isTruncated ? entry.content.substring(0, 150) + '...' : entry.content}
                         </ReactMarkdown>
                       </div>
                     </div>
 
-                    {/* 悬浮显示完整内容 - 只在被截断时显示，延迟 0.5 秒 */}
-                    {isTruncated && (
-                      <div className="absolute left-0 right-0 bottom-full mb-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 delay-500 z-50">
-                        <div className="bg-zinc-900 border border-zinc-700 rounded-lg p-4 shadow-2xl">
-                          <div className="flex items-center gap-2 mb-2 pb-2 border-b border-zinc-800">
-                            <div className={`w-5 h-5 rounded-full flex items-center justify-center ${entry.type === 'user' ? 'bg-white text-black' : 'bg-zinc-700'
+                    {/* 悬浮显示完整内容 - 延迟 500ms 后显示 */}
+                    {isTruncated && isHovered && (
+                      <div
+                        className="fixed inset-0 flex items-center justify-center z-[9999] pointer-events-none"
+                        style={{ padding: '40px' }}
+                      >
+                        <div
+                          className="bg-[var(--bready-surface)] border border-[var(--bready-border)] rounded-xl p-4 shadow-2xl backdrop-blur-xl max-w-lg max-h-[60vh] overflow-y-auto pointer-events-auto animate-in fade-in zoom-in-95 duration-200"
+                          onMouseEnter={() => {
+                            // 当鼠标进入 tooltip 时，取消延迟关闭
+                            if (hoverTimeoutRef.current) {
+                              clearTimeout(hoverTimeoutRef.current)
+                              hoverTimeoutRef.current = null
+                            }
+                          }}
+                          onMouseLeave={() => {
+                            // 鼠标离开 tooltip 时立即关闭
+                            if (hoverTimeoutRef.current) {
+                              clearTimeout(hoverTimeoutRef.current)
+                              hoverTimeoutRef.current = null
+                            }
+                            setHoveredMessageIndex(null)
+                          }}
+                        >
+                          <div className="flex items-center gap-2 mb-3 pb-2 border-b border-[var(--bready-border)]">
+                            <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${entry.type === 'user' ? 'bg-[var(--bready-accent)] text-[var(--bready-accent-contrast)]' : 'bg-[var(--bready-surface-3)] text-[var(--bready-text)]'
                               }`}>
                               {entry.type === 'user' ? (
                                 entry.source === 'voice' ? <Mic className="w-2.5 h-2.5" /> : <span className="text-[8px]">⌨</span>
@@ -1007,11 +1142,14 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
                                 <span className="text-[9px]">🍞</span>
                               )}
                             </div>
-                            <span className="text-[10px] text-zinc-400">
+                            <span className="text-[10px] text-[var(--bready-text-muted)] flex-shrink-0">
                               {entry.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                             </span>
+                            <span className="text-[10px] text-[var(--bready-text-muted)] ml-auto">
+                              {t('collaboration.actions.copy')}
+                            </span>
                           </div>
-                          <div className="prose prose-sm prose-invert max-w-none text-white prose-p:text-white prose-headings:text-white">
+                          <div className="prose prose-sm max-w-none text-[var(--bready-text)] prose-p:text-[var(--bready-text)] prose-headings:text-[var(--bready-text)] dark:prose-invert text-sm leading-relaxed">
                             <ReactMarkdown
                               remarkPlugins={[remarkGfm]}
                               rehypePlugins={[rehypeHighlight]}
@@ -1033,17 +1171,17 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
       {/* 初始化加载状态 */}
       {
         isInitializing && (
-          <div className="fixed inset-0 bg-black flex items-center justify-center z-[9999]" style={{ pointerEvents: 'auto' }}>
+          <div className="fixed inset-0 bg-[var(--bready-bg)] flex items-center justify-center z-[9999]" style={{ pointerEvents: 'auto' }}>
             <div className="text-center p-6">
               <div className="w-16 h-16 mx-auto mb-4 relative">
-                <div className="absolute inset-0 rounded-full bg-white opacity-10 animate-ping"></div>
-                <div className="absolute inset-2 rounded-full bg-white opacity-20 animate-ping" style={{ animationDelay: '0.5s' }}></div>
-                <div className="absolute inset-4 rounded-full bg-white flex items-center justify-center">
-                  <Loader2 className="w-6 h-6 text-black animate-spin" />
+                <div className="absolute inset-0 rounded-full bg-[var(--bready-border)] opacity-50 animate-ping"></div>
+                <div className="absolute inset-2 rounded-full bg-[var(--bready-border)] opacity-70 animate-ping" style={{ animationDelay: '0.5s' }}></div>
+                <div className="absolute inset-4 rounded-full bg-[var(--bready-surface)] border border-[var(--bready-border)] flex items-center justify-center">
+                  <Loader2 className="w-6 h-6 text-[var(--bready-text)] animate-spin" />
                 </div>
               </div>
-              <h2 className="text-xl font-bold text-white mb-2">{status}</h2>
-              <p className="text-gray-400">正在准备协作模式...</p>
+              <h2 className="text-xl font-bold text-[var(--bready-text)] mb-2">{status}</h2>
+              <p className="text-[var(--bready-text-muted)]">{t('collaboration.status.preparing')}</p>
             </div>
           </div>
         )
@@ -1056,18 +1194,18 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
             className="fixed inset-0 bg-black/50 backdrop-blur-md flex items-center justify-center z-[100] cursor-pointer"
             onClick={() => setShowExitConfirm(false)}
           >
-            <div className="bg-zinc-900 border border-zinc-700 rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl cursor-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-[var(--bready-surface)] border border-[var(--bready-border)] rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl cursor-auto" onClick={(e) => e.stopPropagation()}>
               <div className="text-center">
-                <div className="w-12 h-12 bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <AlertCircle className="w-6 h-6 text-red-400" />
+                <div className="w-12 h-12 bg-red-500/15 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <AlertCircle className="w-6 h-6 text-red-500" />
                 </div>
-                <h3 className="text-lg font-semibold text-white mb-2">退出协作模式？</h3>
-                <p className="text-gray-400 mb-6">这将断开与AI的连接并返回主页。</p>
+                <h3 className="text-lg font-semibold text-[var(--bready-text)] mb-2">{t('collaboration.exit.title')}</h3>
+                <p className="text-[var(--bready-text-muted)] mb-6">{t('collaboration.exit.description')}</p>
                 <Button
                   onClick={handleExitConfirm}
                   className="w-full bg-red-600 hover:bg-red-700 text-white cursor-pointer"
                 >
-                  退出
+                  {t('collaboration.exit.confirm')}
                 </Button>
               </div>
             </div>
@@ -1082,71 +1220,67 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
             className="fixed inset-0 bg-black/50 backdrop-blur-md flex items-center justify-center z-[100] p-4 cursor-pointer"
             onClick={() => setShowPermissionsModal(false)}
           >
-            <div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-md shadow-2xl cursor-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-[var(--bready-surface)] border border-[var(--bready-border)] rounded-2xl w-full max-w-md shadow-2xl cursor-auto" onClick={(e) => e.stopPropagation()}>
               <div className="p-6">
                 <div className="mb-6">
-                  <h2 className="text-xl font-bold text-white">权限设置</h2>
+                  <h2 className="text-xl font-bold text-[var(--bready-text)]">{t('collaboration.permissions.title')}</h2>
                 </div>
 
                 <div className="space-y-4">
-                  <div className="bg-zinc-800 rounded-lg p-4">
+                  <div className="bg-[var(--bready-surface-2)] rounded-lg p-4">
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center space-x-2">
-                        <Volume2 className="w-5 h-5 text-gray-400" />
-                        <span className="font-medium text-white">系统音频权限</span>
+                        <Volume2 className="w-5 h-5 text-[var(--bready-text-muted)]" />
+                        <span className="font-medium text-[var(--bready-text)]">{t('collaboration.permissions.systemAudio')}</span>
                       </div>
                       <div className="flex items-center space-x-2">
                         {getStatusIcon(systemPermissions.screenRecording)}
-                        <span className="text-sm font-medium text-green-600 dark:text-green-400">
+                        <span className="text-sm font-medium text-emerald-600 dark:text-emerald-300">
                           {getStatusText(systemPermissions.screenRecording)}
                         </span>
                       </div>
                     </div>
-                    <p className="text-sm text-gray-400">
-                      用于捕获系统播放的音频（如在线面试官的声音）
-                    </p>
+                    <p className="text-sm text-[var(--bready-text-muted)]">{t('collaboration.permissions.systemAudioDesc')}</p>
                   </div>
 
-                  <div className="bg-zinc-800 rounded-lg p-4">
+                  <div className="bg-[var(--bready-surface-2)] rounded-lg p-4">
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center space-x-2">
-                        <Mic className="w-5 h-5 text-gray-400" />
-                        <span className="font-medium text-white">麦克风权限</span>
+                        <Mic className="w-5 h-5 text-[var(--bready-text-muted)]" />
+                        <span className="font-medium text-[var(--bready-text)]">{t('collaboration.permissions.microphone')}</span>
                       </div>
                       <div className="flex items-center space-x-2">
                         {getStatusIcon(systemPermissions.microphone)}
-                        <span className="text-sm font-medium text-green-600 dark:text-green-400">
+                        <span className="text-sm font-medium text-emerald-600 dark:text-emerald-300">
                           {getStatusText(systemPermissions.microphone)}
                         </span>
                       </div>
                     </div>
-                    <p className="text-sm text-gray-400">
-                      用于语音输入（可选）
-                    </p>
+                    <p className="text-sm text-[var(--bready-text-muted)]">{t('collaboration.permissions.microphoneDesc')}</p>
                   </div>
 
-                  <div className="bg-zinc-800 rounded-lg p-4">
+                  <div className="bg-[var(--bready-surface-2)] rounded-lg p-4">
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center space-x-2">
-                        <Wifi className="w-5 h-5 text-gray-400" />
-                        <span className="font-medium text-white">网络连接</span>
+                        <Wifi className="w-5 h-5 text-[var(--bready-text-muted)]" />
+                        <span className="font-medium text-[var(--bready-text)]">{t('collaboration.permissions.network')}</span>
                       </div>
                       <div className="flex items-center space-x-2">
                         {isConnected ? (
                           <>
-                            <Wifi className="w-5 h-5 text-green-400" />
-                            <span className="text-sm font-medium text-green-400">已连接</span>
+                            <Wifi className="w-5 h-5 text-emerald-500" />
+                            <span className="text-sm font-medium text-emerald-500">{t('collaboration.permissions.networkConnected')}</span>
                           </>
                         ) : (
                           <>
-                            <WifiOff className="w-5 h-5 text-red-400" />
-                            <span className="text-sm font-medium text-red-400">未连接</span>
+                            <WifiOff className="w-5 h-5 text-red-500" />
+                            <span className="text-sm font-medium text-red-500">{t('collaboration.permissions.networkDisconnected')}</span>
                           </>
                         )}
                       </div>
                     </div>
-                    <p className="text-sm text-gray-400">
-                      {isConnected ? '与Gemini API保持连接' : '尝试重新连接AI服务'}
+                    <p className="text-sm text-[var(--bready-text-muted)]">
+                      {isConnected ? t('collaboration.permissions.networkConnectedDesc') : t('collaboration.permissions.networkDisconnectedDesc')}
                     </p>
 
                     {!isConnected && (
@@ -1154,10 +1288,10 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
                         onClick={handleReconnect}
                         variant="outline"
                         size="sm"
-                        className="mt-3 w-full border-zinc-600 hover:bg-zinc-700 text-gray-300 cursor-pointer"
+                        className="mt-3 w-full border-[var(--bready-border)] bg-[var(--bready-surface-2)] hover:bg-[var(--bready-surface-3)] text-[var(--bready-text)] cursor-pointer"
                       >
                         <RefreshCw className="w-4 h-4 mr-2" />
-                        重新连接
+                        {t('collaboration.permissions.reconnect')}
                       </Button>
                     )}
                   </div>

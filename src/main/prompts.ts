@@ -130,8 +130,9 @@ Provide only the exact words to say in **markdown format**. No coaching, no "you
 
 // 语言代码到语言名称的映射
 const languageNames: { [key: string]: string } = {
-  'cmn-CN': 'Chinese (中文)',
+  'cmn-CN': 'Simplified Chinese (简体中文，使用中国大陆普通话表达习惯)',
   'en-US': 'English',
+  'zh-en': 'Chinese + English (中英混合，中文部分使用简体中文)',
   'ja-JP': 'Japanese (日本語)',
   'ko-KR': 'Korean (한국어)',
   'es-ES': 'Spanish (Español)',
@@ -163,6 +164,7 @@ function buildSystemPrompt(promptParts: PromptParts, customPrompt = '', googleSe
     '\n\n**FINAL REMINDER:**\n',
     `- Your response MUST be in ${responseLanguage}\n`,
     `- Do NOT use English unless ${responseLanguage} is English\n`,
+    language === 'cmn-CN' ? '- 必须使用简体中文，禁止使用繁体字\n- 使用中国大陆的表达习惯，不要使用港台用语\n' : '',
     `- This is a CRITICAL requirement\n`,
     '\n\nSTRICT OUTPUT:\n',
     '- Do not include analysis, reasoning, or meta commentary.\n',

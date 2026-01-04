@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- 圆角方形背景 -->
+  <rect width="512" height="512" rx="96" fill="#0a0a0a"/>
+  
+  <!-- Sparkles 图标 (来自 lucide-react, 缩放并居中) -->
+  <g transform="translate(128, 128) scale(10.67)">
+    <!-- Main sparkle -->
+    <path 
+      d="M12 3L13.5 8H18.5L14.5 11.5L16 17L12 14L8 17L9.5 11.5L5.5 8H10.5L12 3Z" 
+      stroke="white" 
+      stroke-width="2" 
+      stroke-linecap="round" 
+      stroke-linejoin="round"
+      fill="none"
+    />
+    <!-- Small sparkle top right -->
+    <path 
+      d="M19 8L19.94 10.06L22 11L19.94 11.94L19 14L18.06 11.94L16 11L18.06 10.06L19 8Z"
+      stroke="white" 
+      stroke-width="1.5" 
+      stroke-linecap="round" 
+      stroke-linejoin="round"
+      fill="none"
+    />
+    <!-- Small sparkle bottom left -->
+    <path 
+      d="M5 18L5.54 19.46L7 20L5.54 20.54L5 22L4.46 20.54L3 20L4.46 19.46L5 18Z"
+      stroke="white" 
+      stroke-width="1.5" 
+      stroke-linecap="round" 
+      stroke-linejoin="round"
+      fill="none"
+    />
+  </g>
+</svg>

@@ -3,8 +3,6 @@ import React, { useState, useEffect } from 'react'
 import { HashRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import WelcomePage from './components/WelcomePage'
 import MainPage from './components/MainPage'
-import CreatePreparationPage from './components/CreatePreparationPage'
-import PreparationDetailPage from './components/PreparationDetailPage'
 import FloatingWindow from './components/FloatingWindow'
 import CollaborationMode from './components/CollaborationMode'
 import LoginPage from './components/LoginPage'
@@ -15,6 +13,7 @@ import { preparationService, type Preparation } from './lib/supabase'
 import { Loader2, Volume2, Mic, CheckCircle } from 'lucide-react'
 import { ThemeProvider } from './components/ui/theme-provider'
 import { Button } from './components/ui/button'
+import { I18nProvider, useI18n } from './contexts/I18nContext'
 
 // 声明全局类型
 declare global {
@@ -56,6 +55,7 @@ declare global {
       onAudioStreamInterrupted: (callback: () => void) => () => void
       onAudioStreamRestored: (callback: () => void) => () => void
       analyzePreparation: (data: { name: string; jobDescription: string; resume?: string }) => Promise<{ success: boolean; analysis?: any; error?: string }>
+      extractFileContent: (data: { fileName: string; fileType: string; base64Data: string }) => Promise<{ success: boolean; content?: string; error?: string }>
     }
     env: {
       GEMINI_API_KEY?: string
@@ -96,16 +96,17 @@ const CollaborationModeWrapper: React.FC = () => {
 // 受保护的路由组件
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth()
+  const { t } = useI18n()
 
   console.log('ProtectedRoute: user =', user, 'loading =', loading)
 
   if (loading) {
     console.log('ProtectedRoute: Showing loading state')
     return (
-      <div className="h-screen w-screen overflow-hidden bg-gray-50 dark:bg-black flex items-center justify-center">
+      <div className="h-screen w-screen overflow-hidden bg-[var(--bready-bg)] flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-gray-600 dark:text-gray-400" />
-          <p className="text-gray-600 dark:text-gray-400">加载中...</p>
+          <p className="text-gray-600 dark:text-gray-400">{t('common.loading')}</p>
         </div>
       </div>
     )
@@ -122,6 +123,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
 function AppContent() {
   const { user } = useAuth()
+  const { t } = useI18n()
   const [isFirstTime, setIsFirstTime] = useState(true)
   const [preparations, setPreparations] = useState<Preparation[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -219,10 +221,10 @@ function AppContent() {
   // 如果正在加载，显示加载状态
   if (isLoading) {
     return (
-      <div className="h-screen w-screen overflow-hidden bg-white dark:bg-black flex items-center justify-center">
+      <div className="h-screen w-screen overflow-hidden bg-[var(--bready-bg)] flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 border-2 border-black dark:border-white border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">正在加载...</p>
+          <p className="text-gray-600 dark:text-gray-400">{t('common.loadingShort')}</p>
         </div>
       </div>
     )
@@ -231,7 +233,7 @@ function AppContent() {
   return (
     <ErrorBoundary>
       <Router>
-        <div className="h-screen w-screen overflow-hidden bg-white dark:bg-black">
+        <div className="h-screen w-screen overflow-hidden bg-[var(--bready-bg)]">
           <Routes>
             <Route
               path="/"
@@ -261,11 +263,7 @@ function AppContent() {
               path="/create-preparation"
               element={
                 <ProtectedRoute>
-                  <CreatePreparationPage
-                    preparations={preparations}
-                    setPreparations={setPreparations}
-                    onReloadData={loadPreparations}
-                  />
+                  <Navigate to="/" replace />
                 </ProtectedRoute>
               }
             />
@@ -273,11 +271,7 @@ function AppContent() {
               path="/edit-preparation/:id"
               element={
                 <ProtectedRoute>
-                  <CreatePreparationPage
-                    preparations={preparations}
-                    setPreparations={setPreparations}
-                    onReloadData={loadPreparations}
-                  />
+                  <Navigate to="/" replace />
                 </ProtectedRoute>
               }
             />
@@ -285,9 +279,7 @@ function AppContent() {
               path="/preparation/:id"
               element={
                 <ProtectedRoute>
-                  <PreparationDetailPage
-                    preparations={preparations}
-                  />
+                  <Navigate to="/" replace />
                 </ProtectedRoute>
               }
             />
@@ -302,16 +294,14 @@ function AppContent() {
             className="fixed inset-0 bg-white/30 dark:bg-black/30 backdrop-blur-md flex items-center justify-center z-[9999] p-4 cursor-pointer"
             onClick={() => setShowPermissionGuide(false)}
           >
-            <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md shadow-2xl cursor-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-[var(--bready-surface)] border border-[var(--bready-border)] rounded-2xl w-full max-w-md shadow-2xl cursor-auto" onClick={(e) => e.stopPropagation()}>
               <div className="p-6">
                 <div className="mb-6">
-                  <h2 className="text-xl font-bold text-black dark:text-white">系统权限设置</h2>
+                  <h2 className="text-xl font-bold text-black dark:text-white">{t('permissionsGuide.title')}</h2>
                 </div>
 
                 <div className="mb-6">
-                  <p className="text-gray-600 dark:text-gray-400 mb-4">
-                    为了使用协作模式，Bready 需要以下系统权限：
-                  </p>
+                  <p className="text-gray-600 dark:text-gray-400 mb-4">{t('permissionsGuide.description')}</p>
 
                   <div className="space-y-3">
                     {/* 屏幕录制权限卡片 - 可点击 */}
@@ -321,12 +311,12 @@ function AppContent() {
                           await window.bready.openSystemPreferences('security')
                         }
                       }}
-                      className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      className="bg-[var(--bready-surface-2)] rounded-lg p-4 cursor-pointer hover:bg-[var(--bready-surface-3)] transition-colors"
                     >
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center space-x-2">
                           <Volume2 className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                          <span className="font-medium text-black dark:text-white">屏幕录制权限</span>
+                          <span className="font-medium text-black dark:text-white">{t('permissionsGuide.screen')}</span>
                         </div>
                         <CheckCircle
                           className={`w-5 h-5 ${permissionStatus.screenRecording
@@ -335,9 +325,7 @@ function AppContent() {
                             }`}
                         />
                       </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        用于捕获系统音频（在线面试官的声音）
-                      </p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">{t('permissionsGuide.screenDesc')}</p>
                     </div>
 
                     {/* 麦克风权限卡片 - 可点击 */}
@@ -347,12 +335,12 @@ function AppContent() {
                           await window.bready.openSystemPreferences('security')
                         }
                       }}
-                      className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      className="bg-[var(--bready-surface-2)] rounded-lg p-4 cursor-pointer hover:bg-[var(--bready-surface-3)] transition-colors"
                     >
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center space-x-2">
                           <Mic className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                          <span className="font-medium text-black dark:text-white">麦克风权限</span>
+                          <span className="font-medium text-black dark:text-white">{t('permissionsGuide.mic')}</span>
                         </div>
                         <CheckCircle
                           className={`w-5 h-5 ${permissionStatus.microphone
@@ -361,9 +349,7 @@ function AppContent() {
                             }`}
                         />
                       </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        用于语音输入（可选）
-                      </p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">{t('permissionsGuide.micDesc')}</p>
                     </div>
                   </div>
                 </div>
@@ -376,13 +362,11 @@ function AppContent() {
                     variant="outline"
                     className="w-full border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 cursor-pointer"
                   >
-                    稍后设置
+                    {t('permissionsGuide.later')}
                   </Button>
                 </div>
 
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-4 text-center">
-                  你可以随时在协作模式中重新设置权限
-                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-4 text-center">{t('permissionsGuide.note')}</p>
               </div>
             </div>
           </div>
@@ -395,11 +379,13 @@ function AppContent() {
 // 主 App 组件，包装 AuthProvider 和 ThemeProvider
 function App() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
-    </ThemeProvider>
+    <I18nProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
+      </ThemeProvider>
+    </I18nProvider>
   )
 }
 

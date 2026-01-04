@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react'
-import { User, Crown, Calendar, Clock, LogOut, Settings } from 'lucide-react'
+import { User, Calendar, Clock, LogOut, Settings, Sun, Moon, Monitor, Globe } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { userProfileService, membershipService, type UserProfile, type MembershipPackage } from '../lib/supabase'
 import { Button } from './ui/button'
 import UserLevelBadge from './UserLevelBadge'
+import { useTheme } from './ui/theme-provider'
+import { useI18n } from '../contexts/I18nContext'
 
 interface UserProfileModalProps {
   onClose: () => void
@@ -12,6 +14,8 @@ interface UserProfileModalProps {
 
 const UserProfileModal: React.FC<UserProfileModalProps> = ({ onClose, onOpenAdminPanel }) => {
   const { user, profile, signOut } = useAuth()
+  const { theme, setTheme } = useTheme()
+  const { t, languageOptions, language, setLanguage, locale } = useI18n()
   const [userProfile, setUserProfile] = useState<UserProfile | null>(profile)
   const [packages, setPackages] = useState<MembershipPackage[]>([])
   const [loading, setLoading] = useState(false)
@@ -62,172 +66,213 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ onClose, onOpenAdmi
       await loadUserData() // 重新加载用户数据
     } catch (error) {
       console.error('Error purchasing package:', error)
-      alert('购买失败，请稍后重试')
+      alert(t('alerts.purchaseFailed'))
     } finally {
       setLoading(false)
     }
   }
 
   const formatDate = (dateString?: string) => {
-    if (!dateString) return '无'
-    return new Date(dateString).toLocaleDateString('zh-CN')
+    if (!dateString) return t('common.none')
+    return new Date(dateString).toLocaleDateString(locale)
   }
 
 
 
   const isAdmin = userProfile?.user_level === '管理' || userProfile?.user_level === '超级'
   const isExpired = userProfile?.membership_expires_at && new Date(userProfile.membership_expires_at) < new Date()
+  const themeOptions = [
+    { value: 'light' as const, label: t('profile.themeOptions.light'), icon: Sun },
+    { value: 'dark' as const, label: t('profile.themeOptions.dark'), icon: Moon },
+    { value: 'auto' as const, label: t('profile.themeOptions.auto'), icon: Monitor }
+  ]
+
+  // 判断是否为深色模式
+  const isDarkMode = theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 cursor-pointer"
+      className={`fixed inset-0 ${isDarkMode ? 'bg-black/40' : 'bg-black/20'} backdrop-blur-sm flex items-center justify-center z-50 cursor-pointer p-4`}
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-xl w-full max-w-xl p-6 shadow-xl animate-fade-in border border-gray-200 cursor-auto"
+        className={`${isDarkMode ? 'bg-black border-gray-800' : 'bg-white border-gray-200'} rounded-2xl w-[85vw] max-w-[960px] h-auto max-h-[85vh] p-6 shadow-xl animate-fade-in border cursor-auto overflow-y-auto`}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* 头部 */}
         <div className="mb-6">
-          <h2 className="text-xl font-semibold text-black">个人中心</h2>
+          <h2 className={`text-xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{t('profile.title')}</h2>
         </div>
 
-        {/* 主要内容区域 - 水平布局 */}
-        <div className="grid grid-cols-2 gap-6 mb-6">
-          {/* 左侧：用户基本信息 */}
-          <div className="space-y-4">
-            {/* 基本信息 */}
-            <div className="bg-gray-50 rounded-lg p-4">
-              <div className="flex items-center space-x-3 mb-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-black to-gray-800 rounded-full flex items-center justify-center">
-                  <User className="w-6 h-6 text-white" />
+        <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-6">
+          <div className="space-y-6">
+            <div className={`rounded-xl border ${isDarkMode ? 'border-gray-800 bg-gray-900/50' : 'border-gray-200 bg-gray-50'} p-5`}>
+              <div className="flex items-center gap-4">
+                <div className={`w-12 h-12 ${isDarkMode ? 'bg-white text-black' : 'bg-black text-white'} rounded-full flex items-center justify-center`}>
+                  <User className="w-5 h-5" />
                 </div>
-                <div>
-                  <h3 className="font-medium text-black">
-                    {userProfile?.full_name || userProfile?.username || '用户'}
+                <div className="flex-1">
+                  <h3 className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                    {userProfile?.full_name || userProfile?.username || t('common.currentUser')}
                   </h3>
-                  <p className="text-sm text-gray-600">{user?.email}</p>
+                  <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{user?.email}</p>
                 </div>
+                <UserLevelBadge level={userProfile?.user_level || '小白'} size="md" showIcon={true} />
               </div>
-
-              {/* 身份等级 */}
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">身份等级</span>
-                <UserLevelBadge
-                  level={userProfile?.user_level || '小白'}
-                  size="md"
-                  showIcon={true}
-                />
+              <div className={`mt-4 flex items-center justify-between text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                <span>{t('profile.identity')}</span>
+                <span className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{userProfile?.user_level || '小白'}</span>
               </div>
             </div>
-          </div>
 
-          {/* 右侧：会员信息 */}
-          <div className="space-y-4">
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h4 className="font-medium text-black mb-3">会员信息</h4>
+            <div className={`rounded-xl border ${isDarkMode ? 'border-gray-800 bg-black' : 'border-gray-200 bg-white'} p-5`}>
+              <h4 className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-4`}>{t('profile.membership')}</h4>
               <div className="space-y-3 text-sm">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Clock className="w-4 h-4 text-gray-500" />
-                    <span className="text-gray-600">剩余面试时间</span>
+                  <div className={`flex items-center gap-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    <Clock className="w-4 h-4" />
+                    <span>{t('profile.remainingTime')}</span>
                   </div>
-                  <div className={`font-medium ${(userProfile?.remaining_interview_minutes || 0) > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {userProfile?.remaining_interview_minutes || 0} 分钟
+                  <div className={`font-medium ${(userProfile?.remaining_interview_minutes || 0) > 0 ? (isDarkMode ? 'text-white' : 'text-gray-900') : 'text-red-500'}`}>
+                    {t('profile.minutes', { count: userProfile?.remaining_interview_minutes || 0 })}
                   </div>
                 </div>
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Calendar className="w-4 h-4 text-gray-500" />
-                    <span className="text-gray-600">会员到期时间</span>
+                  <div className={`flex items-center gap-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    <Calendar className="w-4 h-4" />
+                    <span>{t('profile.expiry')}</span>
                   </div>
-                  <div className={`font-medium ${isExpired ? 'text-red-600' : 'text-green-600'}`}>
+                  <div className={`font-medium ${isExpired ? 'text-red-500' : (isDarkMode ? 'text-white' : 'text-gray-900')}`}>
                     {formatDate(userProfile?.membership_expires_at)}
                   </div>
                 </div>
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Clock className="w-4 h-4 text-gray-500" />
-                    <span className="text-gray-600">累计购买时间</span>
+                  <div className={`flex items-center gap-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    <Clock className="w-4 h-4" />
+                    <span>{t('profile.totalPurchased')}</span>
                   </div>
-                  <div className="font-medium text-gray-800">
-                    {userProfile?.total_purchased_minutes || 0} 分钟
+                  <div className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                    {t('profile.minutes', { count: userProfile?.total_purchased_minutes || 0 })}
                   </div>
                 </div>
               </div>
             </div>
+
+            {packages.length > 0 && (
+              <div className={`rounded-xl border ${isDarkMode ? 'border-gray-800 bg-black' : 'border-gray-200 bg-white'} p-5`}>
+                <h4 className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-4`}>{t('profile.packages')}</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {packages.map(pkg => {
+                    const pricing = membershipService.calculatePrice(pkg.price, userProfile?.user_level || '小白')
+                    const hasDiscount = pricing.discountRate < 1.00
+
+                    return (
+                      <div key={pkg.id} className={`flex items-center justify-between p-3 ${isDarkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-gray-50 border-gray-200'} rounded-xl border`}>
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2">
+                            <span className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{pkg.name}</span>
+                            <span className={`text-xs ${isDarkMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-200 text-gray-600'} px-2 py-1 rounded`}>
+                              {t('profile.minutes', { count: pkg.interview_minutes })}
+                            </span>
+                          </div>
+                          <div className="flex items-center space-x-2 mt-1">
+                            {hasDiscount && (
+                              <span className="text-xs text-gray-400 line-through">¥{pkg.price}</span>
+                            )}
+                            <span className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>¥{pricing.actualPrice}</span>
+                            {hasDiscount && (
+                              <span className={`text-xs ${isDarkMode ? 'bg-white text-black' : 'bg-gray-900 text-white'} px-1.5 py-0.5 rounded`}>
+                                {t('profile.discount', { percent: Math.round((1 - pricing.discountRate) * 100) })}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handlePurchasePackage(pkg.id)}
+                          disabled={loading}
+                          className={`ml-3 px-4 py-1.5 text-sm font-medium ${isDarkMode ? 'bg-white text-black hover:bg-gray-100' : 'bg-black text-white hover:bg-gray-800'} rounded-lg transition-colors cursor-pointer disabled:opacity-50`}
+                        >
+                          {t('profile.buy')}
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
           </div>
-        </div>
 
-        {/* 套餐购买 */}
-        {packages.length > 0 && (
-          <div className="bg-gray-50 rounded-lg p-4 mb-6">
-            <h4 className="font-medium text-black mb-3">购买套餐</h4>
-            <div className="grid grid-cols-2 gap-3">
-              {packages.map(pkg => {
-                const pricing = membershipService.calculatePrice(pkg.price, userProfile?.user_level || '小白')
-                const hasDiscount = pricing.discountRate < 1.00
-
-                return (
-                  <div key={pkg.id} className="flex items-center justify-between p-3 bg-white rounded border border-gray-200">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2">
-                        <span className="font-medium text-black">{pkg.name}</span>
-                        <span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded">
-                          {pkg.interview_minutes}分钟
-                        </span>
-                      </div>
-                      <div className="flex items-center space-x-2 mt-1">
-                        {hasDiscount && (
-                          <span className="text-xs text-gray-500 line-through">¥{pkg.price}</span>
-                        )}
-                        <span className="text-sm font-medium text-black">¥{pricing.actualPrice}</span>
-                        {hasDiscount && (
-                          <span className="text-xs bg-red-100 text-red-600 px-1 py-0.5 rounded">
-                            {Math.round((1 - pricing.discountRate) * 100)}%折扣
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <Button
-                      size="sm"
-                      onClick={() => handlePurchasePackage(pkg.id)}
-                      disabled={loading}
-                      className="ml-3 cursor-pointer"
-                    >
-                      购买
-                    </Button>
+          <div className="space-y-6">
+            <div className={`rounded-xl border ${isDarkMode ? 'border-gray-800 bg-black' : 'border-gray-200 bg-white'} p-5`}>
+              <h4 className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-4`}>{t('profile.settings')}</h4>
+              <div className="space-y-4">
+                <div>
+                  <div className={`flex items-center gap-2 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} mb-2`}>
+                    <Sun className="w-4 h-4" />
+                    <span>{t('profile.theme')}</span>
                   </div>
-                )
-              })}
+                  <div className="grid grid-cols-3 gap-2">
+                    {themeOptions.map((option) => {
+                      const Icon = option.icon
+                      const isActive = theme === option.value
+                      return (
+                        <button
+                          key={option.value}
+                          onClick={() => setTheme(option.value)}
+                          className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-medium border transition-colors cursor-pointer ${
+                            isActive
+                              ? (isDarkMode ? 'bg-white text-black border-transparent' : 'bg-black text-white border-transparent')
+                              : (isDarkMode ? 'bg-gray-900 text-gray-300 border-gray-800 hover:bg-gray-800' : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100')
+                          }`}
+                        >
+                          <Icon className="w-3.5 h-3.5" />
+                          <span>{option.label}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+                <div>
+                  <div className={`flex items-center gap-2 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} mb-2`}>
+                    <Globe className="w-4 h-4" />
+                    <span>{t('profile.language')}</span>
+                  </div>
+                  <select
+                    value={language}
+                    onChange={(event) => setLanguage(event.target.value as typeof language)}
+                    className={`w-full px-3 py-2 rounded-lg border ${isDarkMode ? 'border-gray-800 bg-gray-900 text-white focus:ring-white/10' : 'border-gray-200 bg-gray-50 text-gray-900 focus:ring-black/10'} text-sm focus:outline-none focus:ring-2 cursor-pointer`}
+                  >
+                    {languageOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className={`rounded-xl border ${isDarkMode ? 'border-gray-800 bg-black' : 'border-gray-200 bg-white'} p-4`}>
+              <div className="flex gap-3">
+                {isAdmin && onOpenAdminPanel && (
+                  <button
+                    onClick={onOpenAdminPanel}
+                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium ${isDarkMode ? 'text-gray-300 border-gray-800 hover:bg-gray-900' : 'text-gray-700 border-gray-200 hover:bg-gray-50'} border rounded-lg transition-colors cursor-pointer`}
+                  >
+                    <Settings className="w-4 h-4" />
+                    {t('profile.admin')}
+                  </button>
+                )}
+                <button
+                  onClick={handleSignOut}
+                  disabled={loading}
+                  className={`${isAdmin && onOpenAdminPanel ? 'flex-1' : 'w-full'} flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-red-500 border ${isDarkMode ? 'border-red-900/50 hover:bg-red-900/20' : 'border-red-200 hover:bg-red-50'} rounded-lg transition-colors cursor-pointer disabled:opacity-50`}
+                >
+                  <LogOut className="w-4 h-4" />
+                  {t('profile.logout')}
+                </button>
+              </div>
             </div>
           </div>
-        )}
-
-        {/* 操作按钮 - 水平排列 */}
-        <div className="flex gap-3">
-          {/* 管理员入口 */}
-          {isAdmin && onOpenAdminPanel && (
-            <Button
-              variant="outline"
-              className="flex-1 justify-center cursor-pointer"
-              onClick={onOpenAdminPanel}
-            >
-              <Settings className="w-4 h-4 mr-2" />
-              管理后台
-            </Button>
-          )}
-
-          {/* 退出登录 */}
-          <Button
-            variant="outline"
-            className="flex-1 justify-center text-red-600 border-red-200 hover:bg-red-50 cursor-pointer"
-            onClick={handleSignOut}
-            disabled={loading}
-          >
-            <LogOut className="w-4 h-4 mr-2" />
-            退出登录
-          </Button>
         </div>
       </div>
     </div>

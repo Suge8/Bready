@@ -35,8 +35,8 @@ export const Card: React.FC<CardProps> = ({
   }
 
   const baseClasses = `
-    bg-white dark:bg-gray-800 rounded-lg
-    ${border ? 'border border-gray-200 dark:border-gray-700' : ''}
+    bg-[var(--bready-surface)] rounded-lg
+    ${border ? 'border border-[var(--bready-border)]' : ''}
     ${shadowClasses[shadow]}
     ${paddingClasses[padding]}
     ${onClick ? 'cursor-pointer' : ''}
@@ -82,12 +82,12 @@ export const CardHeader: React.FC<CardHeaderProps> = ({ title, subtitle, action,
     <div className={`flex items-center justify-between mb-4 ${className}`}>
       <div>
         {title && (
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+          <h3 className="text-lg font-semibold text-[var(--bready-text)]">
             {title}
           </h3>
         )}
         {subtitle && (
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          <p className="text-sm text-[var(--bready-text-muted)] mt-1">
             {subtitle}
           </p>
         )}
@@ -108,7 +108,7 @@ export interface CardTitleProps {
 
 export const CardTitle: React.FC<CardTitleProps> = ({ children, className = '' }) => {
   return (
-    <h3 className={`text-lg font-semibold text-gray-900 dark:text-white ${className}`}>
+    <h3 className={`text-lg font-semibold text-[var(--bready-text)] ${className}`}>
       {children}
     </h3>
   )
@@ -121,7 +121,7 @@ export interface CardDescriptionProps {
 
 export const CardDescription: React.FC<CardDescriptionProps> = ({ children, className = '' }) => {
   return (
-    <p className={`text-sm text-gray-500 dark:text-gray-400 ${className}`}>
+    <p className={`text-sm text-[var(--bready-text-muted)] ${className}`}>
       {children}
     </p>
   )
@@ -134,7 +134,7 @@ export interface CardContentProps {
 
 export const CardContent: React.FC<CardContentProps> = ({ children, className = '' }) => {
   return (
-    <div className={`text-gray-700 dark:text-gray-300 ${className}`}>
+    <div className={`text-[var(--bready-text)] ${className}`}>
       {children}
     </div>
   )
@@ -155,7 +155,7 @@ export const CardFooter: React.FC<CardFooterProps> = ({ children, className = ''
   }
 
   return (
-    <div className={`flex items-center mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 ${justifyClasses[justify]} ${className}`}>
+    <div className={`flex items-center mt-4 pt-4 border-t border-[var(--bready-border)] ${justifyClasses[justify]} ${className}`}>
       {children}
     </div>
   )

@@ -4,7 +4,7 @@
   "description": "面宝 - AI面试伙伴",
   "main": "out/main/index.js",
   "scripts": {
-    "dev": "NODE_OPTIONS=\"--expose-gc\" electron-vite dev --inspect=0",
+    "dev": "NODE_OPTIONS=\"--expose-gc\" electron-vite dev --inspect=9229 -- --remote-debugging-port=9222",
     "dev:gc": "electron-vite build && electron --js-flags=\"--expose-gc\" out/main/index.js",
     "dev:api": "tsx src/api-server.ts",
     "dev:full": "concurrently \"npm run dev:api\" \"npm run dev\"",

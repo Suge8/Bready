@@ -112,6 +112,28 @@ class RendererAudioCapture {
       return true
     }
 
+    // 验证配置
+    if (debugAudio) {
+      console.log('📋 音频捕获配置:', JSON.stringify(config, null, 2))
+    }
+
+    // 确保 config 有效
+    if (!config || !config.options) {
+      console.error('❌ 无效的音频捕获配置:', config)
+      // 使用默认配置
+      config = {
+        mode: config?.mode || 'microphone',
+        options: {
+          sampleRate: 24000,
+          channels: 1,
+          bitDepth: 16
+        }
+      }
+      if (debugAudio) {
+        console.log('📋 使用默认配置:', JSON.stringify(config, null, 2))
+      }
+    }
+
     this.config = config
     this.usingSystemAudioDump = false
 
@@ -125,6 +147,9 @@ class RendererAudioCapture {
       if (config.mode === 'system') {
         stream = await this.getSystemAudioStream()
       } else {
+        if (debugAudio) {
+          console.log('🎤 用户选择麦克风模式')
+        }
         stream = await this.getMicrophoneStream()
       }
 
@@ -142,9 +167,9 @@ class RendererAudioCapture {
 
       // 如果系统音频失败，自动降级到麦克风
       if (config.mode === 'system') {
-      if (debugAudio) {
-        console.log('🔄 系统音频失败，自动降级到麦克风模式...')
-      }
+        if (debugAudio) {
+          console.log('🔄 系统音频失败，自动降级到麦克风模式...')
+        }
 
         // 通知用户已降级
         if ((window as any).bready?.ipcRenderer?.send) {
@@ -164,6 +189,15 @@ class RendererAudioCapture {
           console.error('❌ 麦克风音频也失败:', micError)
           return false
         }
+      }
+
+      // 麦克风模式失败，通知前端
+      if ((window as any).bready?.ipcRenderer?.send) {
+        (window as any).bready.ipcRenderer.send('audio-mode-fallback', {
+          from: 'microphone',
+          to: 'none',
+          reason: error instanceof Error ? error.message : String(error)
+        })
       }
 
       return false
@@ -215,14 +249,18 @@ class RendererAudioCapture {
     }
 
     // 启动 SystemAudioDump 进程
-    const success = await (window as any).bready?.ipcRenderer?.invoke('start-system-audio-dump')
-    if (!success) {
-      throw new Error('启动 SystemAudioDump 进程失败')
+    const result = await (window as any).bready?.ipcRenderer?.invoke('start-system-audio-dump')
+    if (debugAudio) {
+      console.log('🚀 SystemAudioDump 启动结果:', result)
+    }
+
+    if (!result || !result.success) {
+      throw new Error(result?.error || '启动 SystemAudioDump 进程失败')
     }
 
     this.usingSystemAudioDump = true
     if (debugAudio) {
-      console.log('✅ SystemAudioDump 启动成功')
+      console.log('✅ SystemAudioDump 启动成功, PID:', result.pid)
     }
     return null
   }
@@ -322,16 +360,50 @@ class RendererAudioCapture {
    * 获取麦克风音频流
    */
   private async getMicrophoneStream(): Promise<MediaStream> {
-    return await navigator.mediaDevices.getUserMedia({
-      audio: {
-        sampleRate: this.config!.options.sampleRate,
-        channelCount: this.config!.options.channels,
-        echoCancellation: false,
-        noiseSuppression: false,
-        autoGainControl: false
-      },
-      video: false
-    })
+    if (debugAudio) {
+      console.log('🎤 尝试获取麦克风音频流...')
+      console.log('🎤 配置:', {
+        sampleRate: this.config?.options?.sampleRate,
+        channels: this.config?.options?.channels
+      })
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          sampleRate: this.config?.options?.sampleRate || 24000,
+          channelCount: this.config?.options?.channels || 1,
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        },
+        video: false
+      })
+
+      if (debugAudio) {
+        console.log('✅ 麦克风音频流获取成功')
+        const audioTracks = stream.getAudioTracks()
+        console.log('🎤 音频轨道数量:', audioTracks.length)
+        if (audioTracks.length > 0) {
+          console.log('🎤 音频轨道设置:', audioTracks[0].getSettings())
+        }
+      }
+
+      return stream
+    } catch (error) {
+      console.error('❌ 获取麦克风音频流失败:', error)
+      // 抛出更具描述性的错误
+      if (error instanceof Error) {
+        if (error.name === 'NotAllowedError') {
+          throw new Error('麦克风权限被拒绝，请在系统设置中授予权限')
+        } else if (error.name === 'NotFoundError') {
+          throw new Error('未找到麦克风设备')
+        } else if (error.name === 'NotReadableError') {
+          throw new Error('麦克风设备被占用或不可用')
+        }
+      }
+      throw error
+    }
   }
 
   /**
@@ -455,12 +527,23 @@ class RendererAudioCapture {
   stop(): void {
     if (debugAudio) {
       console.log('⏹️ 停止渲染进程音频捕获...')
+      console.log('📊 当前状态:', {
+        isCapturing: this.isCapturing,
+        usingSystemAudioDump: this.usingSystemAudioDump,
+        hasProcessor: !!this.processor,
+        hasAudioContext: !!this.audioContext,
+        hasMediaStream: !!this.mediaStream,
+        mode: this.config?.mode
+      })
     }
 
     if (this.usingSystemAudioDump) {
       try {
         if ((window as any).bready?.ipcRenderer?.invoke) {
-          ;(window as any).bready.ipcRenderer.invoke('stop-system-audio-dump')
+          if (debugAudio) {
+            console.log('⏹️ 正在停止 SystemAudioDump...')
+          }
+          ; (window as any).bready.ipcRenderer.invoke('stop-system-audio-dump')
         }
       } catch (error) {
         console.error('停止 SystemAudioDump 失败:', error)
@@ -469,21 +552,42 @@ class RendererAudioCapture {
     }
 
     if (this.processor) {
+      if (debugAudio) {
+        console.log('⏹️ 断开音频处理器...')
+      }
       this.processor.disconnect()
       this.processor = null
     }
 
     if (this.audioContext) {
+      if (debugAudio) {
+        console.log('⏹️ 关闭音频上下文...')
+      }
       this.audioContext.close()
       this.audioContext = null
     }
 
     if (this.mediaStream) {
-      this.mediaStream.getTracks().forEach(track => track.stop())
+      if (debugAudio) {
+        console.log('⏹️ 停止媒体流轨道...')
+        const tracks = this.mediaStream.getTracks()
+        console.log(`   共 ${tracks.length} 个轨道`)
+      }
+      this.mediaStream.getTracks().forEach(track => {
+        if (debugAudio) {
+          console.log(`   停止轨道: ${track.kind} - ${track.label}`)
+        }
+        track.stop()
+      })
       this.mediaStream = null
     }
 
+    // 清空音频缓存
+    this.audioBuffer = new Float32Array(0)
+
     this.isCapturing = false
+    this.config = null
+
     if (debugAudio) {
       console.log('✅ 渲染进程音频捕获已停止')
     }

@@ -98,14 +98,23 @@ let textSystemPrompt = ''
 let lastNoSessionLogAt = 0
 const NO_SESSION_LOG_COOLDOWN_MS = 2000
 
+// ===== 文本对话历史 =====
+// 用于保存协作模式下的对话上下文
+interface ChatMessage {
+  role: 'user' | 'model'
+  parts: { text: string }[]
+}
+let textChatHistory: ChatMessage[] = []
+const MAX_CHAT_HISTORY = 20 // 最多保留20轮对话（40条消息）
+
 // ===== 转录检测变量 =====
 let lastTranscriptionUpdate = 0
 let transcriptionDebounceTimer: NodeJS.Timeout | null = null
-const TRANSCRIPTION_DEBOUNCE_MS = 800  // 转录 800ms 没更新就触发文本模型 API
+const TRANSCRIPTION_DEBOUNCE_MS = 800  // 转录 800ms 没更新就触发文本模型 API - 优化响应速度
 let isProcessingVoiceInput = false  // 防止重复触发
 
 // ===== 文本回答模型配置 =====
-const TEXT_RESPONSE_MODEL = 'gemini-3-flash-preview'
+const TEXT_RESPONSE_MODEL = 'gemini-2.5-flash-lite-preview-09-2025'
 const TEXT_RESPONSE_THINKING_BUDGET = 0  // 思考预算为0
 
 // ===== API Key 轮询机制 =====
@@ -160,12 +169,16 @@ let messageCount = 0
 const MAX_CONTEXT_MESSAGES = 50 // 最大上下文消息数量
 
 // 音频处理计数器已在上面声明
+const MIN_WINDOW_WIDTH = 960
+const MIN_WINDOW_HEIGHT = 640
 
 function createWindow(): BrowserWindow {
   // Create the browser window.
   mainWindow = new BrowserWindow({
     width: 1000,
     height: 700,
+    minWidth: MIN_WINDOW_WIDTH,
+    minHeight: MIN_WINDOW_HEIGHT,
     resizable: true,
     show: false,
     autoHideMenuBar: true,
@@ -200,7 +213,9 @@ function createWindow(): BrowserWindow {
     if (fs.existsSync(boundsFile)) {
       const data = JSON.parse(fs.readFileSync(boundsFile, 'utf-8'))
       if (data?.width && data?.height) {
-        mainWindow.setSize(Number(data.width), Number(data.height))
+        const width = Math.max(Number(data.width), MIN_WINDOW_WIDTH)
+        const height = Math.max(Number(data.height), MIN_WINDOW_HEIGHT)
+        mainWindow.setSize(width, height)
       }
     }
 
@@ -604,6 +619,7 @@ ipcMain.handle('reconnect-gemini', async () => {
     isInitializingSession = false
     messageBuffer = ''
     currentTranscription = ''
+    textChatHistory = [] // 清空对话历史
 
     // 等待一下确保清理完成
     await new Promise(resolve => setTimeout(resolve, 1000))
@@ -651,6 +667,7 @@ ipcMain.handle('disconnect-gemini', () => {
   currentTranscription = ''
   textClient = null
   textSystemPrompt = ''
+  textChatHistory = [] // 清空对话历史
 
   // 通知渲染进程
   sendToRenderer('session-closed')
@@ -672,7 +689,7 @@ ipcMain.handle('send-text-message', async (event, message: string) => {
   return await generateTextResponse(message.trim())
 })
 
-// 使用文本模型生成回答（用于打字输入和语音转录后的回答）
+// 使用文本模型生成回答（用于打字输入和语音转录后的回答）- 流式版本
 async function generateTextResponse(userMessage: string): Promise<{ success: boolean; error?: string }> {
   try {
     if (!textClient) {
@@ -680,17 +697,25 @@ async function generateTextResponse(userMessage: string): Promise<{ success: boo
       return { success: false, error: 'AI 服务未初始化，请先连接' }
     }
 
-    console.log('📨 正在使用文本模型生成回答...')
+    console.log('📨 正在使用文本模型生成流式回答...')
     sendToRenderer('update-status', '正在思考...')
 
-    const response = await textClient.models.generateContent({
+    // 将用户消息添加到历史记录
+    textChatHistory.push({
+      role: 'user',
+      parts: [{ text: userMessage }]
+    })
+
+    // 构建包含历史记录的 contents
+    const contents = textChatHistory.map(msg => ({
+      role: msg.role,
+      parts: msg.parts
+    }))
+
+    // 使用流式 API
+    const streamResponse = await textClient.models.generateContentStream({
       model: TEXT_RESPONSE_MODEL,
-      contents: [
-        {
-          role: 'user',
-          parts: [{ text: userMessage }]
-        }
-      ],
+      contents: contents,
       config: {
         systemInstruction: textSystemPrompt,
         temperature: 1.0,
@@ -701,14 +726,49 @@ async function generateTextResponse(userMessage: string): Promise<{ success: boo
       }
     })
 
-    const responseText = response.text
-    if (responseText) {
-      console.log('✅ 文本模型回答:', responseText.substring(0, 100))
-      sendToRenderer('ai-response-update', responseText)
-      sendToRenderer('ai-response', responseText)
+    // 累积完整回复文本
+    let fullResponseText = ''
+    let chunkCount = 0
+
+    // 逐块处理流式响应
+    for await (const chunk of streamResponse) {
+      const chunkText = chunk.text
+      if (chunkText) {
+        fullResponseText += chunkText
+        chunkCount++
+
+        // 每收到一个 chunk 就发送当前累积的文本到前端
+        sendToRenderer('ai-response-update', fullResponseText)
+
+        // 第一个 chunk 时更新状态
+        if (chunkCount === 1) {
+          sendToRenderer('update-status', '正在回复...')
+        }
+      }
+    }
+
+    // 流式响应完成后，发送最终完整回复
+    if (fullResponseText) {
+      console.log('✅ 文本模型流式回答完成，共', chunkCount, '个块，总长度:', fullResponseText.length)
+      
+      // 将 AI 回复添加到历史记录
+      textChatHistory.push({
+        role: 'model',
+        parts: [{ text: fullResponseText }]
+      })
+
+      // 限制历史记录长度，保留最近的对话
+      if (textChatHistory.length > MAX_CHAT_HISTORY * 2) {
+        textChatHistory = textChatHistory.slice(-MAX_CHAT_HISTORY * 2)
+        console.log('📝 对话历史已压缩，当前保留', textChatHistory.length, '条消息')
+      }
+
+      sendToRenderer('ai-response', fullResponseText)
       sendToRenderer('update-status', '正在聆听...')
     } else {
       console.warn('⚠️ 文本模型返回空回答')
+      // 如果回复为空，移除刚才添加的用户消息
+      textChatHistory.pop()
       sendToRenderer('update-status', '正在聆听...')
     }
 
@@ -716,7 +776,12 @@ async function generateTextResponse(userMessage: string): Promise<{ success: boo
 
   } catch (error: any) {
     const errorMessage = error?.message || String(error)
-    console.error('❌ 文本模型生成失败:', errorMessage)
+    console.error('❌ 文本模型流式生成失败:', errorMessage)
+
+    // 发生错误时，移除刚才添加的用户消息
+    if (textChatHistory.length > 0 && textChatHistory[textChatHistory.length - 1].role === 'user') {
+      textChatHistory.pop()
+    }
 
     // 检查是否是配额超限错误
     if (errorMessage.includes('429') || errorMessage.includes('quota')) {
@@ -1191,7 +1256,7 @@ ipcMain.handle('start-system-audio-dump', async () => {
 
     // 设置音频处理参数（与 cheating-daddy 完全一致）
     // 设置音频处理参数（与 cheating-daddy 完全一致）
-    const CHUNK_DURATION = 0.05        // 50ms 批处理间隔 - 极低延迟
+    const CHUNK_DURATION = 0.05        // 50ms 批处理间隔 - 极低延迟优化
     const SAMPLE_RATE = 24000          // 24kHz 采样率
     const BYTES_PER_SAMPLE = 2         // 16-bit = 2 bytes
     const CHANNELS = 2                 // 立体声
@@ -1292,6 +1357,14 @@ ipcMain.handle('analyze-preparation', async (event, preparationData) => {
   console.log('收到AI分析请求:', preparationData)
   const result = await analyzePreparation(preparationData)
   console.log('AI分析结果:', result.success ? '成功' : `失败: ${result.error}`)
+  return result
+})
+
+// 文件内容提取 IPC 处理器
+ipcMain.handle('extract-file-content', async (event, fileData: { fileName: string, fileType: string, base64Data: string }) => {
+  console.log('收到文件内容提取请求:', fileData.fileName, fileData.fileType)
+  const result = await extractFileContent(fileData)
+  console.log('文件内容提取结果:', result.success ? '成功' : `失败: ${result.error}`)
   return result
 })
 
@@ -1846,7 +1919,7 @@ async function startMacOSAudioCapture(): Promise<boolean> {
     }
 
     // 音频参数配置
-    const CHUNK_DURATION = 0.2 // 200ms chunks - 降低转录延迟
+    const CHUNK_DURATION = 0.05 // 50ms chunks - 极低延迟优化
     const SAMPLE_RATE = 24000
     const BYTES_PER_SAMPLE = 2
     const CHANNELS = 2 // SystemAudioDump 输出立体声
@@ -2396,7 +2469,9 @@ async function testAudioCapture(): Promise<{ success: boolean; message: string; 
   }
 }
 
-// AI 分析功能
+// AI 分析功能 - 使用 gemini-3-flash-preview 进行严格评估
+const ANALYSIS_MODEL = 'gemini-3-flash-preview'
+
 async function analyzePreparation(preparationData: {
   name: string
   jobDescription: string
@@ -2405,6 +2480,7 @@ async function analyzePreparation(preparationData: {
   success: boolean
   analysis?: {
     matchScore: number
+    jobRequirements: string[]
     strengths: string[]
     weaknesses: string[]
     suggestions: string[]
@@ -2415,7 +2491,6 @@ async function analyzePreparation(preparationData: {
   try {
     const apiKey = process.env.VITE_GEMINI_API_KEY
     console.log('AI分析 - API密钥状态:', apiKey ? `存在，长度: ${apiKey.length}` : '未找到')
-    console.log('AI分析 - 环境变量:', Object.keys(process.env).filter(key => key.includes('GEMINI')))
 
     if (!apiKey) {
       console.error('AI分析失败: API密钥未配置')
@@ -2427,46 +2502,64 @@ async function analyzePreparation(preparationData: {
 
     const client = new GoogleGenAI({ apiKey })
 
-    // 构建分析提示词
     const analysisPrompt = `
-作为一名专业的HR和面试专家，请分析以下面试准备信息：
+你是一位资深的人力资源专家和面试官，拥有15年以上的招聘经验，曾在多家顶级互联网公司担任招聘总监。请以极其严格、专业、客观的标准分析以下面试准备信息。
+
+**极其严格的评分原则（必须严格遵守）：**
+- 评分必须严格遵循 0-100 分制
+- 50分以下：明显不匹配，缺乏多项关键技能或经验，不建议面试
+- 50-60分：勉强匹配，存在较多短板，需要大量准备
+- 60-70分：基本匹配，具备部分要求但有明显不足
+- 70-80分：较好匹配，具备大部分要求，有一定竞争力
+- 80-90分：优秀匹配，几乎完全符合要求（仅限经验丰富且高度契合的候选人）
+- 90分以上：极度罕见，仅限于完美契合且有突出亮点的情况
+- **如果没有提供简历，评分直接为0分，无法进行任何有效评估**
+- **即使简历优秀，也要严格对照岗位要求逐条评估，不要轻易给高分**
 
 **准备名称：** ${preparationData.name}
 
-**岗位描述：**
+**岗位描述（JD）：**
 ${preparationData.jobDescription}
 
-${preparationData.resume ? `**个人简历：**\n${preparationData.resume}` : '**注意：** 未提供个人简历信息'}
+${preparationData.resume ? `**个人简历：**\n${preparationData.resume}` : '**警告：** 未提供个人简历，无法进行任何有效评估，评分将直接为0分'}
 
-请从以下几个维度进行深度分析，并以JSON格式返回结果：
+请严格按照以下要求分析并返回JSON：
 
-1. **匹配度评分** (0-100分)：评估候选人与岗位的整体匹配程度
-2. **优势分析**：列出候选人的主要优势和亮点（3-5个要点）
-3. **劣势分析**：指出可能的不足和需要改进的地方（2-4个要点）
-4. **面试建议**：提供具体的面试准备建议（3-5个要点）
-5. **系统提示词**：为AI面试助手生成一个专业的系统提示词，用于在面试协作模式中提供个性化帮助
+1. **matchScore** (必填，0-100整数)：严格的综合匹配度评分，请逐条对照岗位要求评估
 
-请确保分析客观、专业、具有建设性。返回格式如下：
+2. **jobRequirements** (必填，数组，5-6项)：从岗位描述JD中提炼出最核心的关键要求，包括：
+   - 必备技能要求
+   - 经验年限要求  
+   - 学历要求
+   - 核心能力素质
+   每条15-20字，要具体明确
 
+3. **strengths** (必填，数组，4-5项)：候选人的核心竞争优势，每条20-30字，要具体说明为什么是优势
+
+4. **weaknesses** (必填，数组，3-4项)：候选人需要改进的方面，每条20-30字，要指出具体的差距和改进方向
+
+5. **suggestions** (必填，数组，4-5项)：针对性的面试准备建议，每条25-35字，要包含具体的准备方法或可能被问到的问题
+
+6. **systemPrompt** (必填，字符串)：为AI面试助手生成的系统提示词
+
+返回格式（所有字段必填，字段名必须完全一致）：
 {
-  "matchScore": 85,
-  "strengths": ["优势1", "优势2", "优势3"],
-  "weaknesses": ["不足1", "不足2"],
-  "suggestions": ["建议1", "建议2", "建议3"],
-  "systemPrompt": "你是一名专业的面试助手，专门帮助候选人准备[岗位名称]面试。基于候选人的背景和岗位要求，你需要..."
+  "matchScore": 65,
+  "jobRequirements": ["要求1详细描述", "要求2详细描述", "要求3详细描述", "要求4详细描述", "要求5详细描述"],
+  "strengths": ["优势1：具体说明为什么是优势", "优势2：具体说明", "优势3：具体说明", "优势4：具体说明"],
+  "weaknesses": ["改进1：指出差距和改进方向", "改进2：指出差距", "改进3：指出差距"],
+  "suggestions": ["建议1：具体准备方法", "建议2：可能被问的问题", "建议3：回答策略", "建议4：注意事项"],
+  "systemPrompt": "你是一名专业的面试助手..."
 }
 `
 
     const response = await client.models.generateContent({
-      model: TEXT_RESPONSE_MODEL,
+      model: ANALYSIS_MODEL,
       contents: analysisPrompt,
       config: {
         responseMimeType: 'application/json',
-        temperature: 1.0,
-        maxOutputTokens: 2000,
-        thinkingConfig: {
-          thinkingBudget: TEXT_RESPONSE_THINKING_BUDGET
-        }
+        temperature: 0.7,
+        maxOutputTokens: 3000
       }
     })
 
@@ -2480,12 +2573,45 @@ ${preparationData.resume ? `**个人简历：**\n${preparationData.resume}` : '*
 
     try {
       const analysis = JSON.parse(analysisText)
+      console.log('========== AI分析原始返回 ==========')
+      console.log(JSON.stringify(analysis, null, 2))
+      console.log('所有字段:', Object.keys(analysis))
+      console.log('=====================================')
+      
+      if (analysis.matchScore > 100) analysis.matchScore = 100
+      if (analysis.matchScore < 0) analysis.matchScore = 0
+      if (!preparationData.resume) {
+        analysis.matchScore = 0
+      }
+      
+      // 兼容不同的字段名
+      if (!analysis.jobRequirements) {
+        // 尝试其他可能的字段名
+        analysis.jobRequirements = analysis.job_requirements 
+          || analysis.requirements 
+          || analysis.岗位需求 
+          || analysis.岗位要求
+          || []
+      }
+      if (!analysis.strengths) {
+        analysis.strengths = analysis.核心优势 || []
+      }
+      if (!analysis.weaknesses) {
+        analysis.weaknesses = analysis.改进空间 || analysis.劣势 || []
+      }
+      if (!analysis.suggestions) {
+        analysis.suggestions = analysis.面试建议 || analysis.建议 || []
+      }
+      
+      console.log('处理后 jobRequirements:', analysis.jobRequirements)
+      
       return {
         success: true,
         analysis
       }
     } catch (parseError) {
       console.error('Failed to parse AI analysis result:', parseError)
+      console.error('原始文本:', analysisText)
       return {
         success: false,
         error: 'AI 分析结果格式错误'
@@ -2497,6 +2623,118 @@ ${preparationData.resume ? `**个人简历：**\n${preparationData.resume}` : '*
     return {
       success: false,
       error: `AI 分析失败: ${error.message || error}`
+    }
+  }
+}
+
+// 文件内容提取功能
+async function extractFileContent(fileData: {
+  fileName: string
+  fileType: string
+  base64Data: string
+}): Promise<{
+  success: boolean
+  content?: string
+  error?: string
+}> {
+  try {
+    const apiKey = process.env.VITE_GEMINI_API_KEY
+    console.log('文件内容提取 - API密钥状态:', apiKey ? `存在，长度: ${apiKey.length}` : '未找到')
+
+    if (!apiKey) {
+      console.error('文件内容提取失败: API密钥未配置')
+      return {
+        success: false,
+        error: 'Gemini API 密钥未配置'
+      }
+    }
+
+    const client = new GoogleGenAI({ apiKey })
+
+    // 确定 MIME 类型
+    let mimeType = fileData.fileType
+    if (!mimeType || mimeType === 'application/octet-stream') {
+      const ext = fileData.fileName.toLowerCase().split('.').pop()
+      switch (ext) {
+        case 'pdf':
+          mimeType = 'application/pdf'
+          break
+        case 'png':
+          mimeType = 'image/png'
+          break
+        case 'jpg':
+        case 'jpeg':
+          mimeType = 'image/jpeg'
+          break
+        case 'webp':
+          mimeType = 'image/webp'
+          break
+        default:
+          mimeType = 'application/octet-stream'
+      }
+    }
+
+    console.log('文件内容提取 - 文件类型:', mimeType)
+
+    // 构建提取提示词
+    const extractionPrompt = `请仔细阅读并提取这份文档中的所有文字内容。
+
+要求：
+1. 完整提取所有文字，保持原有的结构和格式
+2. 如果是简历，请按照以下格式整理：
+   - 个人信息（姓名、联系方式等）
+   - 教育背景
+   - 工作经历
+   - 技能特长
+   - 项目经验
+   - 其他信息
+3. 如果是其他类型的文档，保持原有的段落结构
+4. 只返回提取的文字内容，不要添加任何额外的说明或评论
+
+请直接输出提取的内容：`
+
+    const response = await client.models.generateContent({
+      model: TEXT_RESPONSE_MODEL,
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            {
+              inlineData: {
+                mimeType: mimeType,
+                data: fileData.base64Data
+              }
+            },
+            {
+              text: extractionPrompt
+            }
+          ]
+        }
+      ],
+      config: {
+        temperature: 0.1,
+        maxOutputTokens: 8000
+      }
+    })
+
+    const extractedText = response.text
+    if (!extractedText) {
+      return {
+        success: false,
+        error: '文件内容提取返回空结果'
+      }
+    }
+
+    return {
+      success: true,
+      content: extractedText.trim()
+    }
+
+  } catch (error: any) {
+    console.error('File content extraction failed:', error)
+    return {
+      success: false,
+      error: `文件内容提取失败: ${error.message || error}`
     }
   }
 }

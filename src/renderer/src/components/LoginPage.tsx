@@ -4,11 +4,13 @@ import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Mail, Phone, Eye, EyeOff, Loader2 } from 'lucide-react'
+import { useI18n } from '../contexts/I18nContext'
 
 type LoginMode = 'email' | 'phone' | 'signup'
 
 const LoginPage: React.FC = () => {
   const { signIn, signUp, signInWithGoogle, signInWithPhone, verifyOtp, loading } = useAuth()
+  const { t } = useI18n()
   const [mode, setMode] = useState<LoginMode>('email')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -29,7 +31,7 @@ const LoginPage: React.FC = () => {
         setError(error.message)
       }
     } catch (err: any) {
-      setError(err.message || '登录失败')
+      setError(err.message || t('login.errors.loginFailed'))
     }
   }
 
@@ -42,14 +44,14 @@ const LoginPage: React.FC = () => {
       if (error) {
         setError(error.message)
       } else {
-        setError('注册成功！正在为您登录...')
+        setError(t('login.errors.signupSuccess'))
         // 注册成功后自动登录
         setTimeout(() => {
           signIn(email, password)
         }, 1000)
       }
     } catch (err: any) {
-      setError(err.message || '注册失败')
+      setError(err.message || t('login.errors.signupFailed'))
     }
   }
 
@@ -61,7 +63,7 @@ const LoginPage: React.FC = () => {
         setError(error.message)
       }
     } catch (err: any) {
-      setError(err.message || 'Google 登录失败')
+      setError(err.message || t('login.errors.googleFailed'))
     }
   }
 
@@ -77,7 +79,7 @@ const LoginPage: React.FC = () => {
         setShowOtpInput(true)
       }
     } catch (err: any) {
-      setError(err.message || '发送验证码失败')
+      setError(err.message || t('login.errors.sendCodeFailed'))
     }
   }
 
@@ -91,7 +93,7 @@ const LoginPage: React.FC = () => {
         setError(error.message)
       }
     } catch (err: any) {
-      setError(err.message || '验证码验证失败')
+      setError(err.message || t('login.errors.verifyFailed'))
     }
   }
 
@@ -111,28 +113,28 @@ const LoginPage: React.FC = () => {
       }
     } catch (err: any) {
       console.error('❌ handleTestLogin: Exception:', err)
-      setError(err.message || '测试登录失败')
+      setError(err.message || t('login.errors.testLoginFailed'))
     }
   }
 
   return (
-    <div className="h-screen w-screen overflow-hidden bg-gray-50 flex flex-col">
+    <div className="h-screen w-screen overflow-hidden bg-[var(--bready-bg)] text-[var(--bready-text)] flex flex-col">
       {/* 拖拽区域 */}
       <div className="h-12 w-full" style={{ WebkitAppRegion: 'drag' } as any}></div>
 
       {/* 主要内容 */}
       <div className="flex-1 overflow-y-auto" style={{ WebkitAppRegion: 'no-drag' } as any}>
         <div className="min-h-full flex items-center justify-center p-4">
-          <Card className="w-full max-w-md">
+          <Card className="w-full max-w-md border border-[var(--bready-border)] bg-[var(--bready-surface)] shadow-xl">
             <CardHeader className="text-center">
-              <CardTitle className="text-2xl font-bold">面宝 Bready</CardTitle>
+              <CardTitle className="text-2xl font-bold">{t('login.title')}</CardTitle>
               <CardDescription>
-                {mode === 'signup' ? '创建新账户' : '登录您的账户'}
+                {mode === 'signup' ? t('login.subtitleSignup') : t('login.subtitleLogin')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {error && (
-                <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg">
+                <div className="p-3 text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50 rounded-lg">
                   {error}
                 </div>
               )}
@@ -142,42 +144,42 @@ const LoginPage: React.FC = () => {
                 <form onSubmit={mode === 'signup' ? handleEmailSignup : handleEmailLogin} className="space-y-4">
                   {mode === 'signup' && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">昵称</label>
+                      <label className="block text-sm font-medium text-[var(--bready-text-muted)] mb-1">{t('login.nickname')}</label>
                       <Input
                         type="text"
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
-                        placeholder="请输入您的昵称"
+                        placeholder={t('login.placeholders.nickname')}
                         required
                       />
                     </div>
                   )}
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">邮箱</label>
+                    <label className="block text-sm font-medium text-[var(--bready-text-muted)] mb-1">{t('login.email')}</label>
                     <Input
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="请输入邮箱地址"
+                      placeholder={t('login.placeholders.email')}
                       required
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">密码</label>
+                    <label className="block text-sm font-medium text-[var(--bready-text-muted)] mb-1">{t('login.password')}</label>
                     <div className="relative">
                       <Input
                         type={showPassword ? 'text' : 'password'}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        placeholder="请输入密码"
+                        placeholder={t('login.placeholders.password')}
                         required
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 cursor-pointer"
                       >
                         {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
@@ -186,7 +188,7 @@ const LoginPage: React.FC = () => {
 
                   <Button type="submit" className="w-full" disabled={loading}>
                     {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                    {mode === 'signup' ? '注册' : '登录'}
+                    {mode === 'signup' ? t('login.signup') : t('login.login')}
                   </Button>
                 </form>
               ) : null}
@@ -195,19 +197,19 @@ const LoginPage: React.FC = () => {
               {mode === 'phone' && !showOtpInput && (
                 <form onSubmit={handlePhoneLogin} className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">手机号</label>
+                    <label className="block text-sm font-medium text-[var(--bready-text-muted)] mb-1">{t('login.phone')}</label>
                     <Input
                       type="tel"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      placeholder="请输入手机号"
+                      placeholder={t('login.placeholders.phone')}
                       required
                     />
                   </div>
 
                   <Button type="submit" className="w-full" disabled={loading}>
                     {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                    发送验证码
+                    {t('login.sendCode')}
                   </Button>
                 </form>
               )}
@@ -216,12 +218,12 @@ const LoginPage: React.FC = () => {
               {mode === 'phone' && showOtpInput && (
                 <form onSubmit={handleOtpVerify} className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">验证码</label>
+                    <label className="block text-sm font-medium text-[var(--bready-text-muted)] mb-1">{t('login.code')}</label>
                     <Input
                       type="text"
                       value={otp}
                       onChange={(e) => setOtp(e.target.value)}
-                      placeholder="请输入6位验证码"
+                      placeholder={t('login.placeholders.code')}
                       maxLength={6}
                       required
                     />
@@ -229,7 +231,7 @@ const LoginPage: React.FC = () => {
 
                   <Button type="submit" className="w-full" disabled={loading}>
                     {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                    验证登录
+                    {t('login.verify')}
                   </Button>
 
                   <Button
@@ -238,7 +240,7 @@ const LoginPage: React.FC = () => {
                     className="w-full"
                     onClick={() => setShowOtpInput(false)}
                   >
-                    重新发送验证码
+                    {t('login.resend')}
                   </Button>
                 </form>
               )}
@@ -256,7 +258,7 @@ const LoginPage: React.FC = () => {
                   <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
                   <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                 </svg>
-                使用 Google 登录
+                {t('login.google')}
               </Button>
 
               {/* 测试登录按钮 */}
@@ -266,24 +268,24 @@ const LoginPage: React.FC = () => {
                 className="w-full text-sm"
                 disabled={loading}
               >
-                管理员测试登录
+                {t('login.adminTest')}
               </Button>
 
               {/* 切换登录方式 */}
               <div className="flex justify-center space-x-4 text-sm">
                 <button
                   onClick={() => setMode('email')}
-                  className={`flex items-center space-x-1 ${mode === 'email' ? 'text-blue-600' : 'text-gray-500'}`}
+                  className={`flex items-center space-x-1 cursor-pointer transition-colors ${mode === 'email' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}
                 >
                   <Mail className="w-4 h-4" />
-                  <span>邮箱</span>
+                  <span>{t('login.switchEmail')}</span>
                 </button>
                 <button
                   onClick={() => setMode('phone')}
-                  className={`flex items-center space-x-1 ${mode === 'phone' ? 'text-blue-600' : 'text-gray-500'}`}
+                  className={`flex items-center space-x-1 cursor-pointer transition-colors ${mode === 'phone' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}
                 >
                   <Phone className="w-4 h-4" />
-                  <span>手机</span>
+                  <span>{t('login.switchPhone')}</span>
                 </button>
               </div>
 
@@ -291,22 +293,22 @@ const LoginPage: React.FC = () => {
               <div className="text-center text-sm">
                 {mode === 'signup' ? (
                   <span>
-                    已有账户？
+                    {t('login.hasAccount')}
                     <button
                       onClick={() => setMode('email')}
-                      className="text-blue-600 hover:underline ml-1"
+                      className="text-blue-600 dark:text-blue-400 hover:underline ml-1 cursor-pointer"
                     >
-                      立即登录
+                      {t('login.loginNow')}
                     </button>
                   </span>
                 ) : (
                   <span>
-                    没有账户？
+                    {t('login.noAccount')}
                     <button
                       onClick={() => setMode('signup')}
-                      className="text-blue-600 hover:underline ml-1"
+                      className="text-blue-600 dark:text-blue-400 hover:underline ml-1 cursor-pointer"
                     >
-                      立即注册
+                      {t('login.signupNow')}
                     </button>
                   </span>
                 )}

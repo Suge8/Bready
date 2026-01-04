@@ -1,29 +1,69 @@
-/* 导入 Inter 字体 */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+/* 导入 Space Grotesk 和 Inter 字体 */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
 
 @import "tailwindcss";
 
 :root {
   --background: 0 0% 100%;
-  --foreground: 0 0% 3.9%;
+  --foreground: 0 0% 4%;
   --card: 0 0% 100%;
-  --card-foreground: 0 0% 3.9%;
+  --card-foreground: 0 0% 4%;
   --popover: 0 0% 100%;
-  --popover-foreground: 0 0% 3.9%;
+  --popover-foreground: 0 0% 4%;
   --primary: 0 0% 9%;
   --primary-foreground: 0 0% 98%;
-  --secondary: 0 0% 96.1%;
+  --secondary: 0 0% 96%;
   --secondary-foreground: 0 0% 9%;
-  --muted: 0 0% 96.1%;
-  --muted-foreground: 0 0% 45.1%;
-  --accent: 0 0% 96.1%;
+  --muted: 0 0% 96%;
+  --muted-foreground: 0 0% 45%;
+  --accent: 0 0% 96%;
   --accent-foreground: 0 0% 9%;
-  --destructive: 0 84.2% 60.2%;
+  --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 98%;
-  --border: 0 0% 89.8%;
-  --input: 0 0% 89.8%;
-  --ring: 0 0% 3.9%;
-  --radius: 0.5rem;
+  --border: 0 0% 90%;
+  --input: 0 0% 90%;
+  --ring: 0 0% 15%;
+  --radius: 0.75rem;
+  --bready-bg: #f8fafc;
+  --bready-surface: #ffffff;
+  --bready-surface-2: #f1f5f9;
+  --bready-surface-3: #e2e8f0;
+  --bready-border: rgba(15, 23, 42, 0.08);
+  --bready-text: #0f172a;
+  --bready-text-muted: #64748b;
+  --bready-accent: #3b82f6;
+  --bready-accent-contrast: #ffffff;
+  --bready-glow: rgba(59, 130, 246, 0.15);
+}
+
+.dark {
+  --background: 0 0% 0%;
+  --foreground: 0 0% 98%;
+  --card: 0 0% 4%;
+  --card-foreground: 0 0% 98%;
+  --popover: 0 0% 4%;
+  --popover-foreground: 0 0% 98%;
+  --primary: 0 0% 98%;
+  --primary-foreground: 0 0% 0%;
+  --secondary: 0 0% 8%;
+  --secondary-foreground: 0 0% 98%;
+  --muted: 0 0% 8%;
+  --muted-foreground: 0 0% 63%;
+  --accent: 0 0% 8%;
+  --accent-foreground: 0 0% 98%;
+  --border: 0 0% 10%;
+  --input: 0 0% 10%;
+  --ring: 0 0% 80%;
+  --bready-bg: #000000;
+  --bready-surface: #0a0a0a;
+  --bready-surface-2: #141414;
+  --bready-surface-3: #1a1a1a;
+  --bready-border: rgba(255, 255, 255, 0.1);
+  --bready-text: #fafafa;
+  --bready-text-muted: #a1a1aa;
+  --bready-accent: #ffffff;
+  --bready-accent-contrast: #000000;
+  --bready-glow: rgba(255, 255, 255, 0.1);
 }
 
 /* 全局样式 */
@@ -40,9 +80,9 @@ html,
 body {
   margin: 0;
   padding: 0;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background-color: #ffffff;
-  color: #000000;
+  font-family: 'Inter', 'Space Grotesk', system-ui, -apple-system, sans-serif;
+  background-color: var(--bready-bg);
+  color: var(--bready-text);
   font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -140,13 +180,29 @@ body {
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(15, 15, 15, 0.2);
   border-radius: 4px;
   border: none;
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(15, 15, 15, 0.3);
+}
+
+.dark .scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.scrollbar-thin {
+  scrollbar-color: rgba(15, 15, 15, 0.3) transparent;
+}
+
+.dark .scrollbar-thin {
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
 }
 
 /* 隐藏滚动条但保持滚动功能 */
@@ -212,7 +268,7 @@ body {
 
 /* 现代化渐变背景 */
 .gradient-bg {
-  background: linear-gradient(135deg, #000000 0%, #1f2937 50%, #374151 100%);
+  background: linear-gradient(135deg, #0a0a0a 0%, #18181b 50%, #27272a 100%);
 }
 
 /* 现代化文本渐变 */
@@ -412,4 +468,224 @@ body {
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+/* 径向渐变背景 */
+.bg-gradient-radial {
+  background: radial-gradient(circle, var(--tw-gradient-stops));
+}
+
+/* 现代化玻璃态效果 */
+.glass-morphism {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.dark .glass-morphism {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+/* 渐变边框效果 */
+.gradient-border {
+  position: relative;
+  background: linear-gradient(var(--bready-surface), var(--bready-surface)) padding-box,
+              linear-gradient(135deg, rgba(59, 130, 246, 0.5), rgba(147, 51, 234, 0.5)) border-box;
+  border: 1px solid transparent;
+}
+
+/* 光晕效果 */
+.glow-effect {
+  box-shadow: 0 0 40px -10px rgba(59, 130, 246, 0.3);
+}
+
+.dark .glow-effect {
+  box-shadow: 0 0 40px -10px rgba(96, 165, 250, 0.2);
+}
+
+/* 悬浮卡片效果 */
+.floating-card {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.floating-card:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 
+    0 25px 50px -12px rgba(0, 0, 0, 0.15),
+    0 0 0 1px rgba(59, 130, 246, 0.1);
+}
+
+.dark .floating-card:hover {
+  box-shadow: 
+    0 25px 50px -12px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(96, 165, 250, 0.15);
+}
+
+/* 渐变文字动画 */
+.gradient-text-animated {
+  background: linear-gradient(
+    90deg,
+    #3b82f6,
+    #8b5cf6,
+    #ec4899,
+    #3b82f6
+  );
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradient-shift 8s ease infinite;
+}
+
+@keyframes gradient-shift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* 呼吸动画 */
+@keyframes breathe {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+}
+
+.animate-breathe {
+  animation: breathe 4s ease-in-out infinite;
+}
+
+/* 浮动动画 */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+/* 闪烁光效 */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.shimmer-effect {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.4) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+/* 按钮涟漪效果 */
+.ripple-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.ripple-effect::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.6s ease, height 0.6s ease;
+}
+
+.ripple-effect:active::after {
+  width: 300px;
+  height: 300px;
+}
+
+/* 滑入动画延迟 */
+.slide-in-from-bottom-8 {
+  animation-name: animate-slide-in-from-bottom-8;
+}
+
+@keyframes animate-slide-in-from-bottom-8 {
+  from {
+    opacity: 0;
+    transform: translateY(2rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 延迟类 */
+.delay-100 {
+  animation-delay: 100ms;
+}
+
+.delay-200 {
+  animation-delay: 200ms;
+}
+
+.delay-300 {
+  animation-delay: 300ms;
+}
+
+.delay-400 {
+  animation-delay: 400ms;
+}
+
+.delay-500 {
+  animation-delay: 500ms;
+}
+
+/* 现代化阴影 */
+.shadow-modern {
+  box-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.02),
+    0 4px 8px rgba(0, 0, 0, 0.04),
+    0 16px 32px rgba(0, 0, 0, 0.06);
+}
+
+.shadow-modern-lg {
+  box-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.02),
+    0 8px 16px rgba(0, 0, 0, 0.04),
+    0 24px 48px rgba(0, 0, 0, 0.08);
+}
+
+/* 毛玻璃卡片 */
+.frosted-card {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(12px) saturate(150%);
+  -webkit-backdrop-filter: blur(12px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+}
+
+.dark .frosted-card {
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { AlertTriangle, FolderOpen } from 'lucide-react'
+import { useI18n } from '../../contexts/I18nContext'
 
 interface SmartFormValidationProps {
   value: string
@@ -21,28 +21,29 @@ export const SmartFormValidation: React.FC<SmartFormValidationProps> = ({
   required = false,
   maxLength = 50
 }) => {
+  const { t } = useI18n()
   const [error, setError] = useState<string | null>(null)
   const [helperText, setHelperText] = useState<string>('')
 
   useEffect(() => {
     validateField()
-  }, [value])
+  }, [value, required, maxLength, placeholder, t])
 
   const validateField = () => {
     if (required && !value.trim()) {
-      setError('此字段为必填项')
-      setHelperText('请输入内容')
+      setError(t('form.validation.required'))
+      setHelperText(t('form.validation.requiredHint'))
       return
     }
 
     if (value.length > maxLength) {
-      setError(`内容不能超过${maxLength}个字符`)
-      setHelperText(`当前${value.length}个字符`)
+      setError(t('form.validation.tooLong', { max: maxLength }))
+      setHelperText(t('form.validation.count', { count: value.length }))
       return
     }
 
     setError(null)
-    setHelperText(value.length > 0 ? `${value.length}/${maxLength} 字符` : placeholder)
+    setHelperText(value.length > 0 ? t('form.validation.counter', { count: value.length, max: maxLength }) : placeholder)
   }
 
   return (
@@ -59,10 +60,10 @@ export const SmartFormValidation: React.FC<SmartFormValidationProps> = ({
         onChange={(e) => onChange(e.target.value)}
         className={`
           w-full px-3 py-2 border rounded-lg
-          focus:outline-none focus:ring-2 focus:ring-blue-500
+          focus:outline-none focus:ring-2 focus:ring-black/10
           ${error 
             ? 'border-red-500 focus:border-red-500' 
-            : 'border-gray-300 dark:border-gray-600 focus:border-blue-500'
+            : 'border-gray-300 dark:border-gray-600 focus:border-gray-400'
           }
           bg-white dark:bg-gray-800 text-black dark:text-white
         `}
@@ -87,6 +88,7 @@ export const AutoSaveForm: React.FC<AutoSaveFormProps> = ({
   onFormChange,
   children 
 }) => {
+  const { t, locale } = useI18n()
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
   const [isSaving, setIsSaving] = useState(false)
 
@@ -110,16 +112,16 @@ export const AutoSaveForm: React.FC<AutoSaveFormProps> = ({
         {isSaving ? (
           <>
             <motion.div
-              className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full mr-2"
+              className="w-3 h-3 border-2 border-[var(--bready-accent)] border-t-transparent rounded-full mr-2"
               animate={{ rotate: 360 }}
               transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
             />
-            保存中...
+            {t('form.autosave.saving')}
           </>
         ) : lastSaved ? (
-          `草稿已自动保存于 ${lastSaved.toLocaleTimeString()}`
+          t('form.autosave.savedAt', { time: lastSaved.toLocaleTimeString(locale) })
         ) : (
-          '正在编辑...'
+          t('form.autosave.editing')
         )}
       </div>
     </div>

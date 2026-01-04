@@ -71,7 +71,7 @@ export const FriendlyErrorPage: React.FC<FriendlyErrorPageProps> = ({
   onGoBack
 }) => {
   return (
-    <div className="h-screen w-screen overflow-hidden bg-gray-50 dark:bg-gray-900 flex flex-col">
+    <div className="h-screen w-screen overflow-hidden bg-[var(--bready-bg)] flex flex-col">
       <div className="flex-1 overflow-y-auto w-full p-4">
         <div className="min-h-full flex items-center justify-center">
           <div className="text-center max-w-md">

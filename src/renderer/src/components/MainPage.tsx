@@ -1,17 +1,20 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AnimatePresence } from 'framer-motion'
-import { ArrowRight, Plus, Sparkles, UserCircle, Calendar, Trash2 } from 'lucide-react'
+import { AnimatePresence, motion } from 'framer-motion'
+import { ArrowRight, Plus, Sparkles, UserCircle, Calendar, Trash2, FileText, Users, Code, Briefcase } from 'lucide-react'
 import SelectPreparationModal from './SelectPreparationModal'
 import AllPreparationsModal from './AllPreparationsModal'
 import UserProfileModal from './UserProfileModal'
 import AdminPanelModal from './AdminPanelModal'
-import { Button } from './ui/button'
-import { Card, CardDescription, CardHeader, CardTitle } from './ui/card'
+import PreparationDetailModal from './PreparationDetailModal'
+import EditPreparationModal from './EditPreparationModal'
+import CreatePreparationTypeModal, { type PreparationType } from './CreatePreparationTypeModal'
+import EditSalesPreparationModal from './EditSalesPreparationModal'
+import EditMeetingPreparationModal from './EditMeetingPreparationModal'
 import { preparationService, type Preparation } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
-
-import { MicroInteraction } from './ui/navigation'
+import { useI18n } from '../contexts/I18nContext'
+import { useTheme } from './ui/theme-provider'
 
 interface MainPageProps {
   preparations: Preparation[]
@@ -19,251 +22,404 @@ interface MainPageProps {
   onReloadData: () => Promise<void>
 }
 
+// 准备项卡片图标映射
+const getPreparationIcon = (index: number) => {
+  const icons = [FileText, Users, Code, Briefcase]
+  const Icon = icons[index % icons.length]
+  return Icon
+}
+
+// 准备项卡片颜色映射 - 浅色和深色模式
+const getPreparationColor = (index: number, isDark: boolean) => {
+  if (isDark) {
+    // 深色模式：纯黑背景上的深色卡片
+    const darkColors = [
+      'bg-rose-950/40', // 深粉色
+      'bg-violet-950/40', // 深紫色
+      'bg-emerald-950/40', // 深绿色
+      'bg-amber-950/40', // 深黄色
+    ]
+    return darkColors[index % darkColors.length]
+  } else {
+    // 浅色模式：更鲜艳的渐变背景
+    const lightColors = [
+      'bg-gradient-to-br from-pink-100 to-rose-100', // 粉色渐变
+      'bg-gradient-to-br from-violet-100 to-purple-100', // 紫色渐变
+      'bg-gradient-to-br from-emerald-100 to-teal-100', // 绿色渐变
+      'bg-gradient-to-br from-amber-100 to-orange-100', // 橙色渐变
+    ]
+    return lightColors[index % lightColors.length]
+  }
+}
+
 const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onReloadData }) => {
   const navigate = useNavigate()
-  const { user, profile } = useAuth()
+  const { profile } = useAuth()
+  const { t, list, locale } = useI18n()
+  const { theme } = useTheme()
   const [showSelectModal, setShowSelectModal] = useState(false)
   const [showAllPreparationsModal, setShowAllPreparationsModal] = useState(false)
   const [showUserProfileModal, setShowUserProfileModal] = useState(false)
   const [showAdminPanelModal, setShowAdminPanelModal] = useState(false)
   const [isEnteringMode, setIsEnteringMode] = useState(false)
+  const [viewingPreparation, setViewingPreparation] = useState<Preparation | null>(null)
+  const [editingPreparation, setEditingPreparation] = useState<Preparation | null | undefined>(undefined) // undefined = closed, null = create new
+  const [showCreateTypeModal, setShowCreateTypeModal] = useState(false)
+  const [editingSalesPreparation, setEditingSalesPreparation] = useState<Preparation | null | undefined>(undefined)
+  const [editingMeetingPreparation, setEditingMeetingPreparation] = useState<Preparation | null | undefined>(undefined)
 
-
-  // 随机标语
-  const slogans = [
-    "面试紧张？放轻松",
-    "面宝协作，胜券在握",
-    "面试？小意思",
-    "AI 助力，轻松顺利",
-  ]
-
-  const [currentSlogan] = useState(() =>
-    slogans[Math.floor(Math.random() * slogans.length)]
-  )
+  const slogans = list('slogans.main')
+  const currentSlogan = React.useMemo(() => {
+    const pool = slogans.length ? slogans : [t('home.headline')]
+    return pool[Math.floor(Math.random() * pool.length)]
+  }, [slogans, t])
 
   const handleStartInterview = () => {
     setShowSelectModal(true)
   }
 
   const handleCreateNew = () => {
-    navigate('/create-preparation')
+    setShowCreateTypeModal(true)
+  }
+
+  const handleSelectPreparationType = (type: PreparationType) => {
+    setShowCreateTypeModal(false)
+    if (type === 'interview') {
+      setEditingPreparation(null)
+    } else if (type === 'sales') {
+      setEditingSalesPreparation(null)
+    } else if (type === 'meeting') {
+      setEditingMeetingPreparation(null)
+    }
   }
 
   const handleViewPreparation = (id: string) => {
-    navigate(`/preparation/${id}`)
+    const prep = preparations.find(p => p.id === id)
+    if (prep) {
+      setViewingPreparation(prep)
+    }
   }
 
   const handleDeletePreparation = async (id: string) => {
-    if (confirm('确定要删除这个准备项吗？此操作无法撤销。')) {
+    if (confirm(t('alerts.deletePreparation'))) {
       try {
         await preparationService.delete(id)
         const updatedPreparations = preparations.filter(p => p.id !== id)
         setPreparations(updatedPreparations)
-        // 重新加载数据以确保同步
         await onReloadData()
       } catch (error) {
         console.error('Failed to delete preparation:', error)
-        alert('删除失败，请稍后重试')
+        alert(t('alerts.deleteFailed'))
       }
     }
   }
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
-    return date.toLocaleDateString('zh-CN', {
+    return date.toLocaleDateString(locale, {
       year: 'numeric',
-      month: 'short',
+      month: 'long',
       day: 'numeric'
     })
   }
 
-
-
-  // 筛选和搜索后的准备项
   const filteredPreparations = preparations
 
+  // 动画变体
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+        delayChildren: 0.2
+      }
+    }
+  }
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        type: 'spring' as const,
+        stiffness: 100,
+        damping: 15
+      }
+    }
+  }
+
+  const cardHoverVariants = {
+    rest: { scale: 1, y: 0 },
+    hover: { 
+      scale: 1.02,
+      y: -4,
+      transition: {
+        type: 'spring' as const,
+        stiffness: 300,
+        damping: 25
+      }
+    }
+  }
+
+  // 动态背景类名，根据当前主题决定 - Vercel 风格纯黑
+  const getBackgroundClasses = () => {
+    const isDark = theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+    
+    if (isDark) {
+      return 'bg-black' // 纯黑背景
+    } else {
+      return 'bg-gradient-to-br from-gray-50 via-gray-50 to-gray-100'
+    }
+  }
+
+  // 判断是否为深色模式
+  const isDarkMode = theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+
   return (
-    <div className="h-screen bg-white dark:bg-black flex flex-col transition-colors duration-300 relative overflow-hidden">
-      {/* 背景光晕效果 - 极简且高级 */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-gradient-to-b from-gray-100/50 to-transparent dark:from-zinc-900/30 dark:to-transparent rounded-[100%] blur-[100px] pointer-events-none z-0" />
+    <div className={`h-screen ${getBackgroundClasses()} text-[var(--bready-text)] flex flex-col transition-colors duration-500 relative overflow-hidden`}>
+      {/* 装饰性背景元素 */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        {/* 细微的噪点纹理 */}
+        <div className={`absolute inset-0 ${theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'opacity-[0.05]' : 'opacity-[0.02]'}`} 
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`
+          }}
+        />
+      </div>
 
       {/* 顶部导航 */}
-      <header className="border-b border-gray-200 dark:border-zinc-800 bg-white/60 dark:bg-black/60 backdrop-blur-md z-50 flex-shrink-0 sticky top-0">
-        {/* 拖拽区域 */}
-        <div className="h-6 w-full" style={{ WebkitAppRegion: 'drag' } as any}></div>
-        <div className="max-w-6xl mx-auto px-6 flex items-center justify-between" style={{ WebkitAppRegion: 'no-drag' } as any}>
-          {/* 左侧空白区域，避开macOS系统按钮 */}
-          <div className="w-20"></div>
-
-          {/* 中间：Logo和标题 */}
-          <div className="flex items-center -mt-6 space-x-3">
-            <div className="w-8 h-8 bg-black dark:bg-white rounded-lg flex items-center justify-center shadow-lg hover:shadow-xl transition-all duration-300">
-              <Sparkles className="w-4 h-4 text-white dark:text-black" />
-            </div>
-            <h1 className="text-lg font-bold text-black dark:text-white tracking-tight">面宝</h1>
-          </div>
-
-          {/* 右侧：用户按钮 */}
-          <Button
-            variant="ghost"
-            className="w-10 h-10 !p-2 -mt-4 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-full transition-all duration-200 cursor-pointer"
-            onClick={() => setShowUserProfileModal(true)}
+      <header className="relative z-50 flex-shrink-0">
+        <div className="h-8 w-full" style={{ WebkitAppRegion: 'drag' } as any}></div>
+        <div className="max-w-6xl mx-auto px-4 -ml-10 flex items-center justify-between pb-3" style={{ WebkitAppRegion: 'no-drag' } as any}>
+          {/* Logo 区域 - 左侧留出空间给 mac 按钮 */}
+          <motion.div 
+            className="flex items-center gap-2.5 ml-16"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, ease: 'easeOut' }}
           >
-            <UserCircle className="w-8 h-8 text-gray-600 dark:text-gray-400" />
-          </Button>
+            <div className={`w-8 h-8 -my-4 ${isDarkMode ? 'bg-white' : 'bg-black'} rounded-2xl flex items-center justify-center`}>
+              <Sparkles className={`w-4 h-4 ${isDarkMode ? 'text-black' : 'text-white'}`} />
+            </div>
+            <div className="flex flex-col leading-none">
+              <span className={`text-[9px] uppercase tracking-[0.2em] ${isDarkMode ? 'text-gray-500' : 'text-gray-400'} font-medium`}>Bready</span>
+              <h1 className={`text-base font-semibold tracking-tight ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{t('app.name')}</h1>
+            </div>
+          </motion.div>
+
+          {/* 用户头像 */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, ease: 'easeOut' }}
+          >
+            <button
+              className={`w-12 h-12 mr-2 mt-2 flex items-center justify-center ${isDarkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'} rounded-full transition-colors duration-200 cursor-pointer`}
+              onClick={() => setShowUserProfileModal(true)}
+            >
+              {profile?.avatar_url ? (
+                <img 
+                  src={profile.avatar_url} 
+                  alt="avatar" 
+                  className="w-8 h-8 object-cover rounded-full"
+                />
+              ) : (
+                <UserCircle className={`w-7 h-7 ${isDarkMode ? 'text-gray-500' : 'text-black'}`} />
+              )}
+            </button>
+          </motion.div>
         </div>
       </header>
 
-
-
       {/* 主要内容 */}
-      <main className="flex-1 overflow-y-auto px-6 pt-8 pb-8">
-        <div className="min-h-full flex items-center justify-center">
-          <div className="max-w-5xl w-full">
-            <div className="flex flex-col gap-12">
-              {/* 上方：开始按钮区域 */}
-              <div className="w-full flex flex-col justify-center items-center text-center">
-                <div className="max-w-2xl animate-in fade-in slide-in-from-bottom-4 duration-700">
-                  <div className="mb-10">
-                    <h1 className="text-5xl font-extrabold text-black dark:text-white mb-6 leading-tight tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-400">
-                      {currentSlogan}
-                    </h1>
-                    <p className="text-xl text-gray-500 dark:text-gray-400 leading-relaxed font-light">
-                      拿 Offer 从未如此简单
-                    </p>
-                  </div>
+      <main className="flex-1 flex flex-col px-8 overflow-hidden">
+        <div className="flex-1 flex flex-col max-w-5xl w-full mx-auto">
+          {/* 上方：Hero 区域 */}
+          <motion.div 
+            className="flex-1 flex flex-col justify-center items-center text-center min-h-0"
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+          >
+            <motion.div className="max-w-2xl" variants={itemVariants}>
+              {/* 主标题 - 更大 */}
+              <motion.h1 
+                className="text-5xl md:text-6xl font-bold mb-4 leading-[1.1] tracking-tight"
+                variants={itemVariants}
+              >
+                <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>
+                  {currentSlogan}
+                </span>
+              </motion.h1>
 
-                  <Button
-                    onClick={handleStartInterview}
-                    size="lg"
-                    className="h-14 px-10 text-lg font-semibold group bg-black hover:bg-neutral-800 text-white dark:bg-white dark:hover:bg-gray-200 dark:text-black rounded-full shadow-2xl hover:shadow-3xl hover:-translate-y-0.5 transition-all duration-300 cursor-pointer"
+              {/* 副标题 */}
+              <motion.p 
+                className={`text-lg ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} leading-relaxed mb-10 max-w-md mx-auto`}
+                variants={itemVariants}
+              >
+                {t('home.subhead')}
+              </motion.p>
+
+              {/* 开始按钮 - 更大 */}
+              <motion.div variants={itemVariants}>
+                <motion.button
+                  onClick={handleStartInterview}
+                  className={`group relative h-12 px-10 text-base font-medium rounded-full cursor-pointer ${isDarkMode ? 'bg-white text-black hover:bg-gray-100' : 'bg-black text-white hover:bg-gray-800'} transition-colors duration-200`}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                >
+                  <span className="flex items-center justify-center">
+                    {t('home.start')}
+                  </span>
+                </motion.button>
+              </motion.div>
+            </motion.div>
+          </motion.div>
+
+            {/* 下方：我的准备列表 */}
+          <motion.div 
+            className="w-full pb-4 flex-shrink-0"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3, ease: 'easeOut' }}
+          >
+            <div className="space-y-3">
+              {/* 标题栏 */}
+              <div className="flex items-center justify-between px-1">
+                <h2 className={`text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} tracking-wide`}>
+                  {t('home.myPreparations')}
+                </h2>
+                {filteredPreparations.length > 0 && (
+                  <motion.button
+                    onClick={handleCreateNew}
+                    className={`h-8 w-8 flex items-center justify-center ${isDarkMode ? 'text-gray-400 hover:text-gray-300 hover:bg-gray-800' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'} rounded-full transition-all duration-200 cursor-pointer`}
+                    whileHover={{ scale: 1.1, rotate: 90 }}
+                    whileTap={{ scale: 0.95 }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 25 }}
                   >
-                    开始
-                    <ArrowRight className="ml-3 w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                  </Button>
-                </div>
+                    <Plus className="w-5 h-5" />
+                  </motion.button>
+                )}
               </div>
 
-              {/* 下方：我的准备列表 */}
-              <div className="w-full animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100">
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between px-1">
-                    <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 tracking-wider uppercase">我的准备</h2>
-                    {filteredPreparations.length > 0 && (
-                      <Button
-                        onClick={handleCreateNew}
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-gray-400 hover:text-black dark:text-gray-500 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-zinc-800 transition-all duration-200 rounded-full cursor-pointer"
-                      >
-                        <Plus className="w-5 h-5" />
-                      </Button>
-                    )}
-                  </div>
+              {/* 准备项列表 */}
+              <div>
+                {filteredPreparations.length === 0 ? (
+                  <motion.div 
+                    className={`p-8 ${isDarkMode ? 'bg-gray-900/40 border-gray-700/40' : 'bg-white/60 border-gray-200/60'} backdrop-blur-xl border rounded-2xl flex flex-col items-center justify-center text-center relative overflow-hidden group shadow-sm`}
+                    whileHover={{ scale: 1.01 }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                  >
+                    <motion.div 
+                      className={`w-14 h-14 mb-4 ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'} rounded-2xl flex items-center justify-center`}
+                      animate={{ rotate: [0, 5, -5, 0] }}
+                      transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+                    >
+                      <Sparkles className={`w-6 h-6 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`} />
+                    </motion.div>
+                    <h3 className={`text-base mb-2 ${isDarkMode ? 'text-gray-200' : 'text-gray-700'} font-semibold`}>
+                      {t('home.emptyTitle')}
+                    </h3>
+                    <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} max-w-xs mb-6 leading-relaxed`}>
+                      {t('home.emptyDescription')}
+                    </p>
+                    <motion.button
+                      onClick={handleCreateNew}
+                      className={`h-10 px-6 ${isDarkMode ? 'bg-white text-black' : 'bg-black text-white'} rounded-full font-medium text-sm cursor-pointer shadow-md`}
+                      whileHover={{ scale: 1.03, y: -2 }}
+                      whileTap={{ scale: 0.98 }}
+                      transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                    >
+                      <span className="flex items-center">
+                        {t('home.createNow')}
+                        <ArrowRight className="ml-2 w-4 h-4" />
+                      </span>
+                    </motion.button>
+                  </motion.div>
+                ) : (
+                  <>
+                    {/* 准备项卡片网格 - 横向滚动显示 */}
+                    <div className="flex gap-4 overflow-x-auto scrollbar-hide py-2 px-1">
+                      {filteredPreparations.map((preparation, index) => {
+                        const IconComponent = getPreparationIcon(index)
+                        const colorClass = getPreparationColor(index, isDarkMode)
+                        
+                        return (
+                          <motion.div
+                            key={preparation.id}
+                            variants={cardHoverVariants}
+                            initial="rest"
+                            whileHover="hover"
+                            className="group cursor-pointer flex-shrink-0 w-[280px]"
+                            onClick={() => handleViewPreparation(preparation.id)}
+                          >
+                            <div className={`relative ${colorClass} ${isDarkMode ? 'border border-gray-800/50 group-hover:border-gray-700' : ''} rounded-3xl overflow-hidden transition-all duration-300 ${isDarkMode ? 'shadow-sm group-hover:shadow-lg' : 'group-hover:shadow-sm'}`}>
+                              {/* 微妙的渐变光效 */}
+                              <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${isDarkMode ? 'bg-gradient-to-br from-white/[0.03] to-transparent' : 'bg-gradient-to-br from-white/40 to-transparent'}`} />
+                              
+                              <div className="relative p-5">
+                                {/* 图标 */}
+                                <motion.div 
+                                  className={`w-12 h-12 mb-4 ${isDarkMode ? 'bg-gray-800/60 border-gray-700/50' : 'bg-white/70'} rounded-2xl flex items-center justify-center shadow-sm ${isDarkMode ? 'border' : ''} backdrop-blur-sm`}
+                                  whileHover={{ rotate: [0, -10, 10, 0] }}
+                                  transition={{ duration: 0.5 }}
+                                >
+                                  <IconComponent className={`w-5 h-5 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`} />
+                                </motion.div>
+                                
+                                {/* 标题 */}
+                                <div className="mb-3">
+                                  <h3 className={`text-base font-semibold ${isDarkMode ? 'text-gray-100 group-hover:text-white' : 'text-gray-800 group-hover:text-gray-900'} line-clamp-2 leading-snug transition-colors mb-1.5`}>
+                                    {preparation.name}
+                                  </h3>
+                                  {preparation.is_analyzing && (
+                                    <motion.span 
+                                      className={`inline-flex items-center gap-1.5 px-2 py-1 ${isDarkMode ? 'bg-emerald-900/30 text-emerald-400 border-emerald-800/30 border' : 'bg-emerald-500/10 text-emerald-600'} rounded-full text-[11px] font-medium`}
+                                      initial={{ opacity: 0, scale: 0.8 }}
+                                      animate={{ opacity: 1, scale: 1 }}
+                                      transition={{ duration: 0.3 }}
+                                    >
+                                      <span className="relative flex h-1.5 w-1.5">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-600"></span>
+                                      </span>
+                                      {t('home.analyzing')}
+                                    </motion.span>
+                                  )}
+                                </div>
+                                
+                                {/* 日期 */}
+                                <div className={`flex items-center text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                                  <Calendar className="w-3.5 h-3.5 mr-1.5 opacity-70" />
+                                  <span className="font-medium">{formatDate(preparation.updated_at)}</span>
+                                </div>
+                              </div>
 
-                  {/* 准备项列表 */}
-                  <div className="space-y-4">
-                    {filteredPreparations.length === 0 ? (
-                      <Card className="p-10 border border-gray-100 dark:border-zinc-800 bg-white/50 dark:bg-zinc-900/30 rounded-2xl flex flex-col items-center justify-center text-center relative overflow-hidden group">
-                        {/* 背景装饰图案 */}
-                        <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05] pointer-events-none"
-                          style={{
-                            backgroundImage: 'radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)',
-                            backgroundSize: '24px 24px'
-                          }}
-                        />
-
-                        <div className="w-16 h-16 mb-6 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-zinc-800 dark:to-zinc-900 rounded-2xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform duration-500">
-                          <Sparkles className="w-6 h-6 text-gray-400 dark:text-gray-500" />
-                        </div>
-                        <CardTitle className="text-lg mb-2 text-gray-900 dark:text-white font-semibold">
-                          开启你的第一次面试准备
-                        </CardTitle>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs mb-8 leading-relaxed">
-                          创建一个准备项，上传你的简历或职位描述，让 AI 帮你分析并进行模拟面试。
-                        </p>
-                        <Button
-                          onClick={handleCreateNew}
-                          className="h-10 px-6 bg-black hover:bg-gray-800 text-white dark:bg-white dark:hover:bg-gray-200 dark:text-black rounded-full font-medium text-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 cursor-pointer"
-                        >
-                          立即创建
-                          <ArrowRight className="ml-2 w-4 h-4 opacity-70" />
-                        </Button>
-                      </Card>
-                    ) : (
-                      <>
-                        {/* 紧凑的准备项卡片 - 横向排列 */}
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                          {filteredPreparations.slice(0, 3).map((preparation) => (
-                            <MicroInteraction key={preparation.id}>
-                              <Card
-                                className="group cursor-pointer border border-gray-100 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/50 backdrop-blur-sm hover:bg-white dark:hover:bg-zinc-900 rounded-xl overflow-hidden relative transition-all duration-300 hover:shadow-xl dark:hover:shadow-none hover:-translate-y-1 hover:border-gray-200 dark:hover:border-zinc-700"
-                                onClick={() => handleViewPreparation(preparation.id)}
+                              {/* 删除按钮 */}
+                              <motion.button
+                                className={`absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-xl ${isDarkMode ? 'bg-gray-800/80 hover:bg-red-900/40 border-gray-700/50 border' : 'bg-white/70 hover:bg-red-50'} text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all duration-200 cursor-pointer shadow-sm backdrop-blur-sm`}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleDeletePreparation(preparation.id)
+                                }}
+                                whileHover={{ scale: 1.1, rotate: 5 }}
+                                whileTap={{ scale: 0.9 }}
                               >
-                                {/* 顶部高亮线条 */}
-                                <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-gray-200 to-transparent dark:via-zinc-700 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-
-                                <CardHeader className="p-5">
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex-1 min-w-0">
-                                      <div className="flex items-center gap-2 mb-2">
-                                        <CardTitle className="text-base font-semibold text-gray-900 dark:text-gray-100 group-hover:text-black dark:group-hover:text-white transition-colors truncate tracking-tight">
-                                          {preparation.name}
-                                        </CardTitle>
-                                        {preparation.is_analyzing && (
-                                          <div className="flex items-center gap-1.5 px-2 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-[10px] font-medium border border-blue-100 dark:border-blue-900/30">
-                                            <span className="relative flex h-1.5 w-1.5">
-                                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                                              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-blue-500"></span>
-                                            </span>
-                                            分析中
-                                          </div>
-                                        )}
-                                      </div>
-                                      <div className="flex items-center text-xs text-gray-400 dark:text-gray-500 font-medium">
-                                        <Calendar className="w-3.5 h-3.5 mr-1.5 opacity-70" />
-                                        {formatDate(preparation.updated_at)}
-                                      </div>
-                                    </div>
-                                    {/* 悬浮显示的删除按钮 */}
-                                    <div className="opacity-0 group-hover:opacity-100 transition-all duration-200 ml-2">
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-8 w-8 text-gray-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-full cursor-pointer transition-colors"
-                                        onClick={(e) => {
-                                          e.stopPropagation()
-                                          handleDeletePreparation(preparation.id)
-                                        }}
-                                      >
-                                        <Trash2 className="w-4 h-4" />
-                                      </Button>
-                                    </div>
-                                  </div>
-                                </CardHeader>
-                              </Card>
-                            </MicroInteraction>
-                          ))}
-                        </div>
-
-                        {filteredPreparations.length > 3 && (
-                          <div className="pt-2 text-center">
-                            <Button
-                              variant="ghost"
-                              className="w-auto px-6 py-2 text-gray-500 hover:text-black dark:text-gray-400 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-full font-medium transition-all duration-200 text-xs mx-auto block cursor-pointer"
-                              onClick={() => setShowAllPreparationsModal(true)}
-                            >
-                              查看全部 {filteredPreparations.length} 个
-                            </Button>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                </div>
+                                <Trash2 className="w-4 h-4" />
+                              </motion.button>
+                            </div>
+                          </motion.div>
+                        )
+                      })}
+                    </div>
+                  </>
+                )}
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
       </main>
 
@@ -275,22 +431,17 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
             isLoading={isEnteringMode}
             onClose={() => !isEnteringMode && setShowSelectModal(false)}
             onSelect={async (preparation, language, purpose) => {
-              // 标记正在进入协作模式，显示加载状态
               setIsEnteringMode(true)
 
-              // 保存选择的配置到 localStorage
               if (preparation) {
                 localStorage.setItem('bready-selected-preparation', JSON.stringify(preparation))
               } else {
-                // 用户选择"不准备直接开始"，清除之前保存的准备资料
                 localStorage.removeItem('bready-selected-preparation')
               }
               localStorage.setItem('bready-selected-language', language)
               localStorage.setItem('bready-selected-purpose', purpose)
 
-              // 启动协作模式 - 调整窗口大小并导航到协作页面
               try {
-                // 检查是否在 Electron 环境中
                 if (window.bready) {
                   const success = await window.bready.enterCollaborationMode()
                   console.log('Enter collaboration mode result:', success)
@@ -301,17 +452,15 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
                   console.log('🌐 Running in browser mode - skipping window management')
                 }
 
-                // 等待一小段时间让窗口调整完成，避免视觉跳跃
                 await new Promise(resolve => setTimeout(resolve, 300))
 
                 navigate('/collaboration')
 
-                // 导航完成后关闭模态框状态（虽然组件已经卸载）
                 setShowSelectModal(false)
                 setIsEnteringMode(false)
               } catch (error) {
                 console.error('Failed to enter collaboration mode:', error)
-                alert('无法启动协作模式，请检查应用权限')
+                alert(t('alerts.startCollabFailed'))
                 setIsEnteringMode(false)
               }
             }}
@@ -325,8 +474,7 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
           preparations={filteredPreparations}
           onClose={() => setShowAllPreparationsModal(false)}
           onDelete={handleDeletePreparation}
-          onView={handleViewPreparation}
-          onEdit={(id) => navigate(`/edit-preparation/${id}`)}
+          onView={(preparation) => setViewingPreparation(preparation)}
         />
       )}
 
@@ -345,6 +493,78 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
       {showAdminPanelModal && (
         <AdminPanelModal
           onClose={() => setShowAdminPanelModal(false)}
+          onBack={() => {
+            setShowAdminPanelModal(false)
+            setShowUserProfileModal(true)
+          }}
+        />
+      )}
+
+      {/* 查看准备项模态框 */}
+      {viewingPreparation && (
+        <PreparationDetailModal
+          preparation={viewingPreparation}
+          preparations={preparations}
+          setPreparations={setPreparations}
+          onReloadData={onReloadData}
+          onClose={() => setViewingPreparation(null)}
+          onEdit={() => {
+            setEditingPreparation(viewingPreparation)
+            setViewingPreparation(null)
+          }}
+        />
+      )}
+
+      {/* 编辑/创建准备项模态框 */}
+      {editingPreparation !== undefined && (
+        <EditPreparationModal
+          preparation={editingPreparation || undefined}
+          preparations={preparations}
+          setPreparations={setPreparations}
+          onReloadData={onReloadData}
+          onClose={() => setEditingPreparation(undefined)}
+          onSaved={(savedPreparation) => {
+            setEditingPreparation(undefined)
+            setViewingPreparation(savedPreparation)
+          }}
+        />
+      )}
+
+      {/* 选择准备类型模态框 */}
+      {showCreateTypeModal && (
+        <CreatePreparationTypeModal
+          onClose={() => setShowCreateTypeModal(false)}
+          onSelect={handleSelectPreparationType}
+        />
+      )}
+
+      {/* 销售准备模态框 */}
+      {editingSalesPreparation !== undefined && (
+        <EditSalesPreparationModal
+          preparation={editingSalesPreparation || undefined}
+          preparations={preparations}
+          setPreparations={setPreparations}
+          onReloadData={onReloadData}
+          onClose={() => setEditingSalesPreparation(undefined)}
+          onSaved={(savedPreparation) => {
+            setEditingSalesPreparation(undefined)
+            setViewingPreparation(savedPreparation)
+          }}
+        />
+      )}
+
+      {/* 会议准备模态框 */}
+      {editingMeetingPreparation !== undefined && (
+        <EditMeetingPreparationModal
+          preparation={editingMeetingPreparation || undefined}
+          preparations={preparations}
+          setPreparations={setPreparations}
+          onReloadData={onReloadData}
+          onClose={() => setEditingMeetingPreparation(undefined)}
+          onSaved={(savedPreparation) => {
+            setEditingMeetingPreparation(undefined)
+            setViewingPreparation(savedPreparation)
+          }}
         />
       )}
     </div>

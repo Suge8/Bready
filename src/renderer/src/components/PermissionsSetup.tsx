@@ -13,6 +13,7 @@ import {
   Play,
   Loader2
 } from 'lucide-react'
+import { useI18n } from '../contexts/I18nContext'
 
 interface PermissionStatus {
   granted: boolean
@@ -34,6 +35,7 @@ interface PermissionsSetupProps {
 }
 
 const PermissionsSetup: React.FC<PermissionsSetupProps> = ({ onComplete, onSkip, isOpen }) => {
+  const { t } = useI18n()
   const [permissions, setPermissions] = useState<SystemPermissions | null>(null)
   const [loading, setLoading] = useState(true)
   const [testing, setTesting] = useState<string | null>(null)
@@ -79,7 +81,7 @@ const PermissionsSetup: React.FC<PermissionsSetupProps> = ({ onComplete, onSkip,
       console.error('音频测试失败:', error)
       setTestResults(prev => ({ 
         ...prev, 
-        audio: { success: false, message: '测试失败' }
+        audio: { success: false, message: t('permissionsSetup.testFailed') }
       }))
     } finally {
       setTesting(null)
@@ -112,9 +114,9 @@ const PermissionsSetup: React.FC<PermissionsSetupProps> = ({ onComplete, onSkip,
   }
 
   const getStatusText = (status: PermissionStatus) => {
-    if (status.granted) return '已授予'
-    if (status.canRequest) return '需要设置'
-    return '被拒绝'
+    if (status.granted) return t('permissionsSetup.status.granted')
+    if (status.canRequest) return t('permissionsSetup.status.needsSetup')
+    return t('permissionsSetup.status.denied')
   }
 
   const allPermissionsGranted = permissions && 
@@ -127,11 +129,11 @@ const PermissionsSetup: React.FC<PermissionsSetupProps> = ({ onComplete, onSkip,
 
   return (
     <div className="fixed inset-0 bg-gray-900/20 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto" style={{ WebkitAppRegion: 'no-drag' } as any}>
-        <div className="p-6 border-b border-gray-200">
-          <h2 className="text-2xl font-semibold text-black">Live Interview 权限设置</h2>
-          <p className="text-gray-600 mt-2">
-            为了确保 Live Interview 模式正常工作，需要配置以下权限和设置
+      <div className="bg-[var(--bready-surface)] border border-[var(--bready-border)] rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto" style={{ WebkitAppRegion: 'no-drag' } as any}>
+        <div className="p-6 border-b border-[var(--bready-border)]">
+          <h2 className="text-2xl font-semibold text-[var(--bready-text)]">{t('permissionsSetup.title')}</h2>
+          <p className="text-[var(--bready-text-muted)] mt-2">
+            {t('permissionsSetup.description')}
           </p>
         </div>
 
@@ -139,18 +141,18 @@ const PermissionsSetup: React.FC<PermissionsSetupProps> = ({ onComplete, onSkip,
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
-              <span className="ml-2 text-gray-600">检查权限状态...</span>
+              <span className="ml-2 text-[var(--bready-text-muted)]">{t('permissionsSetup.checking')}</span>
             </div>
           ) : permissions ? (
             <>
               {/* 屏幕录制权限 */}
-              <div className="border border-gray-200 rounded-lg p-4">
+              <div className="border border-[var(--bready-border)] rounded-lg p-4">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center space-x-3">
-                    <Monitor className="w-6 h-6 text-gray-700" />
+                    <Monitor className="w-6 h-6 text-[var(--bready-text)]" />
                     <div>
-                      <h3 className="font-medium text-black">屏幕录制权限</h3>
-                      <p className="text-sm text-gray-600">用于捕获系统音频</p>
+                      <h3 className="font-medium text-[var(--bready-text)]">{t('permissionsSetup.screen.title')}</h3>
+                      <p className="text-sm text-[var(--bready-text-muted)]">{t('permissionsSetup.screen.description')}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -161,29 +163,29 @@ const PermissionsSetup: React.FC<PermissionsSetupProps> = ({ onComplete, onSkip,
                   </div>
                 </div>
                 
-                <p className="text-sm text-gray-600 mb-3">
+                <p className="text-sm text-[var(--bready-text-muted)] mb-3">
                   {permissions.screenRecording.message}
                 </p>
                 
                 {!permissions.screenRecording.granted && (
                   <button
                     onClick={() => openSystemPreferences('screen-recording')}
-                    className="flex items-center space-x-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
+                    className="flex items-center space-x-2 px-4 py-2 bg-[var(--bready-accent)] text-[var(--bready-accent-contrast)] rounded-lg hover:opacity-90 transition-colors"
                   >
                     <ExternalLink className="w-4 h-4" />
-                    <span>打开系统偏好设置</span>
+                    <span>{t('permissionsSetup.screen.openSettings')}</span>
                   </button>
                 )}
               </div>
 
               {/* 麦克风权限 */}
-              <div className="border border-gray-200 rounded-lg p-4">
+              <div className="border border-[var(--bready-border)] rounded-lg p-4">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center space-x-3">
-                    <Mic className="w-6 h-6 text-gray-700" />
+                    <Mic className="w-6 h-6 text-[var(--bready-text)]" />
                     <div>
-                      <h3 className="font-medium text-black">麦克风权限</h3>
-                      <p className="text-sm text-gray-600">用于语音输入（可选）</p>
+                      <h3 className="font-medium text-[var(--bready-text)]">{t('permissionsSetup.microphone.title')}</h3>
+                      <p className="text-sm text-[var(--bready-text-muted)]">{t('permissionsSetup.microphone.description')}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -194,7 +196,7 @@ const PermissionsSetup: React.FC<PermissionsSetupProps> = ({ onComplete, onSkip,
                   </div>
                 </div>
                 
-                <p className="text-sm text-gray-600 mb-3">
+                <p className="text-sm text-[var(--bready-text-muted)] mb-3">
                   {permissions.microphone.message}
                 </p>
                 
@@ -203,24 +205,24 @@ const PermissionsSetup: React.FC<PermissionsSetupProps> = ({ onComplete, onSkip,
                     <button
                       onClick={requestMicrophonePermission}
                       disabled={testing === 'microphone'}
-                      className="flex items-center space-x-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50"
+                      className="flex items-center space-x-2 px-4 py-2 bg-[var(--bready-accent)] text-[var(--bready-accent-contrast)] rounded-lg hover:opacity-90 transition-colors disabled:opacity-50"
                     >
                       {testing === 'microphone' ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
                         <Mic className="w-4 h-4" />
                       )}
-                      <span>请求权限</span>
+                      <span>{t('permissionsSetup.microphone.request')}</span>
                     </button>
                   )}
                   
                   {!permissions.microphone.granted && !permissions.microphone.canRequest && (
                     <button
                       onClick={() => openSystemPreferences('microphone')}
-                      className="flex items-center space-x-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
+                      className="flex items-center space-x-2 px-4 py-2 bg-[var(--bready-accent)] text-[var(--bready-accent-contrast)] rounded-lg hover:opacity-90 transition-colors"
                     >
                       <ExternalLink className="w-4 h-4" />
-                      <span>打开系统偏好设置</span>
+                      <span>{t('permissionsSetup.microphone.openSettings')}</span>
                     </button>
                   )}
                 </div>
@@ -235,13 +237,13 @@ const PermissionsSetup: React.FC<PermissionsSetupProps> = ({ onComplete, onSkip,
               </div>
 
               {/* API 密钥状态 */}
-              <div className="border border-gray-200 rounded-lg p-4">
+              <div className="border border-[var(--bready-border)] rounded-lg p-4">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center space-x-3">
-                    <Key className="w-6 h-6 text-gray-700" />
+                    <Key className="w-6 h-6 text-[var(--bready-text)]" />
                     <div>
-                      <h3 className="font-medium text-black">Gemini API 密钥</h3>
-                      <p className="text-sm text-gray-600">用于 AI 功能</p>
+                      <h3 className="font-medium text-[var(--bready-text)]">{t('permissionsSetup.apiKey.title')}</h3>
+                      <p className="text-sm text-[var(--bready-text-muted)]">{t('permissionsSetup.apiKey.description')}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -252,27 +254,27 @@ const PermissionsSetup: React.FC<PermissionsSetupProps> = ({ onComplete, onSkip,
                   </div>
                 </div>
                 
-                <p className="text-sm text-gray-600 mb-3">
+                <p className="text-sm text-[var(--bready-text-muted)] mb-3">
                   {permissions.apiKey.message}
                 </p>
                 
                 {!permissions.apiKey.granted && (
                   <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                     <p className="text-sm text-yellow-800">
-                      请在 .env.local 文件中配置 VITE_GEMINI_API_KEY
+                      {t('permissionsSetup.apiKey.hint')}
                     </p>
                   </div>
                 )}
               </div>
 
               {/* 音频设备状态 */}
-              <div className="border border-gray-200 rounded-lg p-4">
+              <div className="border border-[var(--bready-border)] rounded-lg p-4">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center space-x-3">
-                    <Volume2 className="w-6 h-6 text-gray-700" />
+                    <Volume2 className="w-6 h-6 text-[var(--bready-text)]" />
                     <div>
-                      <h3 className="font-medium text-black">音频设备</h3>
-                      <p className="text-sm text-gray-600">系统音频捕获功能</p>
+                      <h3 className="font-medium text-[var(--bready-text)]">{t('permissionsSetup.audio.title')}</h3>
+                      <p className="text-sm text-[var(--bready-text-muted)]">{t('permissionsSetup.audio.description')}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -283,7 +285,7 @@ const PermissionsSetup: React.FC<PermissionsSetupProps> = ({ onComplete, onSkip,
                   </div>
                 </div>
                 
-                <p className="text-sm text-gray-600 mb-3">
+                <p className="text-sm text-[var(--bready-text-muted)] mb-3">
                   {permissions.audioDevice.message}
                 </p>
                 
@@ -291,23 +293,23 @@ const PermissionsSetup: React.FC<PermissionsSetupProps> = ({ onComplete, onSkip,
                   <button
                     onClick={testAudioCapture}
                     disabled={testing === 'audio'}
-                    className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-black rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
+                    className="flex items-center space-x-2 px-4 py-2 bg-[var(--bready-surface-2)] text-[var(--bready-text)] rounded-lg hover:bg-[var(--bready-surface-3)] transition-colors disabled:opacity-50"
                   >
                     {testing === 'audio' ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
                       <Play className="w-4 h-4" />
                     )}
-                    <span>测试音频捕获</span>
+                    <span>{t('permissionsSetup.audio.test')}</span>
                   </button>
 
                   {!permissions.audioDevice.granted && (
                     <button
                       onClick={() => openSystemPreferences('privacy_ScreenCapture')}
-                      className="flex items-center space-x-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
+                      className="flex items-center space-x-2 px-4 py-2 bg-[var(--bready-accent)] text-[var(--bready-accent-contrast)] rounded-lg hover:opacity-90 transition-colors"
                     >
                       <Settings className="w-4 h-4" />
-                      <span>去设置</span>
+                      <span>{t('permissionsSetup.audio.setup')}</span>
                     </button>
                   )}
                 </div>
@@ -320,10 +322,10 @@ const PermissionsSetup: React.FC<PermissionsSetupProps> = ({ onComplete, onSkip,
 
                     {testResults.audio.audioData !== undefined && (
                       <div className="text-xs mt-1">
-                        捕获数据: {testResults.audio.audioData} 字节
+                        {t('permissionsSetup.metrics.capturedData', { bytes: testResults.audio.audioData })}
                         {testResults.audio.silencePercentage !== undefined && (
                           <span className="ml-2">
-                            静音: {testResults.audio.silencePercentage.toFixed(1)}%
+                            {t('permissionsSetup.metrics.silence', { percent: testResults.audio.silencePercentage.toFixed(1) })}
                           </span>
                         )}
                       </div>
@@ -331,7 +333,7 @@ const PermissionsSetup: React.FC<PermissionsSetupProps> = ({ onComplete, onSkip,
 
                     {testResults.audio.recommendation && (
                       <div className="text-sm mt-2 p-2 bg-white bg-opacity-50 rounded border-l-2 border-current">
-                        💡 建议: {testResults.audio.recommendation}
+                        💡 {t('permissionsSetup.metrics.recommendation', { text: testResults.audio.recommendation })}
                       </div>
                     )}
                   </div>
@@ -339,32 +341,32 @@ const PermissionsSetup: React.FC<PermissionsSetupProps> = ({ onComplete, onSkip,
               </div>
             </>
           ) : (
-            <div className="text-center py-8 text-gray-600">
-              无法检查权限状态
+            <div className="text-center py-8 text-[var(--bready-text-muted)]">
+              {t('permissionsSetup.error.unableCheck')}
             </div>
           )}
         </div>
 
-        <div className="p-6 border-t border-gray-200 flex justify-between">
+        <div className="p-6 border-t border-[var(--bready-border)] flex justify-between">
           <button
             onClick={onSkip}
-            className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+            className="px-4 py-2 text-[var(--bready-text-muted)] hover:text-[var(--bready-text)] transition-colors"
           >
-            跳过设置
+            {t('permissionsSetup.actions.skip')}
           </button>
           
           <div className="flex space-x-3">
             <button
               onClick={checkAllPermissions}
               disabled={loading}
-              className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-black rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
+              className="flex items-center space-x-2 px-4 py-2 bg-[var(--bready-surface-2)] text-[var(--bready-text)] rounded-lg hover:bg-[var(--bready-surface-3)] transition-colors disabled:opacity-50"
             >
               {loading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <RefreshCw className="w-4 h-4" />
               )}
-              <span>重新检查</span>
+              <span>{t('permissionsSetup.actions.recheck')}</span>
             </button>
             
             <button
@@ -372,11 +374,11 @@ const PermissionsSetup: React.FC<PermissionsSetupProps> = ({ onComplete, onSkip,
               disabled={!allPermissionsGranted}
               className={`px-6 py-2 rounded-lg transition-colors ${
                 allPermissionsGranted
-                  ? 'bg-black text-white hover:bg-gray-800'
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  ? 'bg-[var(--bready-accent)] text-[var(--bready-accent-contrast)] hover:opacity-90'
+                  : 'bg-[var(--bready-surface-2)] text-[var(--bready-text-muted)] cursor-not-allowed'
               }`}
             >
-              {allPermissionsGranted ? '开始 Live Interview' : '完成权限设置'}
+              {allPermissionsGranted ? t('permissionsSetup.actions.start') : t('permissionsSetup.actions.complete')}
             </button>
           </div>
         </div>

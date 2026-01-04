@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { X, Settings, Volume2, Mic, Send, RefreshCw, Wifi, WifiOff, Trash2 } from 'lucide-react'
+import { X, Settings, Volume2, Send, RefreshCw, Wifi, WifiOff, Trash2 } from 'lucide-react'
+import { useI18n } from '../contexts/I18nContext'
 
 const FloatingWindow: React.FC = () => {
+  const { t, locale } = useI18n()
   const [transcription, setTranscription] = useState('')
   const [aiResponse, setAiResponse] = useState('')
   const [isListening, setIsListening] = useState(false)
   const [opacity, setOpacity] = useState(0.9)
   const [inputText, setInputText] = useState('')
-  const [status, setStatus] = useState('准备中...')
+  const [status, setStatus] = useState(() => t('floating.status.idle'))
   const [isConnected, setIsConnected] = useState(false)
   const [conversationHistory, setConversationHistory] = useState<Array<{type: 'user' | 'ai', content: string, timestamp: Date}>>([])
   const responseRef = useRef<HTMLDivElement>(null)
@@ -40,7 +42,7 @@ const FloatingWindow: React.FC = () => {
           console.error('API密钥获取失败')
           console.log('环境变量状态:', window.env)
           console.log('localStorage状态:', localStorage.getItem('gemini-api-key'))
-          setStatus('错误：未找到 API 密钥。请检查 .env.local 文件中的 VITE_GEMINI_API_KEY 配置')
+          setStatus(t('floating.status.apiKeyMissing'))
           return
         }
 
@@ -59,27 +61,28 @@ const FloatingWindow: React.FC = () => {
 
         console.log('初始化参数:', { customPrompt, language, purpose })
 
-        setStatus('正在连接 Gemini API...')
+        setStatus(t('floating.status.connecting'))
         const success = await window.bready.initializeGemini(apiKey, customPrompt, purpose, language)
 
         if (success) {
-          setStatus('已连接，正在启动音频捕获...')
+          setStatus(t('floating.status.connected'))
           setIsConnected(true)
           const audioSuccess = await window.bready.startAudioCapture()
 
           if (audioSuccess) {
-            setStatus('准备就绪')
+            setStatus(t('floating.status.ready'))
             setIsListening(true)
           } else {
-            setStatus('错误：无法启动音频捕获。请检查系统音频权限')
+            setStatus(t('floating.status.audioFailed'))
           }
         } else {
-          setStatus('错误：无法连接 Gemini API。请检查API密钥是否有效')
+          setStatus(t('floating.status.connectFailed'))
           setIsConnected(false)
         }
       } catch (error) {
         console.error('初始化错误:', error)
-        setStatus(`错误：${error.message || error}`)
+        const message = error instanceof Error ? error.message : String(error)
+        setStatus(t('floating.status.error', { error: message }))
       }
     }
 
@@ -138,13 +141,13 @@ const FloatingWindow: React.FC = () => {
       })
 
       const removeErrorListener = window.bready.onSessionError((error) => {
-        setStatus(`错误：${error}`)
+        setStatus(t('floating.status.error', { error }))
         setIsListening(false)
         setIsConnected(false)
       })
 
       const removeClosedListener = window.bready.onSessionClosed(() => {
-        setStatus('会话已关闭')
+        setStatus(t('floating.status.sessionClosed'))
         setIsListening(false)
         setIsConnected(false)
       })
@@ -199,17 +202,17 @@ const FloatingWindow: React.FC = () => {
   }
 
   const handleReconnect = async () => {
-    setStatus('正在重连...')
+    setStatus(t('floating.status.reconnecting'))
     try {
       const success = await window.bready.reconnectGemini()
       if (success) {
         setIsConnected(true)
-        setStatus('重连成功')
+        setStatus(t('floating.status.reconnectSuccess'))
       } else {
-        setStatus('重连失败')
+        setStatus(t('floating.status.reconnectFailed'))
       }
     } catch (error) {
-      setStatus(`重连错误：${error}`)
+      setStatus(t('floating.status.reconnectError', { error: String(error) }))
     }
   }
 
@@ -218,9 +221,9 @@ const FloatingWindow: React.FC = () => {
       await window.bready.disconnectGemini()
       setIsConnected(false)
       setIsListening(false)
-      setStatus('已断开连接')
+      setStatus(t('floating.status.disconnected'))
     } catch (error) {
-      setStatus(`断开连接错误：${error}`)
+      setStatus(t('floating.status.disconnectError', { error: String(error) }))
     }
   }
 
@@ -262,7 +265,7 @@ const FloatingWindow: React.FC = () => {
             <button
               onClick={handleReconnect}
               className="p-1 hover:bg-vercel-gray-800 rounded"
-              title="重连"
+              title={t('floating.labels.reconnect')}
             >
               <RefreshCw className="w-4 h-4" />
             </button>
@@ -285,14 +288,14 @@ const FloatingWindow: React.FC = () => {
         {/* 实时转录区域 */}
         <div className="bg-vercel-gray-50 p-3 border-b border-vercel-gray-200">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-xs font-medium text-vercel-gray-500">实时转录</h3>
+            <h3 className="text-xs font-medium text-vercel-gray-500">{t('floating.labels.liveTranscription')}</h3>
             <div className={`w-2 h-2 rounded-full ${isListening ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></div>
           </div>
           <div
             ref={transcriptionRef}
             className="text-sm text-vercel-gray-700 max-h-20 overflow-y-auto"
           >
-            {transcription || (isListening ? '正在聆听...' : '等待音频输入')}
+            {transcription || (isListening ? t('floating.labels.listening') : t('floating.labels.waitingAudio'))}
           </div>
         </div>
 
@@ -306,13 +309,13 @@ const FloatingWindow: React.FC = () => {
               <div className="text-center text-vercel-gray-400">
                 {isListening ? (
                   <div>
-                    <div className="loading-dots mb-2">AI 正在聆听</div>
-                    <p className="text-xs">开始说话，AI 将为您提供实时回复</p>
+                    <div className="loading-dots mb-2">{t('floating.labels.listeningHintTitle')}</div>
+                    <p className="text-xs">{t('floating.labels.listeningHint')}</p>
                   </div>
                 ) : (
                   <div>
-                    <p className="mb-2">等待连接...</p>
-                    <p className="text-xs">请稍候，正在初始化 AI 助手</p>
+                    <p className="mb-2">{t('floating.labels.waitingConnection')}</p>
+                    <p className="text-xs">{t('floating.labels.initializingHint')}</p>
                   </div>
                 )}
               </div>
@@ -322,7 +325,7 @@ const FloatingWindow: React.FC = () => {
               {conversationHistory.map((entry, index) => (
                 <div key={index} className={`${entry.type === 'ai' ? 'ml-0' : 'mr-0'}`}>
                   <div className={`text-xs text-vercel-gray-500 mb-1 ${entry.type === 'ai' ? 'text-left' : 'text-right'}`}>
-                    {entry.type === 'ai' ? 'AI 助手' : '您'} • {entry.timestamp.toLocaleTimeString()}
+                    {entry.type === 'ai' ? t('floating.labels.aiAssistant') : t('floating.labels.you')} • {entry.timestamp.toLocaleTimeString(locale)}
                   </div>
                   <div className={`p-2 rounded-lg text-sm ${
                     entry.type === 'ai'
@@ -342,7 +345,7 @@ const FloatingWindow: React.FC = () => {
               {aiResponse && conversationHistory[conversationHistory.length - 1]?.type !== 'ai' && (
                 <div className="ml-0">
                   <div className="text-xs text-vercel-gray-500 mb-1 text-left">
-                    AI 助手 • 正在回复...
+                    {t('floating.labels.aiAssistant')} • {t('floating.labels.responding')}
                   </div>
                   <div className="p-2 rounded-lg text-sm bg-vercel-gray-100 text-vercel-black">
                     <div dangerouslySetInnerHTML={{ __html: aiResponse }} />
@@ -362,7 +365,7 @@ const FloatingWindow: React.FC = () => {
             type="text"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            placeholder="输入问题..."
+            placeholder={t('floating.labels.inputPlaceholder')}
             className="flex-1 px-3 py-2 border border-vercel-gray-200 rounded-l-lg focus:outline-none focus:ring-1 focus:ring-vercel-black"
           />
           <button
@@ -380,23 +383,23 @@ const FloatingWindow: React.FC = () => {
           <div className="flex items-center space-x-3">
             <div className="flex items-center space-x-1">
               <Volume2 className="w-4 h-4 text-vercel-gray-600" />
-              <span className="text-xs text-vercel-gray-600">系统音频</span>
+              <span className="text-xs text-vercel-gray-600">{t('floating.labels.systemAudio')}</span>
             </div>
 
             {conversationHistory.length > 0 && (
               <button
                 onClick={handleClearHistory}
                 className="flex items-center space-x-1 px-2 py-1 text-xs text-vercel-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                title="清除对话历史"
+                title={t('floating.labels.clearHistoryTitle')}
               >
                 <Trash2 className="w-3 h-3" />
-                <span>清除</span>
+                <span>{t('floating.labels.clearHistory')}</span>
               </button>
             )}
           </div>
 
           <div className="flex items-center space-x-2">
-            <span className="text-xs text-vercel-gray-600">透明度</span>
+            <span className="text-xs text-vercel-gray-600">{t('floating.labels.opacity')}</span>
             <input
               type="range"
               min="0.1"

@@ -124,6 +124,7 @@ export interface Preparation {
   resume?: string
   analysis?: {
     matchScore: number
+    jobRequirements: string[]
     strengths: string[]
     weaknesses: string[]
     suggestions: string[]

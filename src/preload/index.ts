@@ -42,11 +42,23 @@ interface BreadyAPI {
     success: boolean
     analysis?: {
       matchScore: number
+      jobRequirements: string[]
       strengths: string[]
       weaknesses: string[]
       suggestions: string[]
       systemPrompt: string
     }
+    error?: string
+  }>
+
+  // 文件内容提取
+  extractFileContent: (fileData: {
+    fileName: string
+    fileType: string
+    base64Data: string
+  }) => Promise<{
+    success: boolean
+    content?: string
     error?: string
   }>
 
@@ -102,6 +114,9 @@ const breadyAPI: BreadyAPI = {
 
   // AI 分析
   analyzePreparation: (preparationData) => ipcRenderer.invoke('analyze-preparation', preparationData),
+
+  // 文件内容提取
+  extractFileContent: (fileData) => ipcRenderer.invoke('extract-file-content', fileData),
 
   // 事件监听
   onStatusUpdate: (callback) => {
