@@ -45,89 +45,89 @@ const SelectPreparationModal: React.FC<SelectPreparationModalProps> = ({
       isOpen
       onClose={!isLoading ? onClose : () => undefined}
       size="lg"
-      className="max-w-xl"
+      className="max-w-xl flex flex-col"
     >
-      <div className="mb-6">
+      <div className="mb-6 flex-shrink-0">
         <h2 className="text-xl font-semibold text-[var(--bready-text)]">
           {t("select.title")}
         </h2>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 mb-6">
-        <div className="relative">
-          <label className="block text-sm font-medium text-[var(--bready-text-muted)] mb-2">
-            {t("select.language")}
-          </label>
-          <button
-            onClick={() => setLanguageDropdownOpen(!languageDropdownOpen)}
-            className="w-full flex items-center justify-between px-4 py-2 bg-[var(--bready-surface-2)] border border-[var(--bready-border)] rounded-xl text-sm hover:shadow-sm transition-colors cursor-pointer"
-          >
-            <span className="text-[var(--bready-text)]">
-              {languageOptions.find((l) => l.value === language)?.label}
-            </span>
-            <ChevronDown className="w-4 h-4 text-[var(--bready-text-muted)]" />
-          </button>
+      <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin">
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="relative">
+            <label className="block text-sm font-medium text-[var(--bready-text-muted)] mb-2">
+              {t("select.language")}
+            </label>
+            <button
+              onClick={() => setLanguageDropdownOpen(!languageDropdownOpen)}
+              className="w-full flex items-center justify-between px-4 py-2 bg-[var(--bready-surface-2)] border border-[var(--bready-border)] rounded-xl text-sm hover:shadow-sm transition-colors cursor-pointer"
+            >
+              <span className="text-[var(--bready-text)]">
+                {languageOptions.find((l) => l.value === language)?.label}
+              </span>
+              <ChevronDown className="w-4 h-4 text-[var(--bready-text-muted)]" />
+            </button>
 
-          {languageDropdownOpen && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-[var(--bready-surface)] border border-[var(--bready-border)] rounded-xl shadow-lg z-10">
-              {languageOptions.map((lang) => (
-                <button
-                  key={lang.value}
-                  onClick={() => {
-                    setLanguage(lang.value)
-                    setLanguageDropdownOpen(false)
-                  }}
-                  className={`w-full text-left px-4 py-2 text-sm hover:bg-[var(--bready-surface-2)] transition-colors first:rounded-t-lg last:rounded-b-lg cursor-pointer ${
-                    language === lang.value
-                      ? "bg-[var(--bready-surface-2)] text-[var(--bready-text)] font-medium"
-                      : "text-[var(--bready-text-muted)]"
-                  }`}
-                >
-                  {lang.label}
-                </button>
-              ))}
-            </div>
-          )}
+            {languageDropdownOpen && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-[var(--bready-surface)] border border-[var(--bready-border)] rounded-xl shadow-lg z-10">
+                {languageOptions.map((lang) => (
+                  <button
+                    key={lang.value}
+                    onClick={() => {
+                      setLanguage(lang.value)
+                      setLanguageDropdownOpen(false)
+                    }}
+                    className={`w-full text-left px-4 py-2 text-sm hover:bg-[var(--bready-surface-2)] transition-colors first:rounded-t-lg last:rounded-b-lg cursor-pointer ${
+                      language === lang.value
+                        ? "bg-[var(--bready-surface-2)] text-[var(--bready-text)] font-medium"
+                        : "text-[var(--bready-text-muted)]"
+                    }`}
+                  >
+                    {lang.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="relative">
+            <label className="block text-sm font-medium text-[var(--bready-text-muted)] mb-2">
+              {t("select.purpose")}
+            </label>
+            <button
+              onClick={() => setPurposeDropdownOpen(!purposeDropdownOpen)}
+              className="w-full flex items-center justify-between px-4 py-2 bg-[var(--bready-surface-2)] border border-[var(--bready-border)] rounded-xl text-sm hover:shadow-sm transition-colors cursor-pointer"
+            >
+              <span className="text-[var(--bready-text)]">
+                {purposes.find((p) => p.value === purpose)?.label}
+              </span>
+              <ChevronDown className="w-4 h-4 text-[var(--bready-text-muted)]" />
+            </button>
+
+            {purposeDropdownOpen && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-[var(--bready-surface)] border border-[var(--bready-border)] rounded-xl shadow-lg z-10">
+                {purposes.map((p) => (
+                  <button
+                    key={p.value}
+                    onClick={() => {
+                      setPurpose(p.value)
+                      setPurposeDropdownOpen(false)
+                    }}
+                    className={`w-full text-left px-4 py-2 text-sm hover:bg-[var(--bready-surface-2)] transition-colors first:rounded-t-lg last:rounded-b-lg cursor-pointer ${
+                      purpose === p.value
+                        ? "bg-[var(--bready-surface-2)] text-[var(--bready-text)] font-medium"
+                        : "text-[var(--bready-text-muted)]"
+                    }`}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
-        <div className="relative">
-          <label className="block text-sm font-medium text-[var(--bready-text-muted)] mb-2">
-            {t("select.purpose")}
-          </label>
-          <button
-            onClick={() => setPurposeDropdownOpen(!purposeDropdownOpen)}
-            className="w-full flex items-center justify-between px-4 py-2 bg-[var(--bready-surface-2)] border border-[var(--bready-border)] rounded-xl text-sm hover:shadow-sm transition-colors cursor-pointer"
-          >
-            <span className="text-[var(--bready-text)]">
-              {purposes.find((p) => p.value === purpose)?.label}
-            </span>
-            <ChevronDown className="w-4 h-4 text-[var(--bready-text-muted)]" />
-          </button>
-
-          {purposeDropdownOpen && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-[var(--bready-surface)] border border-[var(--bready-border)] rounded-xl shadow-lg z-10">
-              {purposes.map((p) => (
-                <button
-                  key={p.value}
-                  onClick={() => {
-                    setPurpose(p.value)
-                    setPurposeDropdownOpen(false)
-                  }}
-                  className={`w-full text-left px-4 py-2 text-sm hover:bg-[var(--bready-surface-2)] transition-colors first:rounded-t-lg last:rounded-b-lg cursor-pointer ${
-                    purpose === p.value
-                      ? "bg-[var(--bready-surface-2)] text-[var(--bready-text)] font-medium"
-                      : "text-[var(--bready-text-muted)]"
-                  }`}
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="max-h-60 overflow-y-auto mb-6">
         {preparations.length === 0 ? (
           <div className="text-center py-8 text-[var(--bready-text-muted)]">
             <p>{t("select.empty")}</p>
@@ -177,7 +177,7 @@ const SelectPreparationModal: React.FC<SelectPreparationModalProps> = ({
         )}
       </div>
 
-      <div className="flex justify-center">
+      <div className="flex justify-center flex-shrink-0 mt-6">
         <Button onClick={handleConfirm} disabled={isLoading}>
           {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
           {selectedPreparation ? t("select.confirm") : t("select.quickStart")}

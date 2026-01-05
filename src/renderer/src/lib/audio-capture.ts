@@ -562,7 +562,9 @@ class RendererAudioCapture {
   /**
    * 清理当前音频处理链路
    */
-  private teardownAudioProcessing(resetBuffer = true) {
+  private teardownAudioProcessing(
+    { resetBuffer = true, stopTracks = true }: { resetBuffer?: boolean; stopTracks?: boolean } = {}
+  ) {
     if (this.processor) {
       if (debugAudio) {
         console.log('⏹️ 断开音频处理器...')
@@ -580,17 +582,19 @@ class RendererAudioCapture {
     }
 
     if (this.mediaStream) {
-      if (debugAudio) {
+      if (debugAudio && stopTracks) {
         console.log('⏹️ 停止媒体流轨道...')
         const tracks = this.mediaStream.getTracks()
         console.log(`   共 ${tracks.length} 个轨道`)
       }
-      this.mediaStream.getTracks().forEach(track => {
-        if (debugAudio) {
-          console.log(`   停止轨道: ${track.kind} - ${track.label}`)
-        }
-        track.stop()
-      })
+      if (stopTracks) {
+        this.mediaStream.getTracks().forEach(track => {
+          if (debugAudio) {
+            console.log(`   停止轨道: ${track.kind} - ${track.label}`)
+          }
+          track.stop()
+        })
+      }
       this.mediaStream = null
     }
 
@@ -666,6 +670,27 @@ class RendererAudioCapture {
 
     navigator.mediaDevices.addEventListener('devicechange', this.scheduleDeviceChangeCheck)
     this.deviceChangeListenerInitialized = true
+  }
+
+  private teardownDeviceChangeListener() {
+    if (!this.deviceChangeListenerInitialized) {
+      return
+    }
+
+    if (typeof navigator !== 'undefined' && navigator.mediaDevices) {
+      navigator.mediaDevices.removeEventListener('devicechange', this.scheduleDeviceChangeCheck)
+    }
+    this.deviceChangeListenerInitialized = false
+
+    if (this.deviceChangeTimeoutId !== null) {
+      window.clearTimeout(this.deviceChangeTimeoutId)
+      this.deviceChangeTimeoutId = null
+    }
+  }
+
+  destroy() {
+    this.stop()
+    this.teardownDeviceChangeListener()
   }
 
   private scheduleDeviceChangeCheck = () => {
@@ -796,9 +821,14 @@ class RendererAudioCapture {
         console.log('🔄 切换麦克风设备到:', device.label)
       }
 
-      this.teardownAudioProcessing()
+      if (!this.config) {
+        return false
+      }
 
-      // 使用指定设备创建新的音频流
+      const previousStream = this.mediaStream
+      const previousDeviceId = this.currentMicrophoneDeviceId
+      const previousDeviceLabel = this.currentDeviceLabel
+
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           deviceId: { exact: device.deviceId },
@@ -812,23 +842,42 @@ class RendererAudioCapture {
       })
 
       const audioTracks = stream.getAudioTracks()
-      if (audioTracks.length > 0) {
-        const track = audioTracks[0]
-        const settings = track.getSettings()
-        const resolvedDeviceId = settings.deviceId || device.deviceId || null
-        const resolvedLabel = track.label || device.label
+      const nextDeviceId = audioTracks.length > 0
+        ? (audioTracks[0].getSettings().deviceId || device.deviceId || null)
+        : (device.deviceId || null)
+      const nextDeviceLabel = audioTracks.length > 0
+        ? (audioTracks[0].label || device.label)
+        : device.label
 
-        this.currentMicrophoneDeviceId = resolvedDeviceId
-        this.currentDeviceLabel = resolvedLabel
-        this.notifyDeviceChanged(resolvedDeviceId, resolvedLabel)
-      } else {
-        this.currentMicrophoneDeviceId = device.deviceId
-        this.currentDeviceLabel = device.label
-        this.notifyDeviceChanged(device.deviceId, device.label)
+      this.teardownAudioProcessing({ stopTracks: false })
+
+      const setupSuccess = this.setupAudioProcessing(stream)
+      if (!setupSuccess) {
+        stream.getTracks().forEach(track => track.stop())
+        if (previousStream) {
+          const restored = this.setupAudioProcessing(previousStream)
+          if (restored) {
+            this.currentMicrophoneDeviceId = previousDeviceId
+            this.currentDeviceLabel = previousDeviceLabel
+            this.notifyDeviceChanged(previousDeviceId, previousDeviceLabel)
+          } else {
+            this.isCapturing = false
+          }
+        } else {
+          this.isCapturing = false
+        }
+        return false
       }
 
-      // 重新设置音频处理管道
-      return this.setupAudioProcessing(stream)
+      if (previousStream) {
+        previousStream.getTracks().forEach(track => track.stop())
+      }
+
+      this.currentMicrophoneDeviceId = nextDeviceId
+      this.currentDeviceLabel = nextDeviceLabel
+      this.notifyDeviceChanged(nextDeviceId, nextDeviceLabel)
+
+      return true
 
     } catch (error) {
       console.error('❌ 切换设备失败:', error)
@@ -848,6 +897,11 @@ class RendererAudioCapture {
       })
     }
   }
+}
+
+const existingCapture = (window as any).rendererAudioCapture
+if (existingCapture?.destroy) {
+  existingCapture.destroy()
 }
 
 // 恢复全局实例创建，但保持延迟初始化策略

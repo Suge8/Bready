@@ -29,15 +29,25 @@ const getPreparationIcon = (index: number) => {
   return Icon
 }
 
-// 准备项卡片颜色映射 - 浅色和深色模式
-const getPreparationColor = (index: number) => {
-  const tones = [
-    'bg-[var(--bready-surface)]',
-    'bg-[var(--bready-surface-2)]',
-    'bg-[var(--bready-surface)]',
-    'bg-[var(--bready-surface-2)]'
-  ]
-  return tones[index % tones.length]
+// 视觉层次系统 - 通过颜色深度、阴影和边框创造层次感
+const getCardVisualLayer = (index: number, isDark: boolean) => {
+  // 定义5个视觉层次，循环使用
+  const layers = isDark
+    ? [
+        { bg: 'bg-zinc-900/80', border: 'border-zinc-700/40', shadow: 'shadow-lg shadow-black/20', accent: 'from-blue-500/10' },
+        { bg: 'bg-zinc-900/60', border: 'border-zinc-700/30', shadow: 'shadow-md shadow-black/15', accent: 'from-emerald-500/10' },
+        { bg: 'bg-zinc-900/50', border: 'border-zinc-700/25', shadow: 'shadow-sm shadow-black/10', accent: 'from-violet-500/10' },
+        { bg: 'bg-zinc-900/40', border: 'border-zinc-800/40', shadow: 'shadow-sm shadow-black/5', accent: 'from-amber-500/10' },
+        { bg: 'bg-zinc-900/30', border: 'border-zinc-800/30', shadow: '', accent: 'from-rose-500/10' },
+      ]
+    : [
+        { bg: 'bg-white', border: 'border-gray-200/80', shadow: 'shadow-lg shadow-gray-200/50', accent: 'from-blue-50' },
+        { bg: 'bg-gray-50/80', border: 'border-gray-200/60', shadow: 'shadow-md shadow-gray-200/40', accent: 'from-emerald-50' },
+        { bg: 'bg-gray-50/60', border: 'border-gray-200/50', shadow: 'shadow-sm shadow-gray-200/30', accent: 'from-violet-50' },
+        { bg: 'bg-gray-100/50', border: 'border-gray-200/40', shadow: 'shadow-sm shadow-gray-100/20', accent: 'from-amber-50' },
+        { bg: 'bg-gray-100/40', border: 'border-gray-200/30', shadow: '', accent: 'from-rose-50' },
+      ]
+  return layers[index % layers.length]
 }
 
 const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onReloadData }) => {
@@ -325,8 +335,8 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
                     <div className="flex gap-4 overflow-x-auto scrollbar-hide py-2 px-1">
                       {filteredPreparations.map((preparation, index) => {
                         const IconComponent = getPreparationIcon(index)
-                        const colorClass = getPreparationColor(index)
-                        
+                        const visualLayer = getCardVisualLayer(index, isDarkMode)
+
                         return (
                           <motion.div
                             key={preparation.id}
@@ -336,28 +346,28 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
                             className="group cursor-pointer flex-shrink-0 w-[280px]"
                             onClick={() => handleViewPreparation(preparation.id)}
                           >
-                            <div className={`relative ${colorClass} ${isDarkMode ? 'border border-gray-800/50 group-hover:border-gray-700' : ''} rounded-3xl overflow-hidden transition-all duration-300 ${isDarkMode ? 'shadow-sm group-hover:shadow-lg' : 'group-hover:shadow-sm'}`}>
+                            <div className={`relative h-[180px] ${visualLayer.bg} border ${visualLayer.border} ${visualLayer.shadow} rounded-2xl overflow-hidden transition-all duration-300 group-hover:border-opacity-60`}>
                               {/* 微妙的渐变光效 */}
-                              <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${isDarkMode ? 'bg-gradient-to-br from-white/[0.03] to-transparent' : 'bg-gradient-to-br from-white/40 to-transparent'}`} />
-                              
-                              <div className="relative p-5">
+                              <div className={`absolute inset-0 bg-gradient-to-br ${visualLayer.accent} to-transparent opacity-60 group-hover:opacity-100 transition-opacity duration-300`} />
+
+                              <div className="relative h-full p-5 flex flex-col">
                                 {/* 图标 */}
-                                <motion.div 
-                                  className={`w-12 h-12 mb-4 ${isDarkMode ? 'bg-gray-800/60 border-gray-700/50' : 'bg-white/70'} rounded-2xl flex items-center justify-center shadow-sm ${isDarkMode ? 'border' : ''} backdrop-blur-sm`}
+                                <motion.div
+                                  className={`w-10 h-10 mb-3 ${isDarkMode ? 'bg-zinc-800/80 border-zinc-700/50' : 'bg-white/90 border-gray-100'} border rounded-xl flex items-center justify-center flex-shrink-0`}
                                   whileHover={{ rotate: [0, -10, 10, 0] }}
                                   transition={{ duration: 0.5 }}
                                 >
-                                  <IconComponent className={`w-5 h-5 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`} />
+                                  <IconComponent className={`w-4 h-4 ${isDarkMode ? 'text-zinc-300' : 'text-gray-600'}`} />
                                 </motion.div>
-                                
-                                {/* 标题 */}
-                                <div className="mb-3">
-                                  <h3 className={`text-base font-semibold ${isDarkMode ? 'text-gray-100 group-hover:text-white' : 'text-gray-800 group-hover:text-gray-900'} line-clamp-2 leading-snug transition-colors mb-1.5`}>
+
+                                {/* 标题和状态 */}
+                                <div className="flex-1 min-h-0 flex flex-col">
+                                  <h3 className={`text-[15px] font-semibold ${isDarkMode ? 'text-zinc-100 group-hover:text-white' : 'text-gray-800 group-hover:text-gray-900'} line-clamp-2 leading-snug transition-colors`}>
                                     {preparation.name}
                                   </h3>
                                   {preparation.is_analyzing && (
-                                    <motion.span 
-                                      className={`inline-flex items-center gap-1.5 px-2 py-1 ${isDarkMode ? 'bg-emerald-900/30 text-emerald-400 border-emerald-800/30 border' : 'bg-emerald-500/10 text-emerald-600'} rounded-full text-[11px] font-medium`}
+                                    <motion.span
+                                      className={`mt-2 inline-flex items-center gap-1.5 px-2 py-1 w-fit ${isDarkMode ? 'bg-emerald-900/30 text-emerald-400 border-emerald-800/30 border' : 'bg-emerald-500/10 text-emerald-600'} rounded-full text-[10px] font-medium`}
                                       initial={{ opacity: 0, scale: 0.8 }}
                                       animate={{ opacity: 1, scale: 1 }}
                                       transition={{ duration: 0.3 }}
@@ -370,9 +380,9 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
                                     </motion.span>
                                   )}
                                 </div>
-                                
-                                {/* 日期 */}
-                                <div className={`flex items-center text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+
+                                {/* 日期 - 固定在底部 */}
+                                <div className={`flex items-center text-xs ${isDarkMode ? 'text-zinc-500' : 'text-gray-400'} mt-auto pt-2 flex-shrink-0`}>
                                   <Calendar className="w-3.5 h-3.5 mr-1.5 opacity-70" />
                                   <span className="font-medium">{formatDate(preparation.updated_at)}</span>
                                 </div>
@@ -380,15 +390,15 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
 
                               {/* 删除按钮 */}
                               <motion.button
-                                className={`absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-xl ${isDarkMode ? 'bg-gray-800/80 hover:bg-red-900/40 border-gray-700/50 border' : 'bg-white/70 hover:bg-red-50'} text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all duration-200 cursor-pointer shadow-sm backdrop-blur-sm`}
+                                className={`absolute top-3 right-3 w-7 h-7 flex items-center justify-center rounded-lg ${isDarkMode ? 'bg-zinc-800/90 hover:bg-red-900/50 border-zinc-700/50 border' : 'bg-white/90 hover:bg-red-50 border border-gray-200/50'} text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all duration-200 cursor-pointer`}
                                 onClick={(e) => {
                                   e.stopPropagation()
                                   handleDeletePreparation(preparation.id)
                                 }}
-                                whileHover={{ scale: 1.1, rotate: 5 }}
+                                whileHover={{ scale: 1.1 }}
                                 whileTap={{ scale: 0.9 }}
                               >
-                                <Trash2 className="w-4 h-4" />
+                                <Trash2 className="w-3.5 h-3.5" />
                               </motion.button>
                             </div>
                           </motion.div>

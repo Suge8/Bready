@@ -137,9 +137,9 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
       isOpen
       onClose={onClose}
       size="xl"
-      className="p-0 w-[90vw] max-w-[1100px] h-[85vh] max-h-[85vh] overflow-hidden"
+      className="p-0 w-[90vw] max-w-[1100px] h-[85vh] max-h-[85vh] flex flex-col"
     >
-      <div className="h-full bg-[var(--bready-surface)] border border-[var(--bready-border)] flex flex-col">
+      <div className="h-full bg-[var(--bready-surface)] border border-[var(--bready-border)] flex flex-col min-h-0">
         <div className="px-6 pt-6 pb-4 border-b border-[var(--bready-border)]">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
@@ -177,7 +177,7 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
           </div>
         </div>
 
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden min-h-0">
           {activeTab === 'users' && (
             <div className="h-full flex flex-col">
               <div className="px-6 pt-5 pb-4 space-y-4">

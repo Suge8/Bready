@@ -38,8 +38,8 @@ const CreatePreparationTypeModal: React.FC<CreatePreparationTypeModalProps> = ({
   ]
 
   return (
-    <Modal isOpen onClose={onClose} size="sm" className="p-0">
-      <div className="border-b border-[var(--bready-border)] px-6 py-5">
+    <Modal isOpen onClose={onClose} size="sm" className="p-0 flex flex-col">
+      <div className="border-b border-[var(--bready-border)] px-6 py-5 flex-shrink-0">
         <h1 className="text-base font-semibold text-[var(--bready-text)]">
           {t("createPrep.title")}
         </h1>
@@ -48,7 +48,7 @@ const CreatePreparationTypeModal: React.FC<CreatePreparationTypeModalProps> = ({
         </p>
       </div>
 
-      <div className="space-y-3 px-6 py-5">
+      <div className="flex-1 min-h-0 space-y-3 overflow-y-auto px-6 py-5 scrollbar-thin">
         {types.map((type) => (
           <button
             key={type.id}

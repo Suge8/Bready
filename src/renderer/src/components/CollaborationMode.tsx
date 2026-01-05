@@ -42,6 +42,7 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
   } | null>(null)
   const [showPermissionsModal, setShowPermissionsModal] = useState(false)
   const [copySuccess, setCopySuccess] = useState(false)
+  const [currentMicrophoneDevice, setCurrentMicrophoneDevice] = useState<string>('')
 
   // 复制文本到剪贴板
   const copyToClipboard = async (text: string) => {
@@ -66,6 +67,7 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const rootRef = useRef<HTMLDivElement>(null)
+  const currentMicrophoneDeviceRef = useRef('')
 
 
   // 权限状态
@@ -637,6 +639,26 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
       })
     })
 
+    // 监听音频设备变更事件
+    const removeAudioDeviceChangedListener = window.bready.onAudioDeviceChanged?.((data: { deviceLabel: string }) => {
+      console.log('🎤 设备已切换:', data.deviceLabel)
+      const nextLabel = data.deviceLabel || ''
+      if (!nextLabel) {
+        return
+      }
+
+      const previousLabel = currentMicrophoneDeviceRef.current
+      currentMicrophoneDeviceRef.current = nextLabel
+      setCurrentMicrophoneDevice(nextLabel)
+
+      if (previousLabel && previousLabel !== nextLabel) {
+        setToast({
+          message: t('collaboration.toasts.deviceSwitched', { device: nextLabel }),
+          type: 'info'
+        })
+      }
+    })
+
     // 返回清理函数
     return () => {
       // 清理事件监听器
@@ -649,6 +671,7 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
       removeSessionReadyListener()
       removeSessionErrorListener()
       removeSessionClosedListener()
+      removeAudioDeviceChangedListener?.()
     }
   }, [])
 
@@ -692,6 +715,7 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
         onAudioModeChange={handleAudioModeChange}
         onOpenPermissions={() => setShowPermissionsModal(true)}
         onExit={() => setShowExitConfirm(true)}
+        currentMicrophoneDevice={currentMicrophoneDevice}
       />
 
       {/* 主要内容区域 - 左右分栏布局 */}

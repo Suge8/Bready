@@ -96,9 +96,9 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ onClose, onOpenAdmi
       isOpen
       onClose={onClose}
       size="xl"
-      className="p-0 w-[85vw] max-w-[960px] max-h-[85vh] overflow-hidden"
+      className="p-0 w-[85vw] max-w-[960px] max-h-[85vh] flex flex-col"
     >
-      <div className={`${isDarkMode ? 'bg-black border-gray-800' : 'bg-white border-gray-200'} h-full p-6 shadow-xl border overflow-y-auto`}>
+      <div className={`${isDarkMode ? 'bg-black border-gray-800' : 'bg-white border-gray-200'} flex-1 min-h-0 p-6 shadow-xl border overflow-y-auto scrollbar-thin`}>
         <div className="mb-6">
           <h2 className={`text-xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{t('profile.title')}</h2>
         </div>

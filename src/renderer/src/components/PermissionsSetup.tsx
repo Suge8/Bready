@@ -134,17 +134,17 @@ const PermissionsSetup: React.FC<PermissionsSetupProps> = ({ onComplete, onSkip,
       isOpen={isOpen}
       onClose={onSkip}
       size="lg"
-      className="p-0 max-w-2xl max-h-[90vh] overflow-hidden"
+      className="p-0 max-w-2xl max-h-[90vh] flex flex-col"
     >
-      <div className="bg-[var(--bready-surface)] border border-[var(--bready-border)] overflow-y-auto max-h-[90vh]">
-        <div className="p-6 border-b border-[var(--bready-border)]">
+      <div className="bg-[var(--bready-surface)] border border-[var(--bready-border)] flex flex-col flex-1 min-h-0">
+        <div className="p-6 border-b border-[var(--bready-border)] flex-shrink-0">
           <h2 className="text-2xl font-semibold text-[var(--bready-text)]">{t('permissionsSetup.title')}</h2>
           <p className="text-[var(--bready-text-muted)] mt-2">
             {t('permissionsSetup.description')}
           </p>
         </div>
 
-        <div className="p-6 space-y-6">
+        <div className="flex-1 min-h-0 p-6 space-y-6 overflow-y-auto scrollbar-thin">
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="w-8 h-8 animate-spin text-gray-400" />

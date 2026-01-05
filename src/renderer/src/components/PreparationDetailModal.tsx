@@ -214,9 +214,9 @@ const PreparationDetailModal: React.FC<PreparationDetailModalProps> = ({
       isOpen
       onClose={onClose}
       size="xl"
-      className="p-0 w-[90vw] max-w-[1100px] max-h-[88vh] overflow-hidden relative"
+      className="p-0 w-[90vw] max-w-[1100px] max-h-[88vh] relative flex flex-col"
     >
-      <div className="relative flex flex-col h-full">
+      <div className="relative flex flex-col flex-1 min-h-0">
         {/* 背景装饰 */}
         <div className={`absolute top-0 right-0 w-60 h-60 ${isDarkMode ? 'bg-blue-500/5' : 'bg-blue-500/10'} rounded-full blur-[80px] pointer-events-none`} />
         <div className={`absolute bottom-0 left-0 w-48 h-48 ${isDarkMode ? 'bg-purple-500/5' : 'bg-purple-500/10'} rounded-full blur-[80px] pointer-events-none`} />
@@ -261,7 +261,7 @@ const PreparationDetailModal: React.FC<PreparationDetailModalProps> = ({
         </div>
 
         {/* Content */}
-        <div className="relative flex-1 overflow-y-auto px-6 pb-6 scrollbar-thin">
+        <div className="relative flex-1 min-h-0 overflow-y-auto px-6 pb-6 scrollbar-thin">
 
           {isAnalyzing ? (
             <div className="h-full min-h-[280px] flex items-center justify-center">

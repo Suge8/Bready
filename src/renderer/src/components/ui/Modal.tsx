@@ -63,7 +63,7 @@ export const Modal: React.FC<ModalProps> = ({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -73,53 +73,51 @@ export const Modal: React.FC<ModalProps> = ({
             onClick={handleOverlayClick}
           />
 
-          <div className="flex min-h-full items-center justify-center p-4">
-            <motion.div
-              data-modal
-              initial={{ opacity: 0, scale: 0.98, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.98, y: 20 }}
-              transition={{ duration: 0.2, ease: "easeOut" }}
-              className={cn(
-                "relative w-full rounded-xl border border-[var(--bready-border)] bg-[var(--bready-surface)] shadow-2xl cursor-auto p-6",
-                sizeClasses[size],
-                className
-              )}
-            >
-              {(title || showCloseButton) && (
-                <div className="mb-6 flex items-start justify-between gap-4">
-                  {title && (
-                    <h2 className="text-xl font-semibold text-[var(--bready-text)]">
-                      {title}
-                    </h2>
-                  )}
-                  {showCloseButton && (
-                    <button
-                      onClick={onClose}
-                      className="text-[var(--bready-text-muted)] hover:text-[var(--bready-text)]"
-                      aria-label="关闭"
+          <motion.div
+            data-modal
+            initial={{ opacity: 0, scale: 0.98, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.98, y: 20 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className={cn(
+              "relative w-full flex flex-col rounded-2xl border border-[var(--bready-border)] bg-[var(--bready-surface)] shadow-2xl cursor-auto p-6 max-h-[90vh]",
+              sizeClasses[size],
+              className
+            )}
+          >
+            {(title || showCloseButton) && (
+              <div className="mb-6 flex items-start justify-between gap-4 flex-shrink-0">
+                {title && (
+                  <h2 className="text-xl font-semibold text-[var(--bready-text)]">
+                    {title}
+                  </h2>
+                )}
+                {showCloseButton && (
+                  <button
+                    onClick={onClose}
+                    className="text-[var(--bready-text-muted)] hover:text-[var(--bready-text)] transition-colors"
+                    aria-label="关闭"
+                  >
+                    <svg
+                      className="h-5 w-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
                     >
-                      <svg
-                        className="h-5 w-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M6 18L18 6M6 6l12 12"
-                        />
-                      </svg>
-                    </button>
-                  )}
-                </div>
-              )}
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                )}
+              </div>
+            )}
 
-              {children}
-            </motion.div>
-          </div>
+            {children}
+          </motion.div>
         </div>
       )}
     </AnimatePresence>

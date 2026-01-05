@@ -191,7 +191,7 @@ const EditPreparationModal: React.FC<EditPreparationModalProps> = ({
       isOpen
       onClose={onClose}
       size="xl"
-      className="w-[85vw] max-w-[900px] max-h-[80vh] overflow-hidden p-0"
+      className="w-[85vw] max-w-[900px] max-h-[80vh] p-0 flex flex-col"
     >
       <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--bready-border)]">
         <h1 className="text-base font-semibold text-[var(--bready-text)]">
@@ -217,7 +217,7 @@ const EditPreparationModal: React.FC<EditPreparationModalProps> = ({
         </Button>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-6 pb-6 scrollbar-thin">
+      <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-6 scrollbar-thin">
         <div className="space-y-4 pt-4">
           <div>
             <label className="block text-sm font-medium mb-2 text-[var(--bready-text)]">

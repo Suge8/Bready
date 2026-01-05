@@ -37,13 +37,13 @@ const AnalysisReportModal: React.FC<AnalysisReportModalProps> = ({ analysis, onC
       isOpen
       onClose={onClose}
       size="xl"
-      className="p-0 max-w-4xl max-h-[90vh] overflow-hidden"
+      className="p-0 max-w-4xl max-h-[90vh] flex flex-col"
     >
-      <div className="flex items-center justify-between p-6 border-b border-[var(--bready-border)]">
+      <div className="flex items-center justify-between p-6 border-b border-[var(--bready-border)] flex-shrink-0">
         <h2 className="text-2xl font-bold text-[var(--bready-text)]">{t('prep.report.modalTitle')}</h2>
       </div>
 
-      <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+      <div className="flex-1 min-h-0 p-6 overflow-y-auto scrollbar-thin">
         <div className="space-y-6">
             {/* 匹配度评分 */}
             <Card className={`border-2 rounded-2xl ${getScoreBgColor(analysis.matchScore)}`}>
@@ -125,7 +125,7 @@ const AnalysisReportModal: React.FC<AnalysisReportModalProps> = ({ analysis, onC
         </div>
       </div>
 
-      <div className="flex justify-end p-6 border-t border-[var(--bready-border)]">
+      <div className="flex justify-end p-6 border-t border-[var(--bready-border)] flex-shrink-0">
         <Button onClick={onClose} className="px-6">
           {t('common.close')}
         </Button>

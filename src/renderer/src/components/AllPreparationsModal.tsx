@@ -42,7 +42,7 @@ const AllPreparationsModal: React.FC<AllPreparationsModalProps> = ({
   }
 
   return (
-    <Modal isOpen onClose={onClose} size="xl" className="p-0 max-h-[80vh] overflow-hidden">
+    <Modal isOpen onClose={onClose} size="xl" className="p-0 max-h-[80vh] flex flex-col">
       <div className="flex items-center justify-between p-6 border-b border-[var(--bready-border)]">
         <div>
           <h2 className="text-xl font-bold text-[var(--bready-text)]">{t('prepList.title')}</h2>
@@ -50,7 +50,7 @@ const AllPreparationsModal: React.FC<AllPreparationsModalProps> = ({
         </div>
       </div>
 
-      <div className="p-6 overflow-y-auto max-h-[calc(80vh-120px)]">
+      <div className="flex-1 min-h-0 p-6 overflow-y-auto scrollbar-thin">
         {preparations.length === 0 ? (
           <div className="text-center text-[var(--bready-text-muted)] py-12">
             {t('prepList.empty')}

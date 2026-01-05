@@ -1,5 +1,5 @@
 import React from "react"
-import { ArrowLeft, Settings } from "lucide-react"
+import { ArrowLeft, Mic, Settings } from "lucide-react"
 import { cn } from "../../lib/utils"
 
 interface AudioModeOption {
@@ -21,6 +21,7 @@ interface CollaborationHeaderProps {
   onAudioModeChange: (mode: "system" | "microphone") => void
   onOpenPermissions: () => void
   onExit: () => void
+  currentMicrophoneDevice?: string
 }
 
 const CollaborationHeader: React.FC<CollaborationHeaderProps> = ({
@@ -35,6 +36,7 @@ const CollaborationHeader: React.FC<CollaborationHeaderProps> = ({
   onAudioModeChange,
   onOpenPermissions,
   onExit,
+  currentMicrophoneDevice,
 }) => {
   return (
     <div className="w-full bg-[var(--bready-bg)] z-50 flex-shrink-0 app-drag pt-[15px]">
@@ -59,6 +61,12 @@ const CollaborationHeader: React.FC<CollaborationHeaderProps> = ({
             )}
             <span>{status}</span>
           </div>
+          {currentAudioMode === "microphone" && currentMicrophoneDevice ? (
+            <div className="flex items-center justify-center space-x-1 text-[11px] text-[var(--bready-text-muted)]">
+              <Mic className="w-3 h-3" />
+              <span className="max-w-[220px] truncate">{currentMicrophoneDevice}</span>
+            </div>
+          ) : null}
         </div>
 
         <div className="flex items-center space-x-2 app-no-drag">
