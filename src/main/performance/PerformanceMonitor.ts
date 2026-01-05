@@ -265,7 +265,7 @@ export class Logger {
 
   constructor(level: LogLevel = LogLevel.INFO, logFile?: string) {
     this.level = level
-    this.logFile = logFile
+    this.logFile = logFile ?? null
   }
 
   private log(level: LogLevel, message: string, data?: any): void {
@@ -325,6 +325,7 @@ export class Logger {
   }
 
   private writeToFile(logEntry: any): void {
+    void logEntry
     // TODO: 实现日志文件写入
     // 可以使用fs.appendFile或者winston等日志库
   }

@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react'
+import React from 'react'
 import { motion } from 'framer-motion'
-import { ChevronRight, FolderOpen, X } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 interface BreadcrumbItem {

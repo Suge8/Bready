@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from 'react'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from './ui/card'
-import { Button } from './ui/button'
+import React from 'react'
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from './card'
+import { Button } from './button'
 
 interface SmartRecommendationsProps {
   onItemSelected?: (item: any) => void
 }
 
 export const SmartRecommendations: React.FC<SmartRecommendationsProps> = ({ onItemSelected }) => {
-  const [recommendations, setRecommendations] = useState<any[]>([
+  const recommendations = [
     {
       id: 1,
       title: '技术面试常见问题',
@@ -29,7 +29,7 @@ export const SmartRecommendations: React.FC<SmartRecommendationsProps> = ({ onIt
       category: '薪资谈判',
       relevance: 82
     }
-  ])
+  ]
 
   return (
     <div className="mt-8">

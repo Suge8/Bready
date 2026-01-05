@@ -15,8 +15,17 @@ interface ErrorMessageProps {
   onDismiss?: () => void
 }
 
+type ErrorColor = 'yellow' | 'red'
+
+interface ErrorConfig {
+  icon: React.ReactNode
+  title: string
+  color: ErrorColor
+  fixText: string
+}
+
 const ErrorMessage: React.FC<ErrorMessageProps> = ({ type, message, onFix, onDismiss }) => {
-  const getErrorConfig = (errorType: ErrorType) => {
+  const getErrorConfig = (errorType: ErrorType): ErrorConfig => {
     switch (errorType) {
       case 'permissions-not-set':
         return {

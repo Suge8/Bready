@@ -5,6 +5,7 @@ import { ToastNotification } from './ui/notifications'
 import { preparationService, type Preparation } from '../lib/supabase'
 import { useI18n } from '../contexts/I18nContext'
 import { useTheme } from './ui/theme-provider'
+import { Modal } from './ui/Modal'
 
 interface PreparationDetailModalProps {
   preparation: Preparation
@@ -135,7 +136,10 @@ const PreparationDetailModal: React.FC<PreparationDetailModalProps> = ({
       }
 
       if (!analysisResultData.success) {
-        showToast(t('prepEditor.toasts.analyzeFailed', { error: analysisResultData.error }), 'error')
+        const errorMessage = analysisResultData.error
+          ? t('prepEditor.toasts.analyzeFailed', { error: analysisResultData.error })
+          : t('prepEditor.toasts.analyzeError')
+        showToast(errorMessage, 'error')
         setIsAnalyzing(false)
         return
       }
@@ -206,11 +210,13 @@ const PreparationDetailModal: React.FC<PreparationDetailModalProps> = ({
   const hasAnalysis = currentPreparation.analysis && !isAnalyzing
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-[100] p-6 cursor-pointer" onClick={onClose}>
-      <div 
-        className={`relative w-[90vw] max-w-[1100px] max-h-[88vh] ${isDarkMode ? 'bg-zinc-900' : 'bg-white'} rounded-2xl shadow-2xl flex flex-col overflow-hidden cursor-default`}
-        onClick={(e) => e.stopPropagation()}
-      >
+    <Modal
+      isOpen
+      onClose={onClose}
+      size="xl"
+      className="p-0 w-[90vw] max-w-[1100px] max-h-[88vh] overflow-hidden relative"
+    >
+      <div className="relative flex flex-col h-full">
         {/* 背景装饰 */}
         <div className={`absolute top-0 right-0 w-60 h-60 ${isDarkMode ? 'bg-blue-500/5' : 'bg-blue-500/10'} rounded-full blur-[80px] pointer-events-none`} />
         <div className={`absolute bottom-0 left-0 w-48 h-48 ${isDarkMode ? 'bg-purple-500/5' : 'bg-purple-500/10'} rounded-full blur-[80px] pointer-events-none`} />
@@ -240,12 +246,11 @@ const PreparationDetailModal: React.FC<PreparationDetailModalProps> = ({
 
           {/* 右侧：按钮 */}
           <div className="flex items-center gap-2 flex-shrink-0">
-            <Button onClick={onEdit} size="sm"
-              className={`h-7 px-2.5 text-xs font-medium rounded-lg cursor-pointer ${isDarkMode ? 'bg-zinc-800 text-white hover:bg-zinc-700' : 'bg-gray-100 text-gray-900 hover:bg-gray-200'}`}>
+            <Button onClick={onEdit} size="sm" variant="outline" className="h-7 px-2.5 text-xs">
               <Edit className="w-3 h-3 mr-1" />{t('prep.actions.edit')}
             </Button>
             <Button onClick={handleAnalyze} disabled={isAnalyzing} size="sm"
-              className={`h-7 px-2.5 text-xs font-medium rounded-lg cursor-pointer ${isDarkMode ? 'bg-white text-black hover:bg-gray-100' : 'bg-black text-white hover:bg-gray-800'} disabled:opacity-50`}>
+              className="h-7 px-2.5 text-xs">
               {isAnalyzing ? (
                 <><Loader2 className="w-3 h-3 mr-1 animate-spin" />{t('prepEditor.actions.analyzing')}</>
               ) : (
@@ -256,15 +261,7 @@ const PreparationDetailModal: React.FC<PreparationDetailModalProps> = ({
         </div>
 
         {/* Content */}
-        <div className={`relative flex-1 overflow-y-auto px-6 pb-6 ${isDarkMode ? 'custom-scrollbar-dark' : 'custom-scrollbar-light'}`}>
-          <style>{`
-            .custom-scrollbar-light::-webkit-scrollbar { width: 5px; }
-            .custom-scrollbar-light::-webkit-scrollbar-track { background: transparent; }
-            .custom-scrollbar-light::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 3px; }
-            .custom-scrollbar-dark::-webkit-scrollbar { width: 5px; }
-            .custom-scrollbar-dark::-webkit-scrollbar-track { background: transparent; }
-            .custom-scrollbar-dark::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 3px; }
-          `}</style>
+        <div className="relative flex-1 overflow-y-auto px-6 pb-6 scrollbar-thin">
 
           {isAnalyzing ? (
             <div className="h-full min-h-[280px] flex items-center justify-center">
@@ -321,8 +318,7 @@ const PreparationDetailModal: React.FC<PreparationDetailModalProps> = ({
                 </div>
                 <h3 className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-1.5`}>{t('prep.noAnalysisTitle')}</h3>
                 <p className={`${isDarkMode ? 'text-zinc-500' : 'text-gray-500'} text-xs mb-4`}>{t('prep.report.completeInfo')}</p>
-                <Button onClick={handleAnalyze}
-                  className={`h-8 px-4 text-xs font-medium ${isDarkMode ? 'bg-white text-black hover:bg-gray-100' : 'bg-black text-white hover:bg-zinc-800'} rounded-lg cursor-pointer`}>
+                <Button onClick={handleAnalyze} size="sm" className="h-8 px-4 text-xs">
                   <Brain className="w-3.5 h-3.5 mr-1.5" />{t('prep.actions.startAnalysis')}
                 </Button>
               </div>
@@ -340,7 +336,7 @@ const PreparationDetailModal: React.FC<PreparationDetailModalProps> = ({
 
         {toast && <ToastNotification message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       </div>
-    </div>
+    </Modal>
   )
 }
 

@@ -6,6 +6,7 @@ import { Button } from './ui/button'
 import UserLevelBadge from './UserLevelBadge'
 import { useTheme } from './ui/theme-provider'
 import { useI18n } from '../contexts/I18nContext'
+import { Modal } from './ui/Modal'
 
 interface UserProfileModalProps {
   onClose: () => void
@@ -91,14 +92,13 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ onClose, onOpenAdmi
   const isDarkMode = theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)
 
   return (
-    <div
-      className={`fixed inset-0 ${isDarkMode ? 'bg-black/40' : 'bg-black/20'} backdrop-blur-sm flex items-center justify-center z-50 cursor-pointer p-4`}
-      onClick={onClose}
+    <Modal
+      isOpen
+      onClose={onClose}
+      size="xl"
+      className="p-0 w-[85vw] max-w-[960px] max-h-[85vh] overflow-hidden"
     >
-      <div
-        className={`${isDarkMode ? 'bg-black border-gray-800' : 'bg-white border-gray-200'} rounded-2xl w-[85vw] max-w-[960px] h-auto max-h-[85vh] p-6 shadow-xl animate-fade-in border cursor-auto overflow-y-auto`}
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className={`${isDarkMode ? 'bg-black border-gray-800' : 'bg-white border-gray-200'} h-full p-6 shadow-xl border overflow-y-auto`}>
         <div className="mb-6">
           <h2 className={`text-xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{t('profile.title')}</h2>
         </div>
@@ -186,13 +186,14 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ onClose, onOpenAdmi
                             )}
                           </div>
                         </div>
-                        <button
+                        <Button
                           onClick={() => handlePurchasePackage(pkg.id)}
                           disabled={loading}
-                          className={`ml-3 px-4 py-1.5 text-sm font-medium ${isDarkMode ? 'bg-white text-black hover:bg-gray-100' : 'bg-black text-white hover:bg-gray-800'} rounded-lg transition-colors cursor-pointer disabled:opacity-50`}
+                          size="sm"
+                          className="ml-3"
                         >
                           {t('profile.buy')}
-                        </button>
+                        </Button>
                       </div>
                     )
                   })}
@@ -254,28 +255,30 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ onClose, onOpenAdmi
             <div className={`rounded-xl border ${isDarkMode ? 'border-gray-800 bg-black' : 'border-gray-200 bg-white'} p-4`}>
               <div className="flex gap-3">
                 {isAdmin && onOpenAdminPanel && (
-                  <button
+                  <Button
                     onClick={onOpenAdminPanel}
-                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium ${isDarkMode ? 'text-gray-300 border-gray-800 hover:bg-gray-900' : 'text-gray-700 border-gray-200 hover:bg-gray-50'} border rounded-lg transition-colors cursor-pointer`}
+                    variant="outline"
+                    className="flex-1"
                   >
                     <Settings className="w-4 h-4" />
                     {t('profile.admin')}
-                  </button>
+                  </Button>
                 )}
-                <button
+                <Button
                   onClick={handleSignOut}
                   disabled={loading}
-                  className={`${isAdmin && onOpenAdminPanel ? 'flex-1' : 'w-full'} flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-red-500 border ${isDarkMode ? 'border-red-900/50 hover:bg-red-900/20' : 'border-red-200 hover:bg-red-50'} rounded-lg transition-colors cursor-pointer disabled:opacity-50`}
+                  variant="danger"
+                  className={isAdmin && onOpenAdminPanel ? 'flex-1' : 'w-full'}
                 >
                   <LogOut className="w-4 h-4" />
                   {t('profile.logout')}
-                </button>
+                </Button>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </Modal>
   )
 }
 

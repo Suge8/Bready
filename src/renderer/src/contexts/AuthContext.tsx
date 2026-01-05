@@ -1,10 +1,19 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
-import { User, Session } from '@supabase/supabase-js'
 import { authService, userProfileService, UserProfile } from '../lib/supabase'
 
+type SupabaseUser = {
+  id: string
+  email?: string
+  user_metadata?: Record<string, any>
+}
+
+type SupabaseSession = {
+  user: SupabaseUser | null
+}
+
 interface AuthContextType {
-  user: User | null
-  session: Session | null
+  user: SupabaseUser | null
+  session: SupabaseSession | null
   profile: UserProfile | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<any>
@@ -30,8 +39,8 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null)
-  const [session, setSession] = useState<Session | null>(null)
+  const [user, setUser] = useState<SupabaseUser | null>(null)
+  const [session, setSession] = useState<SupabaseSession | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
 

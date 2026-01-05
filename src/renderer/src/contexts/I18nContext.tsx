@@ -37,6 +37,15 @@ const normalizeSystemLanguage = (language?: string): SupportedLanguage | null =>
   return null
 }
 
+const normalizeStoredLanguage = (stored: string | null): SupportedLanguage | null => {
+  if (!stored) return null
+  if (stored === 'zh-en') return 'cmn-CN'
+  if (SUPPORTED_LANGUAGES.includes(stored as SupportedLanguage)) {
+    return stored as SupportedLanguage
+  }
+  return null
+}
+
 const detectSystemLanguage = (): SupportedLanguage => {
   if (typeof navigator === 'undefined') return 'cmn-CN'
   const candidates = [navigator.language, ...(navigator.languages || [])]
@@ -50,8 +59,8 @@ const detectSystemLanguage = (): SupportedLanguage => {
 export const I18nProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [language, setLanguage] = useState<SupportedLanguage>(() => {
     if (typeof window === 'undefined') return 'cmn-CN'
-    const stored = localStorage.getItem(STORAGE_KEY) as SupportedLanguage | null
-    if (stored && SUPPORTED_LANGUAGES.includes(stored)) {
+    const stored = normalizeStoredLanguage(localStorage.getItem(STORAGE_KEY))
+    if (stored) {
       return stored
     }
     return detectSystemLanguage()
@@ -59,7 +68,7 @@ export const I18nProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     if (typeof document !== 'undefined') {
-      const htmlLanguage = language === 'cmn-CN' ? 'zh-CN' : language === 'zh-en' ? 'zh-CN' : language
+      const htmlLanguage = language === 'cmn-CN' ? 'zh-CN' : language
       document.documentElement.lang = htmlLanguage
     }
     if (typeof window !== 'undefined') {
@@ -95,7 +104,7 @@ export const I18nProvider: React.FC<{ children: React.ReactNode }> = ({ children
   )
 
   const locale = useMemo(() => {
-    if (language === 'cmn-CN' || language === 'zh-en') return 'zh-CN'
+    if (language === 'cmn-CN') return 'zh-CN'
     return language
   }, [language])
 

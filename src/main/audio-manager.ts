@@ -253,35 +253,27 @@ async function startSystemAudioDump(): Promise<{ success: boolean; error?: strin
     recordMetric('audio.system_dump.started', { pid: systemAudioProc.pid })
 
     // 设置音频处理参数
-    const CHUNK_DURATION = 0.05
-    const SAMPLE_RATE = 24000
-    const BYTES_PER_SAMPLE = 2
     const CHANNELS = 2
-    const CHUNK_SIZE = SAMPLE_RATE * BYTES_PER_SAMPLE * CHANNELS * CHUNK_DURATION
-
-    let audioBuffer = Buffer.alloc(0)
 
     if (systemAudioProc.stdout) {
+      let audioRemainder = Buffer.alloc(0)
+
       systemAudioProc.stdout.on('data', (data: Buffer) => {
-        audioBuffer = Buffer.concat([audioBuffer, data])
+        // 保留 0-3 字节的尾部对齐，避免 16-bit 采样读越界
+        const combined = audioRemainder.length ? Buffer.concat([audioRemainder, data]) : data
+        const alignedLength = combined.length - (combined.length % 4)
+        const alignedBuffer = alignedLength > 0 ? combined.subarray(0, alignedLength) : Buffer.alloc(0)
+        audioRemainder = alignedLength < combined.length ? combined.subarray(alignedLength) : Buffer.alloc(0)
 
-        while (audioBuffer.length >= CHUNK_SIZE) {
-          const chunk = audioBuffer.slice(0, CHUNK_SIZE)
-          audioBuffer = audioBuffer.slice(CHUNK_SIZE)
+        if (alignedBuffer.length === 0) return
 
-          const monoChunk = CHANNELS === 2 ? convertStereoToMono(chunk) : chunk
-          const base64Data = monoChunk.toString('base64')
+        const monoChunk = CHANNELS === 2 ? convertStereoToMono(alignedBuffer) : alignedBuffer
+        const base64Data = monoChunk.toString('base64')
 
-          sendAudioToGemini(base64Data)
+        sendAudioToGemini(base64Data)
 
-          if (process.env.DEBUG_AUDIO) {
-            saveDebugAudio(monoChunk, 'system_audio')
-          }
-        }
-
-        const maxBufferSize = SAMPLE_RATE * BYTES_PER_SAMPLE * 1
-        if (audioBuffer.length > maxBufferSize) {
-          audioBuffer = audioBuffer.slice(-maxBufferSize)
+        if (process.env.DEBUG_AUDIO) {
+          saveDebugAudio(monoChunk, 'system_audio')
         }
       })
     }

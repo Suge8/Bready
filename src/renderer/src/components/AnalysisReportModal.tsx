@@ -1,7 +1,8 @@
 import React from 'react'
-import { X, Target, TrendingUp, AlertTriangle, Lightbulb, Star } from 'lucide-react'
+import { Target, TrendingUp, AlertTriangle, Lightbulb, Star } from 'lucide-react'
 import { Button } from './ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
+import { Modal } from './ui/Modal'
 import { useI18n } from '../contexts/I18nContext'
 
 interface Analysis {
@@ -32,23 +33,18 @@ const AnalysisReportModal: React.FC<AnalysisReportModalProps> = ({ analysis, onC
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-[var(--bready-surface)] border border-[var(--bready-border)] rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-        {/* 头部 */}
-        <div className="flex items-center justify-between p-6 border-b border-[var(--bready-border)]">
-          <h2 className="text-2xl font-bold text-[var(--bready-text)]">{t('prep.report.modalTitle')}</h2>
-          <Button
-            variant="ghost"
-            onClick={onClose}
-            className="hover:bg-[var(--bready-surface-2)] rounded-xl"
-          >
-            <X className="w-5 h-5" />
-          </Button>
-        </div>
+    <Modal
+      isOpen
+      onClose={onClose}
+      size="xl"
+      className="p-0 max-w-4xl max-h-[90vh] overflow-hidden"
+    >
+      <div className="flex items-center justify-between p-6 border-b border-[var(--bready-border)]">
+        <h2 className="text-2xl font-bold text-[var(--bready-text)]">{t('prep.report.modalTitle')}</h2>
+      </div>
 
-        {/* 内容区域 */}
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
-          <div className="space-y-6">
+      <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+        <div className="space-y-6">
             {/* 匹配度评分 */}
             <Card className={`border-2 rounded-2xl ${getScoreBgColor(analysis.matchScore)}`}>
               <CardContent className="p-6 text-center">
@@ -126,20 +122,15 @@ const AnalysisReportModal: React.FC<AnalysisReportModalProps> = ({ analysis, onC
                 </ul>
               </CardContent>
             </Card>
-          </div>
-        </div>
-
-        {/* 底部操作 */}
-        <div className="flex justify-end p-6 border-t border-[var(--bready-border)]">
-          <Button
-            onClick={onClose}
-            className="bg-black hover:bg-gray-900 text-white rounded-xl px-6"
-          >
-            {t('common.close')}
-          </Button>
         </div>
       </div>
-    </div>
+
+      <div className="flex justify-end p-6 border-t border-[var(--bready-border)]">
+        <Button onClick={onClose} className="px-6">
+          {t('common.close')}
+        </Button>
+      </div>
+    </Modal>
   )
 }
 

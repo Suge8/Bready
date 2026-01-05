@@ -1,7 +1,8 @@
 import React from 'react'
-import { X, Calendar, Trash2 } from 'lucide-react'
+import { Calendar, Trash2 } from 'lucide-react'
 import { Button } from './ui/button'
 import { Card, CardDescription, CardHeader, CardTitle } from './ui/card'
+import { Modal } from './ui/Modal'
 import { type Preparation } from '../lib/supabase'
 import { useI18n } from '../contexts/I18nContext'
 
@@ -41,32 +42,21 @@ const AllPreparationsModal: React.FC<AllPreparationsModalProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-[var(--bready-surface)] border border-[var(--bready-border)] rounded-2xl shadow-2xl max-w-4xl w-full max-h-[80vh] overflow-hidden">
-        {/* 头部 */}
-        <div className="flex items-center justify-between p-6 border-b border-[var(--bready-border)]">
-          <div>
-            <h2 className="text-xl font-bold text-[var(--bready-text)]">{t('prepList.title')}</h2>
-            <p className="text-sm text-[var(--bready-text-muted)] mt-1">{t('prepList.count', { count: preparations.length })}</p>
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            className="hover:bg-[var(--bready-surface-2)] rounded-xl"
-          >
-            <X className="w-5 h-5" />
-          </Button>
+    <Modal isOpen onClose={onClose} size="xl" className="p-0 max-h-[80vh] overflow-hidden">
+      <div className="flex items-center justify-between p-6 border-b border-[var(--bready-border)]">
+        <div>
+          <h2 className="text-xl font-bold text-[var(--bready-text)]">{t('prepList.title')}</h2>
+          <p className="text-sm text-[var(--bready-text-muted)] mt-1">{t('prepList.count', { count: preparations.length })}</p>
         </div>
+      </div>
 
-        {/* 内容区域 */}
-        <div className="p-6 overflow-y-auto max-h-[calc(80vh-120px)]">
-          {preparations.length === 0 ? (
-            <div className="text-center text-[var(--bready-text-muted)] py-12">
-              {t('prepList.empty')}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="p-6 overflow-y-auto max-h-[calc(80vh-120px)]">
+        {preparations.length === 0 ? (
+          <div className="text-center text-[var(--bready-text-muted)] py-12">
+            {t('prepList.empty')}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {preparations.map((preparation) => (
               <Card
                 key={preparation.id}
@@ -96,8 +86,7 @@ const AllPreparationsModal: React.FC<AllPreparationsModalProps> = ({
                       </div>
                     </div>
                   </div>
-                  
-                  {/* 操作按钮 */}
+
                   <div className="flex items-center justify-end mt-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     <Button
                       variant="ghost"
@@ -116,10 +105,9 @@ const AllPreparationsModal: React.FC<AllPreparationsModalProps> = ({
               </Card>
             ))}
           </div>
-          )}
-        </div>
+        )}
       </div>
-    </div>
+    </Modal>
   )
 }
 

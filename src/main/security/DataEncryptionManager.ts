@@ -1,5 +1,9 @@
 import * as crypto from 'crypto'
-import { Logger } from '../utils/Logger'
+import { createLogger } from '../utils/logging'
+
+const toErrorMetadata = (error: unknown): Record<string, any> => ({
+  error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error)
+})
 
 /**
  * 加密数据结构
@@ -15,16 +19,15 @@ export interface EncryptedData {
  * 负责敏感数据的加密存储和解密读取
  */
 export class DataEncryptionManager {
-  private logger: Logger
+  private logger = createLogger('data-encryption')
   private readonly ALGORITHM = 'aes-256-gcm'
   private readonly KEY_LENGTH = 32
   private readonly IV_LENGTH = 16
   private readonly TAG_LENGTH = 16
   private readonly VERSION = '1.0'
+  private readonly AAD = Buffer.from('bready-app-v1')
 
-  constructor() {
-    this.logger = Logger.getInstance()
-  }
+  constructor() {}
 
   /**
    * 加密数据
@@ -40,8 +43,8 @@ export class DataEncryptionManager {
       const iv = crypto.randomBytes(this.IV_LENGTH)
       
       // 创建加密器
-      const cipher = crypto.createCipher(this.ALGORITHM, key)
-      cipher.setAAD(Buffer.from('bready-app-v1'))
+      const cipher = crypto.createCipheriv(this.ALGORITHM, key, iv)
+      cipher.setAAD(this.AAD)
       
       // 加密数据
       let encrypted = cipher.update(data, 'utf8', 'hex')
@@ -64,7 +67,7 @@ export class DataEncryptionManager {
       }
       
     } catch (error) {
-      this.logger.error('数据加密失败:', error)
+      this.logger.error('数据加密失败:', toErrorMetadata(error))
       throw new Error('数据加密失败')
     }
   }
@@ -94,26 +97,25 @@ export class DataEncryptionManager {
       // 提取IV、认证标签和加密数据
       const iv = Buffer.from(data.slice(0, this.IV_LENGTH * 2), 'hex')
       const tag = Buffer.from(
-        data.slice(this.IV_LENGTH * 2, (this.IV_LENGTH + this.TAG_LENGTH) * 2), 
+        data.slice(this.IV_LENGTH * 2, (this.IV_LENGTH + this.TAG_LENGTH) * 2),
         'hex'
       )
       const encrypted = data.slice((this.IV_LENGTH + this.TAG_LENGTH) * 2)
-      
-      // 创建解密器
-      const decipher = crypto.createDecipher(this.ALGORITHM, key)
-      decipher.setAAD(Buffer.from('bready-app-v1'))
-      decipher.setAuthTag(tag)
-      
-      // 解密数据
-      let decrypted = decipher.update(encrypted, 'hex', 'utf8')
-      decrypted += decipher.final('utf8')
-      
-      this.logger.debug('数据解密成功')
-      
-      return decrypted
-      
+
+      try {
+        const decipher = crypto.createDecipheriv(this.ALGORITHM, key, iv) as crypto.DecipherGCM
+        const decrypted = this.decryptPayload(decipher, encrypted, tag)
+        this.logger.debug('数据解密成功')
+        return decrypted
+      } catch (error) {
+        this.logger.warn('数据解密失败，尝试兼容旧算法', toErrorMetadata(error))
+        const legacyDecipher = crypto.createDecipher(this.ALGORITHM, key) as crypto.DecipherGCM
+        const decrypted = this.decryptPayload(legacyDecipher, encrypted, tag)
+        this.logger.debug('数据解密成功（兼容旧算法）')
+        return decrypted
+      }
     } catch (error) {
-      this.logger.error('数据解密失败:', error)
+      this.logger.error('数据解密失败:', toErrorMetadata(error))
       throw new Error('数据解密失败')
     }
   }
@@ -128,7 +130,7 @@ export class DataEncryptionManager {
       const jsonString = JSON.stringify(obj)
       return this.encrypt(jsonString, password)
     } catch (error) {
-      this.logger.error('对象加密失败:', error)
+      this.logger.error('对象加密失败:', toErrorMetadata(error))
       throw new Error('对象加密失败')
     }
   }
@@ -143,7 +145,7 @@ export class DataEncryptionManager {
       const jsonString = this.decrypt(encryptedData, password)
       return JSON.parse(jsonString)
     } catch (error) {
-      this.logger.error('对象解密失败:', error)
+      this.logger.error('对象解密失败:', toErrorMetadata(error))
       throw new Error('对象解密失败')
     }
   }
@@ -181,7 +183,7 @@ export class DataEncryptionManager {
       
       return crypto.timingSafeEqual(hash, computedHash)
     } catch (error) {
-      this.logger.error('密码验证失败:', error)
+      this.logger.error('密码验证失败:', toErrorMetadata(error))
       return false
     }
   }
@@ -196,6 +198,15 @@ export class DataEncryptionManager {
     
     // 使用PBKDF2派生密钥
     return crypto.pbkdf2Sync(password, salt, 100000, this.KEY_LENGTH, 'sha256')
+  }
+
+  private decryptPayload(decipher: crypto.DecipherGCM, encrypted: string, tag: Buffer): string {
+    decipher.setAAD(this.AAD)
+    decipher.setAuthTag(tag)
+
+    let decrypted = decipher.update(encrypted, 'hex', 'utf8')
+    decrypted += decipher.final('utf8')
+    return decrypted
   }
 
   /**

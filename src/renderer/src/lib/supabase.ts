@@ -229,6 +229,7 @@ export const authService = {
 
   // 手机号登录（暂不支持）
   async signInWithPhone(phone: string) {
+    void phone
     return {
       data: { user: null, session: null },
       error: { message: '手机号登录暂不支持，请使用邮箱密码登录' }
@@ -237,6 +238,8 @@ export const authService = {
 
   // 验证手机号 OTP（暂不支持）
   async verifyOtp(phone: string, token: string) {
+    void phone
+    void token
     return {
       data: { user: null, session: null },
       error: { message: 'OTP 验证暂不支持，请使用邮箱密码登录' }

@@ -34,7 +34,6 @@ export class OptimizedAudioProcessor extends EventEmitter {
   // 性能优化配置
   private readonly MAX_QUEUE_SIZE = 10
   private readonly BATCH_PROCESS_SIZE = 3
-  private readonly SILENCE_THRESHOLD = 0.01
   
   constructor(config: Partial<AudioConfig> = {}) {
     super()

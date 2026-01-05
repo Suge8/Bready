@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Toggle } from './ui/toggle'
+import { Toggle } from './toggle'
 
 interface UserPreferencesProps {
   preferences: {
@@ -73,7 +73,7 @@ export const UserPreferences: React.FC<UserPreferencesProps> = ({
             
             {option.type === 'select' && (
               <select
-                value={localPreferences[option.id as keyof typeof localPreferences]}
+                value={localPreferences[option.id as keyof typeof localPreferences] as string}
                 onChange={(e) => handleChange(option.id, e.target.value)}
                 className="px-3 py-1 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
               >
@@ -104,7 +104,7 @@ export const UserPreferences: React.FC<UserPreferencesProps> = ({
             {option.type === 'toggle' && (
               <Toggle
                 checked={localPreferences[option.id as keyof typeof localPreferences] as boolean}
-                onChange={(checked) => handleChange(option.id, checked)}
+                onChange={(checked: boolean) => handleChange(option.id, checked)}
               />
             )}
           </div>

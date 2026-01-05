@@ -120,10 +120,10 @@ const LoginPage: React.FC = () => {
   return (
     <div className="h-screen w-screen overflow-hidden bg-[var(--bready-bg)] text-[var(--bready-text)] flex flex-col">
       {/* 拖拽区域 */}
-      <div className="h-12 w-full" style={{ WebkitAppRegion: 'drag' } as any}></div>
+      <div className="h-12 w-full app-drag"></div>
 
       {/* 主要内容 */}
-      <div className="flex-1 overflow-y-auto" style={{ WebkitAppRegion: 'no-drag' } as any}>
+      <div className="flex-1 overflow-y-auto app-no-drag">
         <div className="min-h-full flex items-center justify-center p-4">
           <Card className="w-full max-w-md border border-[var(--bready-border)] bg-[var(--bready-surface)] shadow-xl">
             <CardHeader className="text-center">
@@ -179,7 +179,7 @@ const LoginPage: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 cursor-pointer"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--bready-text-muted)] hover:text-[var(--bready-text)] cursor-pointer"
                       >
                         {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
@@ -275,14 +275,14 @@ const LoginPage: React.FC = () => {
               <div className="flex justify-center space-x-4 text-sm">
                 <button
                   onClick={() => setMode('email')}
-                  className={`flex items-center space-x-1 cursor-pointer transition-colors ${mode === 'email' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}
+                  className={`flex items-center space-x-1 cursor-pointer transition-colors ${mode === 'email' ? 'text-[var(--bready-text)]' : 'text-[var(--bready-text-muted)]'}`}
                 >
                   <Mail className="w-4 h-4" />
                   <span>{t('login.switchEmail')}</span>
                 </button>
                 <button
                   onClick={() => setMode('phone')}
-                  className={`flex items-center space-x-1 cursor-pointer transition-colors ${mode === 'phone' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}
+                  className={`flex items-center space-x-1 cursor-pointer transition-colors ${mode === 'phone' ? 'text-[var(--bready-text)]' : 'text-[var(--bready-text-muted)]'}`}
                 >
                   <Phone className="w-4 h-4" />
                   <span>{t('login.switchPhone')}</span>
@@ -296,7 +296,7 @@ const LoginPage: React.FC = () => {
                     {t('login.hasAccount')}
                     <button
                       onClick={() => setMode('email')}
-                      className="text-blue-600 dark:text-blue-400 hover:underline ml-1 cursor-pointer"
+                      className="ml-1 text-[var(--bready-text)] hover:underline cursor-pointer"
                     >
                       {t('login.loginNow')}
                     </button>
@@ -306,7 +306,7 @@ const LoginPage: React.FC = () => {
                     {t('login.noAccount')}
                     <button
                       onClick={() => setMode('signup')}
-                      className="text-blue-600 dark:text-blue-400 hover:underline ml-1 cursor-pointer"
+                      className="ml-1 text-[var(--bready-text)] hover:underline cursor-pointer"
                     >
                       {t('login.signupNow')}
                     </button>

@@ -51,9 +51,13 @@ declare global {
       onSessionReady: (callback: () => void) => () => void
       onSessionError: (callback: (error: string) => void) => () => void
       onSessionClosed: (callback: () => void) => () => void
+      onAudioModeChanged: (callback: (modeInfo: { mode: 'system' | 'microphone'; fallback?: boolean; reason?: string }) => void) => () => void
       onContextCompressed: (callback: (data: { previousCount: number, newCount: number }) => void) => () => void
       onAudioStreamInterrupted: (callback: () => void) => () => void
       onAudioStreamRestored: (callback: () => void) => () => void
+      onTranscriptionComplete: (callback: (transcription: string) => void) => () => void
+      onPerformanceMetrics: (callback: (metrics: any) => void) => () => void
+      onCrashReport: (callback: (report: any) => void) => () => void
       analyzePreparation: (data: { name: string; jobDescription: string; resume?: string }) => Promise<{ success: boolean; analysis?: any; error?: string }>
       extractFileContent: (data: { fileName: string; fileType: string; base64Data: string }) => Promise<{ success: boolean; content?: string; error?: string }>
     }
@@ -128,7 +132,6 @@ function AppContent() {
   const [preparations, setPreparations] = useState<Preparation[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [showPermissionGuide, setShowPermissionGuide] = useState(false)
-  const [permissionsChecked, setPermissionsChecked] = useState(false)
   const [permissionStatus, setPermissionStatus] = useState({
     screenRecording: false,
     microphone: false
@@ -184,10 +187,8 @@ function AppContent() {
         setShowPermissionGuide(true)
       }
 
-      setPermissionsChecked(true)
     } catch (error) {
       console.error('权限检查失败:', error)
-      setPermissionsChecked(true)
     }
   }
 

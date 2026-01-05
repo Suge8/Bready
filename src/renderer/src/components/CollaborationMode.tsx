@@ -1,14 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { ArrowLeft, Send, RefreshCw, Mic, Volume2, Settings, X, AlertCircle, CheckCircle, XCircle, Loader2, Wifi, WifiOff, Copy, Check } from 'lucide-react'
+import { Send, RefreshCw, Mic, Volume2, X, AlertCircle, CheckCircle, XCircle, Loader2, Wifi, WifiOff, Copy, Check } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
 import { Button } from './ui/button'
 import { Card, CardContent } from './ui/card'
 import { ToastNotification, ConfirmationDialog } from './ui/notifications'
-import { TouchButton, SwipeableCard } from './ui/touch-optimized'
+import { TouchButton } from './ui/touch-optimized'
 import 'highlight.js/styles/github.css'
 import { useI18n } from '../contexts/I18nContext'
+import { Modal } from './ui/Modal'
+import CollaborationHeader from './collaboration/CollaborationHeader'
+import CollaborationSidebar from './collaboration/CollaborationSidebar'
 
 interface CollaborationModeProps {
   onExit: () => void
@@ -25,8 +28,6 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
   const [isWaitingForAI, setIsWaitingForAI] = useState(false)
   const [currentVoiceInput, setCurrentVoiceInput] = useState('')
   const [currentAIResponse, setCurrentAIResponse] = useState('')
-  const [pendingUserInput, setPendingUserInput] = useState<{ content: string, source: 'text' } | null>(null)
-  const [lastAIResponse, setLastAIResponse] = useState('')
   const [isComposing, setIsComposing] = useState(false)
   const [showExitConfirm, setShowExitConfirm] = useState(false)
   const [currentAudioMode, setCurrentAudioMode] = useState<'system' | 'microphone'>('system')
@@ -41,8 +42,6 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
   } | null>(null)
   const [showPermissionsModal, setShowPermissionsModal] = useState(false)
   const [copySuccess, setCopySuccess] = useState(false)
-  const [hoveredMessageIndex, setHoveredMessageIndex] = useState<number | null>(null)
-  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // 复制文本到剪贴板
   const copyToClipboard = async (text: string) => {
@@ -67,7 +66,6 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const rootRef = useRef<HTMLDivElement>(null)
-  const sidebarScrollRef = useRef<HTMLDivElement>(null)
 
 
   // 权限状态
@@ -407,10 +405,6 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
     setConversationHistory(prev => [...prev, userMessage])
 
     // 设置pending状态，用于AI回复时的历史记录处理
-    setPendingUserInput({
-      content: messageText,
-      source: 'text'
-    })
     pendingUserInputRef.current = {
       content: messageText,
       source: 'text'
@@ -421,7 +415,7 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
     setIsWaitingForAI(true)
 
     // 重置AI回复记录
-    setLastAIResponse('')
+    lastAIResponseRef.current = ''
 
     // 检查是否在 Electron 环境中
     if (!window.bready) {
@@ -498,12 +492,6 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
   }, [conversationHistory, currentVoiceInput, currentAIResponse])
 
   useEffect(() => {
-    const sidebar = sidebarScrollRef.current
-    if (!sidebar) return
-    sidebar.scrollTop = sidebar.scrollHeight
-  }, [conversationHistory.length])
-
-  useEffect(() => {
     if (rootRef.current) {
       rootRef.current.scrollTo({ top: 0, left: 0 })
     }
@@ -552,7 +540,7 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
       setIsWaitingForAI(false)
     })
     // 新增：转录完成事件监听器 - 当语音转录完成时，立即将用户消息添加到历史记录
-    const removeTranscriptionCompleteListener = window.bready.onTranscriptionComplete?.((transcription) => {
+    const removeTranscriptionCompleteListener = window.bready.onTranscriptionComplete?.((transcription: string) => {
       console.log('✅ [前端] 收到转录完成事件:', transcription?.substring(0, 30))
 
       if (!transcription?.trim()) return
@@ -582,10 +570,6 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
         content: transcription.trim(),
         source: 'text' // 这里标记为 text 但实际上是为了让 AI 回复时知道用户消息已添加
       }
-      setPendingUserInput({
-        content: transcription.trim(),
-        source: 'text'
-      })
     })
 
     const removeAIResponseListener = window.bready.onAIResponse((response) => {
@@ -599,7 +583,6 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
         return
       }
 
-      setLastAIResponse(response)
       lastAIResponseRef.current = response
       const timestamp = new Date()
       setCurrentAIResponse('')
@@ -617,7 +600,6 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
       }
 
       setConversationHistory(prev => [...prev, aiMessage])
-      setPendingUserInput(null)
       pendingUserInputRef.current = null
       setCurrentVoiceInput('')
       currentVoiceInputRef.current = ''
@@ -698,140 +680,22 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
         - WebkitAppRegion: 'drag': 允许拖动窗口（macOS/Windows 窗口拖动区域）
         - paddingTop: macOS 上留出 20px 空间给系统红绿灯按钮
       */}
-      <div
-        className="w-full bg-[var(--bready-bg)] z-50 flex-shrink-0"
-        style={{ WebkitAppRegion: 'drag', paddingTop: '15px' } as any}
-      >
-        {/* 
-          内层容器 - 三栏布局：
-          - h-8: 固定高度 32px
-          - flex items-center justify-between: 水平排列，垂直居中，两端对齐
-          - px-4: 左右内边距 16px
-          布局结构：[返回按钮] [标题+状态(居中)] [音频模式+设置按钮]
-        */}
-        <div className="h-8 w-full flex items-center justify-between" style={{ WebkitAppRegion: 'drag' } as any}>
-
-          {/* ========== 左侧：返回按钮 ========== */}
-          {/* 
-            - marginLeft: macOS 上左移 72px，避开系统红绿灯按钮
-            - WebkitAppRegion: 'no-drag': 按钮区域可点击，不触发窗口拖动
-            - onClick: 显示退出确认对话框
-          */}
-          <button
-            onClick={() => setShowExitConfirm(true)}
-            className="p-1.5 -mt-7 text-[var(--bready-text-muted)] hover:text-[var(--bready-text)] transition-all duration-200 hover:bg-[var(--bready-surface-2)] rounded-lg cursor-pointer"
-            style={{ marginLeft: isMac ? '68px' : '0', WebkitAppRegion: 'no-drag' } as any}
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-
-          {/* ========== 中间：标题和连接状态（居中显示） ========== */}
-          {/* 
-            - flex-1: 占据剩余空间，确保居中
-            - flex flex-col: 垂直排列（标题在上，状态在下）
-            - items-center: 水平居中
-            - pointer-events-none: 不响应鼠标事件，允许点击穿透到拖动区域
-          */}
-          <div className="flex-1 flex flex-col items-center pointer-events-none">
-            {/* 标题文字 */}
-            <h1 className="font-semibold text-[var(--bready-text)]">{t('collaboration.title')}</h1>
-
-            {/* 连接状态指示器 */}
-            <div className="flex items-center justify-center space-x-2 text-xs text-[var(--bready-text-muted)]">
-              {/* 状态指示灯：绿色=已连接（带脉冲动画），红色=未连接 */}
-              {isConnected ? (
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              ) : (
-                <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-              )}
-              {/* 状态文字（如"准备就绪"、"连接中"等） */}
-              <span>{status}</span>
-            </div>
-          </div>
-
-          {/* ========== 右侧：控制按钮组 ========== */}
-          {/* 
-            包含两个按钮：
-            1. 音频模式切换（系统音频/麦克风）
-            2. 权限设置按钮
-          */}
-          <div className="flex items-center space-x-2" style={{ WebkitAppRegion: 'no-drag' } as any}>
-
-            {/* --- 音频模式切换下拉菜单 --- */}
-            <div className="relative" style={{ WebkitAppRegion: 'no-drag' } as any}>
-              {/* 音频模式按钮：显示当前选中的模式（图标+文字） */}
-              <button
-                onClick={() => setShowAudioModeDropdown(!showAudioModeDropdown)}
-                className="flex items-center space-x-1 px-2 py-1.5 bg-[var(--bready-surface-2)] text-[var(--bready-text)] rounded-lg text-xs hover:bg-[var(--bready-surface-3)] transition-all duration-200 cursor-pointer"
-              >
-                {/* 当前模式图标（麦克风或音量图标） */}
-                {audioModeOptions.find(option => option.value === currentAudioMode)?.icon}
-                {/* 当前模式文字（"系统音频"或"麦克风"） */}
-                <span className="font-medium whitespace-nowrap">
-                  {audioModeOptions.find(option => option.value === currentAudioMode)?.label}
-                </span>
-              </button>
-
-              {/* 下拉菜单：点击按钮后显示 */}
-              {/* 
-                - absolute top-full right-0: 定位在按钮正下方，右对齐
-                - mt-1: 与按钮间隔 4px
-                - z-50: 高层级，覆盖其他内容
-                - min-w-48: 最小宽度 192px
-              */}
-              {showAudioModeDropdown && (
-                <div className="absolute top-full right-0 mt-1 bg-[var(--bready-surface)] border border-[var(--bready-border)] rounded-xl shadow-lg z-50 min-w-48">
-                  {/* 遍历音频模式选项（系统音频、麦克风） */}
-                  {audioModeOptions.map((option) => (
-                    <button
-                      key={option.value}
-                      onClick={() => handleAudioModeChange(option.value)}
-                      className={`w-full px-3 py-2.5 text-left hover:bg-[var(--bready-surface-2)] transition-colors duration-150 first:rounded-t-lg last:rounded-b-lg cursor-pointer ${currentAudioMode === option.value
-                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300'  // 选中状态：绿色高亮
-                        : 'text-[var(--bready-text)]'  // 未选中状态：普通文字色
-                        }`}
-                    >
-                      {/* 选项内容布局：[图标] [标题+描述] [选中指示器] */}
-                      <div className="flex items-start space-x-3">
-                        {/* 图标 */}
-                        <div className={`mt-0.5 ${currentAudioMode === option.value ? 'text-emerald-600 dark:text-emerald-300' : 'text-[var(--bready-text-muted)]'}`}>
-                          {option.icon}
-                        </div>
-                        {/* 标题和描述 */}
-                        <div className="flex-1">
-                          <div className={`text-sm font-medium ${currentAudioMode === option.value ? 'text-emerald-600 dark:text-emerald-300' : 'text-[var(--bready-text)]'}`}>
-                            {option.label}
-                          </div>
-                          <div className="text-xs text-[var(--bready-text-muted)] mt-0.5">
-                            {option.description}
-                          </div>
-                        </div>
-                        {/* 选中指示器：绿色圆点 */}
-                        {currentAudioMode === option.value && (
-                          <div className="w-2 h-2 bg-emerald-400 rounded-full mt-1.5" />
-                        )}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* --- 权限设置按钮 --- */}
-            {/* 点击后打开权限设置模态框，显示系统音频、麦克风、网络等权限状态 */}
-            <button
-              onClick={() => setShowPermissionsModal(true)}
-              className="p-2 text-[var(--bready-text-muted)] hover:text-[var(--bready-text)] transition-all duration-200 hover:bg-[var(--bready-surface-2)] rounded-lg cursor-pointer"
-              style={{ WebkitAppRegion: 'no-drag' } as any}
-            >
-              <Settings className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-      </div>
+      <CollaborationHeader
+        isMac={isMac}
+        title={t('collaboration.title')}
+        status={status}
+        isConnected={isConnected}
+        audioModeOptions={audioModeOptions}
+        currentAudioMode={currentAudioMode}
+        showAudioModeDropdown={showAudioModeDropdown}
+        onToggleAudioModeDropdown={() => setShowAudioModeDropdown(!showAudioModeDropdown)}
+        onAudioModeChange={handleAudioModeChange}
+        onOpenPermissions={() => setShowPermissionsModal(true)}
+        onExit={() => setShowExitConfirm(true)}
+      />
 
       {/* 主要内容区域 - 左右分栏布局 */}
-      <div className="flex-1 flex p-4 gap-4 overflow-hidden bg-[var(--bready-bg)]" style={{ pointerEvents: 'auto' }}>
+      <div className="flex-1 flex p-4 gap-4 overflow-hidden bg-[var(--bready-bg)]">
 
         {/* 左侧主区域 - 实时问答 (约3/4宽度) */}
         <div className="flex-1 flex flex-col min-w-0">
@@ -1034,144 +898,17 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
           </div>
         </div>
 
-        {/* 右侧对话 - 响应式宽度 */}
-        <div className="w-1/4 min-w-[200px] max-w-[320px] flex-shrink-0 flex flex-col bg-[var(--bready-surface)] rounded-xl border border-[var(--bready-border)]">
-          {/* 标题 */}
-          <div className="px-3 py-2.5 border-b border-[var(--bready-border)] flex items-center justify-between">
-            <h3 className="text-xs font-medium text-[var(--bready-text-muted)] tracking-wide">{t('collaboration.sidebar.title')}</h3>
-            <span className="text-[10px] text-[var(--bready-text-muted)] tabular-nums">
-              {conversationHistory.length}
-            </span>
-          </div>
-
-          {/* 对话列表 */}
-          <div ref={sidebarScrollRef} className="flex-1 overflow-y-auto p-2 space-y-2 scrollbar-thin">
-            {conversationHistory.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-[var(--bready-text-muted)] text-xs">
-                <span className="text-lg mb-1">💬</span>
-                <p>{t('collaboration.sidebar.empty')}</p>
-              </div>
-            ) : (
-              conversationHistory.map((entry, index) => {
-                const isTruncated = entry.content.length > 150
-                const isHovered = hoveredMessageIndex === index
-                return (
-                  <div
-                    key={index}
-                    className={`relative p-3 rounded-lg transition-all duration-150 cursor-pointer hover:bg-[var(--bready-surface-3)] active:scale-[0.98] ${entry.type === 'user' ? 'bg-[var(--bready-surface-2)]' : 'bg-[var(--bready-surface-3)]'
-                      }`}
-                    onClick={() => copyToClipboard(entry.content)}
-                    onMouseEnter={() => {
-                      if (isTruncated) {
-                        // 清除之前的定时器
-                        if (hoverTimeoutRef.current) {
-                          clearTimeout(hoverTimeoutRef.current)
-                          hoverTimeoutRef.current = null
-                        }
-                        // 设置 500ms 延迟后显示
-                        hoverTimeoutRef.current = setTimeout(() => {
-                          setHoveredMessageIndex(index)
-                        }, 500)
-                      }
-                    }}
-                    onMouseLeave={() => {
-                      // 清除显示定时器
-                      if (hoverTimeoutRef.current) {
-                        clearTimeout(hoverTimeoutRef.current)
-                        hoverTimeoutRef.current = null
-                      }
-                      // 使用延迟关闭，让鼠标有时间移动到 tooltip 上
-                      hoverTimeoutRef.current = setTimeout(() => {
-                        setHoveredMessageIndex(null)
-                      }, 100)
-                    }}
-                  >
-                    <div className="flex gap-2.5">
-                      {/* 头像和时间列 */}
-                      <div className="flex flex-col items-center flex-shrink-0">
-                        <div className={`w-6 h-6 rounded-full flex items-center justify-center ${entry.type === 'user' ? 'bg-[var(--bready-accent)] text-[var(--bready-accent-contrast)]' : 'bg-[var(--bready-surface-3)] text-[var(--bready-text)]'
-                          }`}>
-                          {entry.type === 'user' ? (
-                            entry.source === 'voice' ? <Mic className="w-3 h-3" /> : <span className="text-[9px]">⌨</span>
-                          ) : (
-                            <span className="text-[10px]">🍞</span>
-                          )}
-                        </div>
-                        <span className="text-[9px] text-[var(--bready-text-muted)] mt-1 tabular-nums">
-                          {entry.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      </div>
-                      {/* 内容 - 支持 Markdown */}
-                      <div className="flex-1 min-w-0 text-xs text-[var(--bready-text)] leading-relaxed line-clamp-3 prose prose-sm max-w-none prose-p:m-0 prose-p:text-[var(--bready-text)] dark:prose-invert">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                          {isTruncated ? entry.content.substring(0, 150) + '...' : entry.content}
-                        </ReactMarkdown>
-                      </div>
-                    </div>
-
-                    {/* 悬浮显示完整内容 - 延迟 500ms 后显示 */}
-                    {isTruncated && isHovered && (
-                      <div
-                        className="fixed inset-0 flex items-center justify-center z-[9999] pointer-events-none"
-                        style={{ padding: '40px' }}
-                      >
-                        <div
-                          className="bg-[var(--bready-surface)] border border-[var(--bready-border)] rounded-xl p-4 shadow-2xl backdrop-blur-xl max-w-lg max-h-[60vh] overflow-y-auto pointer-events-auto animate-in fade-in zoom-in-95 duration-200"
-                          onMouseEnter={() => {
-                            // 当鼠标进入 tooltip 时，取消延迟关闭
-                            if (hoverTimeoutRef.current) {
-                              clearTimeout(hoverTimeoutRef.current)
-                              hoverTimeoutRef.current = null
-                            }
-                          }}
-                          onMouseLeave={() => {
-                            // 鼠标离开 tooltip 时立即关闭
-                            if (hoverTimeoutRef.current) {
-                              clearTimeout(hoverTimeoutRef.current)
-                              hoverTimeoutRef.current = null
-                            }
-                            setHoveredMessageIndex(null)
-                          }}
-                        >
-                          <div className="flex items-center gap-2 mb-3 pb-2 border-b border-[var(--bready-border)]">
-                            <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${entry.type === 'user' ? 'bg-[var(--bready-accent)] text-[var(--bready-accent-contrast)]' : 'bg-[var(--bready-surface-3)] text-[var(--bready-text)]'
-                              }`}>
-                              {entry.type === 'user' ? (
-                                entry.source === 'voice' ? <Mic className="w-2.5 h-2.5" /> : <span className="text-[8px]">⌨</span>
-                              ) : (
-                                <span className="text-[9px]">🍞</span>
-                              )}
-                            </div>
-                            <span className="text-[10px] text-[var(--bready-text-muted)] flex-shrink-0">
-                              {entry.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                            </span>
-                            <span className="text-[10px] text-[var(--bready-text-muted)] ml-auto">
-                              {t('collaboration.actions.copy')}
-                            </span>
-                          </div>
-                          <div className="prose prose-sm max-w-none text-[var(--bready-text)] prose-p:text-[var(--bready-text)] prose-headings:text-[var(--bready-text)] dark:prose-invert text-sm leading-relaxed">
-                            <ReactMarkdown
-                              remarkPlugins={[remarkGfm]}
-                              rehypePlugins={[rehypeHighlight]}
-                            >
-                              {entry.content}
-                            </ReactMarkdown>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )
-              })
-            )}
-          </div>
-        </div>
+        <CollaborationSidebar
+          conversationHistory={conversationHistory}
+          copyToClipboard={copyToClipboard}
+          t={t}
+        />
       </div>
 
       {/* 初始化加载状态 */}
       {
         isInitializing && (
-          <div className="fixed inset-0 bg-[var(--bready-bg)] flex items-center justify-center z-[9999]" style={{ pointerEvents: 'auto' }}>
+          <div className="fixed inset-0 bg-[var(--bready-bg)] flex items-center justify-center z-[9999]">
             <div className="text-center p-6">
               <div className="w-16 h-16 mx-auto mb-4 relative">
                 <div className="absolute inset-0 rounded-full bg-[var(--bready-border)] opacity-50 animate-ping"></div>
@@ -1188,120 +925,116 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
       }
 
       {/* 退出确认对话框 */}
-      {
-        showExitConfirm && (
-          <div
-            className="fixed inset-0 bg-black/50 backdrop-blur-md flex items-center justify-center z-[100] cursor-pointer"
-            onClick={() => setShowExitConfirm(false)}
-          >
-            <div className="bg-[var(--bready-surface)] border border-[var(--bready-border)] rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl cursor-auto" onClick={(e) => e.stopPropagation()}>
-              <div className="text-center">
-                <div className="w-12 h-12 bg-red-500/15 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <AlertCircle className="w-6 h-6 text-red-500" />
-                </div>
-                <h3 className="text-lg font-semibold text-[var(--bready-text)] mb-2">{t('collaboration.exit.title')}</h3>
-                <p className="text-[var(--bready-text-muted)] mb-6">{t('collaboration.exit.description')}</p>
-                <Button
-                  onClick={handleExitConfirm}
-                  className="w-full bg-red-600 hover:bg-red-700 text-white cursor-pointer"
-                >
-                  {t('collaboration.exit.confirm')}
-                </Button>
-              </div>
+      {showExitConfirm && (
+        <Modal
+          isOpen
+          onClose={() => setShowExitConfirm(false)}
+          size="sm"
+          className="max-w-sm"
+        >
+          <div className="text-center">
+            <div className="w-12 h-12 bg-red-500/15 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertCircle className="w-6 h-6 text-red-500" />
             </div>
+            <h3 className="text-lg font-semibold text-[var(--bready-text)] mb-2">
+              {t('collaboration.exit.title')}
+            </h3>
+            <p className="text-[var(--bready-text-muted)] mb-6">
+              {t('collaboration.exit.description')}
+            </p>
+            <Button onClick={handleExitConfirm} variant="danger" fullWidth>
+              {t('collaboration.exit.confirm')}
+            </Button>
           </div>
-        )
-      }
+        </Modal>
+      )}
 
       {/* 权限设置模态框 */}
-      {
-        showPermissionsModal && (
-          <div
-            className="fixed inset-0 bg-black/50 backdrop-blur-md flex items-center justify-center z-[100] p-4 cursor-pointer"
-            onClick={() => setShowPermissionsModal(false)}
-          >
-            <div className="bg-[var(--bready-surface)] border border-[var(--bready-border)] rounded-2xl w-full max-w-md shadow-2xl cursor-auto" onClick={(e) => e.stopPropagation()}>
-              <div className="p-6">
-                <div className="mb-6">
-                  <h2 className="text-xl font-bold text-[var(--bready-text)]">{t('collaboration.permissions.title')}</h2>
+      {showPermissionsModal && (
+        <Modal
+          isOpen
+          onClose={() => setShowPermissionsModal(false)}
+          size="sm"
+          className="max-w-md"
+        >
+          <div className="mb-6">
+            <h2 className="text-xl font-bold text-[var(--bready-text)]">
+              {t('collaboration.permissions.title')}
+            </h2>
+          </div>
+
+          <div className="space-y-4">
+            <div className="bg-[var(--bready-surface-2)] rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center space-x-2">
+                  <Volume2 className="w-5 h-5 text-[var(--bready-text-muted)]" />
+                  <span className="font-medium text-[var(--bready-text)]">{t('collaboration.permissions.systemAudio')}</span>
                 </div>
-
-                <div className="space-y-4">
-                  <div className="bg-[var(--bready-surface-2)] rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center space-x-2">
-                        <Volume2 className="w-5 h-5 text-[var(--bready-text-muted)]" />
-                        <span className="font-medium text-[var(--bready-text)]">{t('collaboration.permissions.systemAudio')}</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        {getStatusIcon(systemPermissions.screenRecording)}
-                        <span className="text-sm font-medium text-emerald-600 dark:text-emerald-300">
-                          {getStatusText(systemPermissions.screenRecording)}
-                        </span>
-                      </div>
-                    </div>
-                    <p className="text-sm text-[var(--bready-text-muted)]">{t('collaboration.permissions.systemAudioDesc')}</p>
-                  </div>
-
-                  <div className="bg-[var(--bready-surface-2)] rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center space-x-2">
-                        <Mic className="w-5 h-5 text-[var(--bready-text-muted)]" />
-                        <span className="font-medium text-[var(--bready-text)]">{t('collaboration.permissions.microphone')}</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        {getStatusIcon(systemPermissions.microphone)}
-                        <span className="text-sm font-medium text-emerald-600 dark:text-emerald-300">
-                          {getStatusText(systemPermissions.microphone)}
-                        </span>
-                      </div>
-                    </div>
-                    <p className="text-sm text-[var(--bready-text-muted)]">{t('collaboration.permissions.microphoneDesc')}</p>
-                  </div>
-
-                  <div className="bg-[var(--bready-surface-2)] rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center space-x-2">
-                        <Wifi className="w-5 h-5 text-[var(--bready-text-muted)]" />
-                        <span className="font-medium text-[var(--bready-text)]">{t('collaboration.permissions.network')}</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        {isConnected ? (
-                          <>
-                            <Wifi className="w-5 h-5 text-emerald-500" />
-                            <span className="text-sm font-medium text-emerald-500">{t('collaboration.permissions.networkConnected')}</span>
-                          </>
-                        ) : (
-                          <>
-                            <WifiOff className="w-5 h-5 text-red-500" />
-                            <span className="text-sm font-medium text-red-500">{t('collaboration.permissions.networkDisconnected')}</span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                    <p className="text-sm text-[var(--bready-text-muted)]">
-                      {isConnected ? t('collaboration.permissions.networkConnectedDesc') : t('collaboration.permissions.networkDisconnectedDesc')}
-                    </p>
-
-                    {!isConnected && (
-                      <Button
-                        onClick={handleReconnect}
-                        variant="outline"
-                        size="sm"
-                        className="mt-3 w-full border-[var(--bready-border)] bg-[var(--bready-surface-2)] hover:bg-[var(--bready-surface-3)] text-[var(--bready-text)] cursor-pointer"
-                      >
-                        <RefreshCw className="w-4 h-4 mr-2" />
-                        {t('collaboration.permissions.reconnect')}
-                      </Button>
-                    )}
-                  </div>
+                <div className="flex items-center space-x-2">
+                  {getStatusIcon(systemPermissions.screenRecording)}
+                  <span className="text-sm font-medium text-emerald-600 dark:text-emerald-300">
+                    {getStatusText(systemPermissions.screenRecording)}
+                  </span>
                 </div>
-
               </div>
+              <p className="text-sm text-[var(--bready-text-muted)]">{t('collaboration.permissions.systemAudioDesc')}</p>
+            </div>
+
+            <div className="bg-[var(--bready-surface-2)] rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center space-x-2">
+                  <Mic className="w-5 h-5 text-[var(--bready-text-muted)]" />
+                  <span className="font-medium text-[var(--bready-text)]">{t('collaboration.permissions.microphone')}</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  {getStatusIcon(systemPermissions.microphone)}
+                  <span className="text-sm font-medium text-emerald-600 dark:text-emerald-300">
+                    {getStatusText(systemPermissions.microphone)}
+                  </span>
+                </div>
+              </div>
+              <p className="text-sm text-[var(--bready-text-muted)]">{t('collaboration.permissions.microphoneDesc')}</p>
+            </div>
+
+            <div className="bg-[var(--bready-surface-2)] rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center space-x-2">
+                  <Wifi className="w-5 h-5 text-[var(--bready-text-muted)]" />
+                  <span className="font-medium text-[var(--bready-text)]">{t('collaboration.permissions.network')}</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  {isConnected ? (
+                    <>
+                      <Wifi className="w-5 h-5 text-emerald-500" />
+                      <span className="text-sm font-medium text-emerald-500">{t('collaboration.permissions.networkConnected')}</span>
+                    </>
+                  ) : (
+                    <>
+                      <WifiOff className="w-5 h-5 text-red-500" />
+                      <span className="text-sm font-medium text-red-500">{t('collaboration.permissions.networkDisconnected')}</span>
+                    </>
+                  )}
+                </div>
+              </div>
+              <p className="text-sm text-[var(--bready-text-muted)]">
+                {isConnected ? t('collaboration.permissions.networkConnectedDesc') : t('collaboration.permissions.networkDisconnectedDesc')}
+              </p>
+
+              {!isConnected && (
+                <Button
+                  onClick={handleReconnect}
+                  variant="outline"
+                  size="sm"
+                  className="mt-3 w-full"
+                >
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  {t('collaboration.permissions.reconnect')}
+                </Button>
+              )}
             </div>
           </div>
-        )
-      }
+        </Modal>
+      )}
 
       {/* Toast通知 */}
       {

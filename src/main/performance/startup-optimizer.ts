@@ -3,7 +3,7 @@
  * 实现应用启动的异步加载和性能监控
  */
 
-import { app, BrowserWindow } from 'electron'
+import { BrowserWindow } from 'electron'
 
 const debugStartup = process.env.DEBUG_STARTUP === '1'
 
@@ -60,20 +60,52 @@ export class StartupOptimizer {
   }
 
   /**
-   * 预加载关键模块
+   * 延迟加载非关键模块
    */
-  async preloadCriticalModules() {
-    const modules = [
-      () => import('../audioUtils'),
-      () => import('../prompts'),
-      () => import('./PerformanceMonitor')
-    ]
+  async lazyLoadNonCriticalModules() {
+    // 延迟 1 秒后加载，不阻塞启动
+    setTimeout(async () => {
+      const modules = [
+        () => import('../audioUtils'),
+        () => import('../prompts'),
+        () => import('./PerformanceMonitor'),
+        () => import('../utils/metrics'),
+        () => import('../utils/cleanup')
+      ]
 
-    // 并行预加载
-    await Promise.allSettled(modules.map(loader => loader()))
-    if (debugStartup) {
-      console.log('✅ 关键模块预加载完成')
-    }
+      await Promise.allSettled(modules.map(loader => loader()))
+      if (debugStartup) {
+        console.log('✅ 非关键模块延迟加载完成')
+      }
+    }, 1000)
+  }
+
+  /**
+   * 预连接外部服务
+   */
+  async warmupConnections() {
+    // 异步预热，不阻塞启动
+    setTimeout(async () => {
+      try {
+        // DNS 预解析
+        const domains = [
+          'generativelanguage.googleapis.com',
+          // 其他可能用到的域名
+        ]
+
+        await Promise.allSettled(
+          domains.map(domain =>
+            fetch(`https://${domain}`, { method: 'HEAD' }).catch(() => {})
+          )
+        )
+
+        if (debugStartup) {
+          console.log('✅ 外部服务预热完成')
+        }
+      } catch (error) {
+        // 预热失败不影响应用
+      }
+    }, 2000)
   }
 
   /**
@@ -116,14 +148,12 @@ export async function optimizedStartup(createWindow: () => BrowserWindow) {
   const window = createWindow()
   optimizer.recordMetric('windowCreateTime')
 
-  // 2. 异步初始化其他组件
-  const initTasks = [
-    optimizer.initializeDatabaseAsync(),
-    optimizer.preloadCriticalModules()
-  ]
+  // 2. 异步初始化数据库
+  await optimizer.initializeDatabaseAsync()
 
-  // 3. 等待所有初始化完成
-  await Promise.allSettled(initTasks)
+  // 3. 启动后台优化任务（不阻塞）
+  optimizer.lazyLoadNonCriticalModules()
+  optimizer.warmupConnections()
 
   // 4. 报告性能指标
   const report = optimizer.getPerformanceReport()

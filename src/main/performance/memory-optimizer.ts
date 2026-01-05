@@ -4,7 +4,6 @@
  */
 
 import { EventEmitter } from 'events'
-import { app } from 'electron'
 
 interface MemoryMetrics {
   used: number
@@ -91,13 +90,6 @@ export class MemoryOptimizer extends EventEmitter {
    */
   private collectMetrics() {
     const memoryUsage = process.memoryUsage()
-    const systemMemory = process.getSystemMemoryInfo?.() || { 
-      total: 0, 
-      free: 0,
-      swapTotal: 0,
-      swapFree: 0
-    }
-
     const metrics: MemoryMetrics = {
       used: memoryUsage.heapUsed / 1024 / 1024, // MB
       total: memoryUsage.heapTotal / 1024 / 1024, // MB

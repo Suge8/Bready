@@ -24,16 +24,16 @@
   --input: 0 0% 90%;
   --ring: 0 0% 15%;
   --radius: 0.75rem;
-  --bready-bg: #f8fafc;
-  --bready-surface: #ffffff;
-  --bready-surface-2: #f1f5f9;
-  --bready-surface-3: #e2e8f0;
-  --bready-border: rgba(15, 23, 42, 0.08);
-  --bready-text: #0f172a;
-  --bready-text-muted: #64748b;
-  --bready-accent: #3b82f6;
+  --bready-bg: #ffffff;
+  --bready-surface: #fafafa;
+  --bready-surface-2: #f4f4f5;
+  --bready-surface-3: #e4e4e7;
+  --bready-border: rgba(0, 0, 0, 0.08);
+  --bready-text: #0a0a0a;
+  --bready-text-muted: #71717a;
+  --bready-accent: #0a0a0a;
   --bready-accent-contrast: #ffffff;
-  --bready-glow: rgba(59, 130, 246, 0.15);
+  --bready-glow: rgba(0, 0, 0, 0.08);
 }
 
 .dark {
@@ -56,14 +56,22 @@
   --ring: 0 0% 80%;
   --bready-bg: #000000;
   --bready-surface: #0a0a0a;
-  --bready-surface-2: #141414;
-  --bready-surface-3: #1a1a1a;
-  --bready-border: rgba(255, 255, 255, 0.1);
+  --bready-surface-2: #151515;
+  --bready-surface-3: #1f1f1f;
+  --bready-border: rgba(255, 255, 255, 0.12);
   --bready-text: #fafafa;
   --bready-text-muted: #a1a1aa;
   --bready-accent: #ffffff;
   --bready-accent-contrast: #000000;
-  --bready-glow: rgba(255, 255, 255, 0.1);
+  --bready-glow: rgba(255, 255, 255, 0.08);
+}
+
+.app-drag {
+  -webkit-app-region: drag;
+}
+
+.app-no-drag {
+  -webkit-app-region: no-drag;
 }
 
 /* 全局样式 */

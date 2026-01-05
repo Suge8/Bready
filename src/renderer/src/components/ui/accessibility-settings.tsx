@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Toggle } from './ui/toggle'
+import { Toggle } from './toggle'
 
 interface AccessibilitySettingsProps {
   accessibility: {
@@ -41,7 +41,7 @@ export const AccessibilitySettings: React.FC<AccessibilitySettingsProps> = ({
           </div>
           <Toggle
             checked={localAccessibility.highContrast}
-            onChange={(checked) => handleChange('highContrast', checked)}
+            onChange={(checked: boolean) => handleChange('highContrast', checked)}
           />
         </div>
         
@@ -52,7 +52,7 @@ export const AccessibilitySettings: React.FC<AccessibilitySettingsProps> = ({
           </div>
           <Toggle
             checked={localAccessibility.largerText}
-            onChange={(checked) => handleChange('largerText', checked)}
+            onChange={(checked: boolean) => handleChange('largerText', checked)}
           />
         </div>
         
@@ -63,7 +63,7 @@ export const AccessibilitySettings: React.FC<AccessibilitySettingsProps> = ({
           </div>
           <Toggle
             checked={localAccessibility.reducedMotion}
-            onChange={(checked) => handleChange('reducedMotion', checked)}
+            onChange={(checked: boolean) => handleChange('reducedMotion', checked)}
           />
         </div>
         
@@ -74,7 +74,7 @@ export const AccessibilitySettings: React.FC<AccessibilitySettingsProps> = ({
           </div>
           <Toggle
             checked={localAccessibility.screenReader}
-            onChange={(checked) => handleChange('screenReader', checked)}
+            onChange={(checked: boolean) => handleChange('screenReader', checked)}
           />
         </div>
       </div>

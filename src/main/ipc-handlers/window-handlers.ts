@@ -1,5 +1,5 @@
 import { ipcMain } from 'electron'
-import { createWindow, createFloatingWindow, getMainWindow, getFloatingWindow } from '../window-manager'
+import { createFloatingWindow, getMainWindow, getFloatingWindow } from '../window-manager'
 
 const debugApp = process.env.DEBUG_APP === '1'
 

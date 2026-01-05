@@ -1,13 +1,17 @@
 import { EventEmitter } from 'events'
 import { performance } from 'perf_hooks'
-import { Logger } from '../utils/Logger'
+import { createLogger } from '../utils/logging'
+
+const toErrorMetadata = (error: unknown): Record<string, any> => ({
+  error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error)
+})
 
 /**
  * 统一监控系统
  * 集成性能监控、错误追踪、用户行为分析
  */
 export class MonitoringSystem extends EventEmitter {
-  private readonly logger: Logger
+  private readonly logger = createLogger('monitoring-system')
   private isRunning = false
   private metrics: Map<string, any> = new Map()
   private errors: any[] = []
@@ -15,7 +19,6 @@ export class MonitoringSystem extends EventEmitter {
 
   constructor() {
     super()
-    this.logger = Logger.getInstance()
     this.setupGlobalHandlers()
   }
 
@@ -165,7 +168,7 @@ export class MonitoringSystem extends EventEmitter {
         this.recordMetric('process.cpu.system', cpuUsage.system, 'microseconds')
 
       } catch (error) {
-        this.logger.error('收集系统指标失败:', error)
+        this.logger.error('收集系统指标失败:', toErrorMetadata(error))
       }
 
       // 每5秒收集一次

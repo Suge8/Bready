@@ -200,8 +200,7 @@ export function useVirtualScroll<T>(
  * 组件懒加载Hook
  */
 export function useLazyComponent<T>(
-  importFunc: () => Promise<{ default: T }>,
-  fallback?: React.ComponentType
+  importFunc: () => Promise<{ default: T }>
 ) {
   const [Component, setComponent] = useState<T | null>(null)
   const [loading, setLoading] = useState(true)

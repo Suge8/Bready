@@ -3,7 +3,7 @@
  * 处理实际的 getUserMedia 和 desktopCapturer 调用
  */
 
-import type { AudioCaptureOptions, AudioMode } from '../../shared/ipc'
+import type { AudioCaptureOptions, AudioMode } from '../../../shared/ipc'
 
 const debugAudio = import.meta.env.VITE_DEBUG_AUDIO === '1'
 if (debugAudio) {
@@ -119,12 +119,14 @@ class RendererAudioCapture {
     if (!config || !config.options) {
       console.error('❌ 无效的音频捕获配置:', config)
       // 使用默认配置
+      const fallbackMode = config?.mode || 'microphone'
       config = {
-        mode: config?.mode || 'microphone',
+        mode: fallbackMode,
         options: {
           sampleRate: 24000,
           channels: 1,
-          bitDepth: 16
+          bitDepth: 16,
+          mode: fallbackMode
         }
       }
       if (debugAudio) {

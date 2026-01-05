@@ -5,7 +5,6 @@
 
 import React, { 
   memo, 
-  forwardRef, 
   useCallback, 
   useMemo,
   useState,
@@ -106,7 +105,6 @@ export function VirtualList<T>({
   
   const {
     startIndex,
-    endIndex,
     items: visibleItems,
     totalHeight,
     offsetY,

@@ -46,7 +46,9 @@ function initializeGeminiServices() {
   const service = initializeGeminiService((event, data) => {
     broadcastToAllWindows(event, data)
   })
-  registerCleanup(() => service.disconnectGemini())
+  registerCleanup(() => {
+    service.disconnectGemini()
+  })
 }
 
 // This method will be called when Electron has finished

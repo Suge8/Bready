@@ -35,13 +35,12 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ onComplete, onCreatePreparati
   return (
     <div className="h-screen w-screen overflow-hidden bg-[var(--bready-bg)] text-[var(--bready-text)] flex flex-col">
       {/* 拖拽区域和主题切换 */}
-      <div className="h-12 w-full relative flex items-center justify-between px-4" style={{ WebkitAppRegion: 'drag' } as any}>
+      <div className="h-12 w-full relative flex items-center justify-between px-4 app-drag">
         <div></div> {/* 占位符 */}
         {mounted && (
           <button
             onClick={toggleTheme}
-            className="p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
-            style={{ WebkitAppRegion: 'no-drag' } as any}
+            className="p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/10 transition-colors app-no-drag"
           >
             {theme === 'light' ? (
               <Moon className="w-5 h-5 text-[var(--bready-text-muted)]" />
@@ -52,7 +51,7 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ onComplete, onCreatePreparati
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto" style={{ WebkitAppRegion: 'no-drag' } as any}>
+      <div className="flex-1 overflow-y-auto app-no-drag">
         <div className="min-h-full flex items-center justify-center p-6">
           <div className="max-w-3xl mx-auto">
             {/* Logo 和标题 */}
@@ -114,7 +113,7 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ onComplete, onCreatePreparati
               <Button
                 onClick={handleGetStarted}
                 size="lg"
-                className="h-12 px-6 text-base font-medium group shadow-lg hover:shadow-xl cursor-pointer bg-black text-white dark:bg-white dark:text-black rounded-full"
+                className="h-12 px-6 text-base font-medium group shadow-lg hover:shadow-xl rounded-full"
               >
                 <span>{t('welcome.cta')}</span>
                 <ArrowRight className="ml-3 w-5 h-5 group-hover:translate-x-1 transition-transform" />

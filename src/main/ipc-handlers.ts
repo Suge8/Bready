@@ -1,15 +1,6 @@
 import { ipcMain } from 'electron'
 import { buildUpdateSetClause } from './utils/sql'
-import { 
-  AuthService, 
-  query, 
-  UserProfile, 
-  Preparation, 
-  MembershipPackage, 
-  PurchaseRecord, 
-  InterviewUsageRecord,
-  UserLevel 
-} from './database'
+import { AuthService, query } from './database'
 
 // 导入所有 IPC 处理器模块
 import './ipc-handlers/window-handlers'
@@ -22,6 +13,7 @@ import './ipc-handlers/debug-handlers'
 export function setupAuthHandlers() {
   // 用户注册
   ipcMain.handle('auth:sign-up', async (event, { email, password, userData }) => {
+    void event
     try {
       const user = await AuthService.signUp(email, password, userData)
       return user
@@ -32,6 +24,7 @@ export function setupAuthHandlers() {
 
   // 用户登录
   ipcMain.handle('auth:sign-in', async (event, { email, password }) => {
+    void event
     console.log('🔐 IPC: auth:sign-in called with:', { email, password: '***' })
     try {
       const result = await AuthService.signIn(email, password)
@@ -45,6 +38,7 @@ export function setupAuthHandlers() {
 
   // 验证会话
   ipcMain.handle('auth:verify-session', async (event, token) => {
+    void event
     try {
       const user = await AuthService.verifySession(token)
       return user
@@ -55,6 +49,7 @@ export function setupAuthHandlers() {
 
   // 用户登出
   ipcMain.handle('auth:sign-out', async (event, token) => {
+    void event
     try {
       await AuthService.signOut(token)
       return true
@@ -68,6 +63,7 @@ export function setupAuthHandlers() {
 export function setupUserHandlers() {
   // 获取用户配置
   ipcMain.handle('user:get-profile', async (event, userId) => {
+    void event
     try {
       const result = await query(
         'SELECT id, username, email, full_name, avatar_url, role, user_level, membership_expires_at, remaining_interview_minutes, total_purchased_minutes, discount_rate, created_at, updated_at FROM user_profiles WHERE id = $1',
@@ -81,6 +77,7 @@ export function setupUserHandlers() {
 
   // 更新用户配置
   ipcMain.handle('user:upsert-profile', async (event, profile) => {
+    void event
     try {
       const { id, ...updateData } = profile
       const { setClause, values } = buildUpdateSetClause(updateData, 2, ['updated_at = NOW()'])
@@ -96,6 +93,7 @@ export function setupUserHandlers() {
 
   // 获取所有用户（管理员功能）
   ipcMain.handle('user:get-all-users', async (event) => {
+    void event
     try {
       const result = await query(
         'SELECT id, username, email, full_name, avatar_url, role, user_level, membership_expires_at, remaining_interview_minutes, total_purchased_minutes, discount_rate, created_at, updated_at FROM user_profiles ORDER BY created_at DESC'
@@ -108,6 +106,7 @@ export function setupUserHandlers() {
 
   // 更新用户等级
   ipcMain.handle('user:update-level', async (event, { userId, userLevel }) => {
+    void event
     try {
       const result = await query(
         'UPDATE user_profiles SET user_level = $2, updated_at = NOW() WHERE id = $1 RETURNING *',
@@ -121,6 +120,7 @@ export function setupUserHandlers() {
 
   // 更新用户角色
   ipcMain.handle('user:update-role', async (event, { userId, role }) => {
+    void event
     try {
       const result = await query(
         'UPDATE user_profiles SET role = $2, updated_at = NOW() WHERE id = $1 RETURNING *',
@@ -137,6 +137,7 @@ export function setupUserHandlers() {
 export function setupMembershipHandlers() {
   // 获取所有可用套餐
   ipcMain.handle('membership:get-packages', async (event) => {
+    void event
     try {
       const result = await query(
         'SELECT * FROM membership_packages WHERE is_active = true ORDER BY price ASC'
@@ -149,6 +150,7 @@ export function setupMembershipHandlers() {
 
   // 购买套餐
   ipcMain.handle('membership:purchase-package', async (event, { userId, packageId, userLevel }) => {
+    void event
     try {
       // 获取套餐信息
       const packageResult = await query(
@@ -218,6 +220,7 @@ export function setupMembershipHandlers() {
 
   // 获取用户购买记录
   ipcMain.handle('membership:get-user-purchases', async (event, userId) => {
+    void event
     try {
       const result = await query(
         `SELECT pr.*, mp.name as package_name, mp.level as package_level 
@@ -238,6 +241,7 @@ export function setupMembershipHandlers() {
 export function setupUsageHandlers() {
   // 开始面试会话
   ipcMain.handle('usage:start-session', async (event, { userId, sessionType, preparationId }) => {
+    void event
     try {
       const result = await query(
         `INSERT INTO interview_usage_records (user_id, preparation_id, session_type, minutes_used, started_at) 
@@ -252,6 +256,7 @@ export function setupUsageHandlers() {
 
   // 结束面试会话
   ipcMain.handle('usage:end-session', async (event, { sessionId, minutesUsed }) => {
+    void event
     try {
       // 更新会话记录
       const sessionResult = await query(
@@ -279,6 +284,7 @@ export function setupUsageHandlers() {
 
   // 获取用户使用记录
   ipcMain.handle('usage:get-user-records', async (event, userId) => {
+    void event
     try {
       const result = await query(
         `SELECT iur.*, p.name as preparation_name 
@@ -299,6 +305,7 @@ export function setupUsageHandlers() {
 export function setupPreparationHandlers() {
   // 获取所有准备项
   ipcMain.handle('preparation:get-all', async (event, userId) => {
+    void event
     try {
       let queryText = 'SELECT * FROM preparations ORDER BY updated_at DESC'
       let params: any[] = []
@@ -317,6 +324,7 @@ export function setupPreparationHandlers() {
 
   // 根据ID获取准备项
   ipcMain.handle('preparation:get-by-id', async (event, id) => {
+    void event
     try {
       const result = await query('SELECT * FROM preparations WHERE id = $1', [id])
       return result.rows[0] || null
@@ -327,6 +335,7 @@ export function setupPreparationHandlers() {
 
   // 创建准备项
   ipcMain.handle('preparation:create', async (event, preparation) => {
+    void event
     try {
       const result = await query(
         `INSERT INTO preparations (user_id, name, job_description, resume, analysis, is_analyzing) 
@@ -348,6 +357,7 @@ export function setupPreparationHandlers() {
 
   // 更新准备项
   ipcMain.handle('preparation:update', async (event, { id, preparation }) => {
+    void event
     try {
       const { setClause, values } = buildUpdateSetClause(preparation, 1, ['updated_at = NOW()'])
       const result = await query(
@@ -362,6 +372,7 @@ export function setupPreparationHandlers() {
 
   // 删除准备项
   ipcMain.handle('preparation:delete', async (event, id) => {
+    void event
     try {
       await query('DELETE FROM preparations WHERE id = $1', [id])
       return true

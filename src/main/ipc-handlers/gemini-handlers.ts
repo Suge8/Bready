@@ -47,6 +47,7 @@ ipcMain.handle('disconnect-gemini', () => {
 
 // 发送文本消息
 ipcMain.handle('send-text-message', async (event, message: string) => {
+  void event
   console.log('📤 收到要发送给 AI 的文本:', message)
 
   if (!message || typeof message !== 'string' || message.trim().length === 0) {
@@ -74,6 +75,7 @@ ipcMain.handle('manual-reconnect', async () => {
 // 优化的音频内容发送处理器
 try {
   ipcMain.handle('send-audio-content-optimized', async (event, { data, mimeType }) => {
+    void event
     try {
       if (!data || typeof data !== 'string') {
         return { success: false, error: '无效的音频数据' }
@@ -102,6 +104,7 @@ try {
 
 // AI 分析相关的 IPC 处理器
 ipcMain.handle('analyze-preparation', async (event, preparationData: AnalyzePreparationRequest) => {
+  void event
   console.log('收到AI分析请求:', preparationData)
   const service = getGeminiService()
   if (!service) {
@@ -112,6 +115,7 @@ ipcMain.handle('analyze-preparation', async (event, preparationData: AnalyzePrep
 
 // 文件内容提取 IPC 处理器
 ipcMain.handle('extract-file-content', async (event, fileData: ExtractFileContentRequest) => {
+  void event
   console.log('收到文件内容提取请求:', fileData.fileName, fileData.fileType)
   const service = getGeminiService()
   if (!service) {

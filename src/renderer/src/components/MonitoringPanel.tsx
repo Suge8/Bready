@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { Card } from './ui/Card'
-import { Button } from './ui/Button'
+import { Card } from './ui/card'
+import { Button } from './ui/button'
 import { useI18n } from '../contexts/I18nContext'
 
 interface MonitoringData {
@@ -57,7 +57,7 @@ export const MonitoringPanel: React.FC = () => {
 
     const loadData = async () => {
       try {
-        const monitoringData = await window.electronAPI?.getMonitoringData()
+        const monitoringData = await (window as any).electronAPI?.getMonitoringData()
         setData(monitoringData)
       } catch (error) {
         console.error('加载监控数据失败:', error)

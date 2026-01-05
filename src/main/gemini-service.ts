@@ -72,11 +72,51 @@ class GeminiService {
   }
 
   private formatGeminiReason(reason: string): string {
-    if (!reason) return reason
-    if (reason.includes('Cannot extract voices from a non-audio request')) {
-      return '收到非音频请求，无法提取语音'
+    if (!reason) return '未知错误'
+
+    // 网络相关
+    if (reason.includes('fetch') || reason.includes('network')) {
+      return '网络连接失败，请检查网络设置'
     }
-    return reason
+    if (reason.includes('timeout')) {
+      return 'AI 服务响应超时，请稍后重试'
+    }
+
+    // 权限和区域
+    if (reason.includes('User location is not supported')) {
+      return '您所在的地区暂不支持此服务，请使用 VPN'
+    }
+    if (reason.includes('API key')) {
+      return 'API 密钥无效或已过期'
+    }
+
+    // 配额和限流
+    if (reason.includes('429') || reason.includes('quota') || reason.includes('rate limit')) {
+      return 'API 配额已用尽，正在切换备用密钥...'
+    }
+
+    // 音频相关
+    if (reason.includes('Cannot extract voices from a non-audio request')) {
+      return '音频数据格式错误'
+    }
+    if (reason.includes('audio')) {
+      return '音频处理失败，请重新启动捕获'
+    }
+
+    // 模型相关
+    if (reason.includes('model')) {
+      return 'AI 模型暂时不可用'
+    }
+
+    // 通用错误
+    if (reason.includes('400')) {
+      return '请求参数错误'
+    }
+    if (reason.includes('500') || reason.includes('503')) {
+      return 'AI 服务暂时不可用，请稍后重试'
+    }
+
+    return reason.length > 100 ? reason.substring(0, 100) + '...' : reason
   }
 
   private isRegionNotSupportedError(message: string): boolean {
@@ -268,8 +308,7 @@ class GeminiService {
         })
 
         if (this.textChatHistory.length > MAX_CHAT_HISTORY * 2) {
-          this.textChatHistory = this.textChatHistory.slice(-MAX_CHAT_HISTORY * 2)
-          log('debug', '📝 对话历史已压缩，当前保留', this.textChatHistory.length, '条消息')
+          await this.compressHistory()
         }
 
         this.onMessageToRenderer('ai-response', fullResponseText)
@@ -344,6 +383,27 @@ class GeminiService {
       this.textSystemPrompt = systemPrompt
 
       const responseModalities = [Modality.AUDIO]
+      const liveConnectConfig: any = {
+        responseModalities,
+        inputAudioTranscription: {},
+        outputAudioTranscription: {},
+        contextWindowCompression: { slidingWindow: {} },
+        realtimeInputConfig: {
+          automaticActivityDetection: {
+            disabled: false,
+            silenceDurationMs: 200,
+            endOfSpeechSensitivity: EndSensitivity.END_SENSITIVITY_HIGH
+          }
+        },
+        systemInstruction: {
+          parts: [{ text: systemPrompt }]
+        },
+        thinkingConfig: {
+          thinkingBudget: 0,
+          includeThoughts: false
+        }
+      }
+
       const connectPromise = client.live.connect({
         model: 'gemini-2.5-flash-native-audio-preview-12-2025',
         callbacks: {
@@ -496,26 +556,7 @@ class GeminiService {
             }
           }
         },
-        config: {
-          responseModalities,
-          inputAudioTranscription: {},
-          outputAudioTranscription: {},
-          contextWindowCompression: { slidingWindow: {} },
-          realtimeInputConfig: {
-            automaticActivityDetection: {
-              disabled: false,
-              silenceDurationMs: 200,
-              endOfSpeechSensitivity: EndSensitivity.END_SENSITIVITY_HIGH,
-            }
-          },
-          systemInstruction: {
-            parts: [{ text: systemPrompt }],
-          },
-          thinkingConfig: {
-            thinkingBudget: 0,
-            includeThoughts: false
-          },
-        },
+        config: liveConnectConfig,
       })
 
       const session = await Promise.race([
@@ -949,6 +990,60 @@ ${preparationData.resume ? `**个人简历：**\n${preparationData.resume}` : '*
         success: false,
         error: `文件内容提取失败: ${error.message || error}`
       }
+    }
+  }
+
+  /**
+   * 智能压缩聊天历史
+   * 保留最近 5 轮对话 + 早期对话摘要
+   */
+  private async compressHistory(): Promise<void> {
+    try {
+      const recentCount = 10 // 保留最近 5 轮（user + model = 10 条）
+      const recent = this.textChatHistory.slice(-recentCount)
+      const older = this.textChatHistory.slice(0, -recentCount)
+
+      if (older.length === 0) {
+        return
+      }
+
+      recordMetric('gemini.history.compress.start', { oldCount: this.textChatHistory.length })
+      log('debug', '📝 开始压缩对话历史，旧消息:', older.length, '条')
+
+      // 生成摘要
+      const summaryText = older.map((msg, i) =>
+        `${i + 1}. ${msg.role === 'user' ? '用户' : 'AI'}: ${msg.parts[0].text.substring(0, 100)}...`
+      ).join('\n')
+
+      const summaryPrompt = `请将以下对话历史简化为一段简短的摘要（50-100字），保留关键信息：\n\n${summaryText}`
+
+      const response = await this.textClient?.models.generateContent({
+        model: TEXT_RESPONSE_MODEL,
+        contents: [{ role: 'user', parts: [{ text: summaryPrompt }] }],
+        config: {
+          temperature: 0.3,
+          maxOutputTokens: 200
+        }
+      })
+
+      const summary = response?.text?.trim()
+      if (summary) {
+        this.textChatHistory = [
+          { role: 'user', parts: [{ text: `[之前的对话摘要] ${summary}` }] },
+          ...recent
+        ]
+        log('info', '✅ 对话历史已压缩:', this.textChatHistory.length, '条（含摘要）')
+        recordMetric('gemini.history.compress.success', { newCount: this.textChatHistory.length })
+      } else {
+        // 降级方案：直接截断
+        this.textChatHistory = recent
+        log('warn', '⚠️ 摘要生成失败，使用截断方式')
+        recordMetric('gemini.history.compress.fallback')
+      }
+    } catch (error) {
+      log('error', '❌ 压缩对话历史失败:', error)
+      this.textChatHistory = this.textChatHistory.slice(-MAX_CHAT_HISTORY * 2)
+      recordMetric('gemini.history.compress.error')
     }
   }
 }

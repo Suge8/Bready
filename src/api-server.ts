@@ -97,6 +97,7 @@ app.post('/api/user/update-profile', async (req, res) => {
 })
 
 app.post('/api/user/get-all-users', async (req, res) => {
+  void req
   try {
     const result = await query(
       'SELECT id, username, email, full_name, avatar_url, role, user_level, membership_expires_at, remaining_interview_minutes, total_purchased_minutes, discount_rate, created_at, updated_at FROM user_profiles ORDER BY created_at DESC'
@@ -180,6 +181,7 @@ app.post('/api/preparation/delete', async (req, res) => {
 
 // 会员套餐相关 API
 app.post('/api/membership/get-packages', async (req, res) => {
+  void req
   try {
     const result = await query(
       'SELECT * FROM membership_packages WHERE is_active = true ORDER BY price ASC'

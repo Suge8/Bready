@@ -1,6 +1,10 @@
 import * as crypto from 'crypto'
 import { ipcMain, IpcMainInvokeEvent } from 'electron'
-import { Logger } from '../utils/Logger'
+import { createLogger } from '../utils/logging'
+
+const toErrorMetadata = (error: unknown): Record<string, any> => ({
+  error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error)
+})
 
 /**
  * 安全IPC消息接口
@@ -17,7 +21,7 @@ export interface SecureIPCMessage {
  * 负责IPC通信的安全验证和消息完整性保护
  */
 export class IPCSecurityManager {
-  private logger: Logger
+  private logger = createLogger('ipc-security')
   private secretKey: string
   private messageCache: Set<string> = new Set()
   private readonly MESSAGE_TIMEOUT = 30000 // 30秒消息超时
@@ -35,7 +39,6 @@ export class IPCSecurityManager {
   ])
 
   constructor() {
-    this.logger = Logger.getInstance()
     this.secretKey = this.generateSecretKey()
     this.setupSecureHandlers()
     this.startCacheCleanup()
@@ -88,7 +91,7 @@ export class IPCSecurityManager {
           return await listener(event, ...args)
           
         } catch (error) {
-          this.logger.error(`安全IPC调用失败 [${channel}]:`, error)
+          this.logger.error(`安全IPC调用失败 [${channel}]:`, toErrorMetadata(error))
           throw error
         }
       }
@@ -178,7 +181,7 @@ export class IPCSecurityManager {
       return message
       
     } catch (error) {
-      this.logger.error('IPC消息验证异常:', error)
+      this.logger.error('IPC消息验证异常:', toErrorMetadata(error))
       return null
     }
   }
@@ -209,7 +212,7 @@ export class IPCSecurityManager {
         Buffer.from(expectedSignature, 'hex')
       )
     } catch (error) {
-      this.logger.error('签名验证异常:', error)
+      this.logger.error('签名验证异常:', toErrorMetadata(error))
       return false
     }
   }
@@ -237,7 +240,7 @@ export class IPCSecurityManager {
       return true
       
     } catch (error) {
-      this.logger.error('验证IPC来源时发生错误:', error)
+      this.logger.error('验证IPC来源时发生错误:', toErrorMetadata(error))
       return false
     }
   }

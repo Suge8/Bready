@@ -284,6 +284,7 @@ ipcMain.handle('check-audio-device-status', async () => {
 })
 
 ipcMain.handle('open-system-preferences', async (event, pane: string) => {
+  void event
   return await openSystemPreferences(pane)
 })
 
@@ -307,6 +308,7 @@ ipcMain.handle('request-microphone-permission', async () => {
 })
 
 ipcMain.handle('get-desktop-sources-safe', async (event, options) => {
+  void event
   try {
     const screenStatus = systemPreferences.getMediaAccessStatus('screen')
     if (screenStatus !== 'granted') {
@@ -363,6 +365,7 @@ ipcMain.handle('get-desktop-sources-safe', async (event, options) => {
 })
 
 ipcMain.handle('get-desktop-sources', async (event, options) => {
+  void event
   try {
     const screenStatus = systemPreferences.getMediaAccessStatus('screen')
     if (screenStatus !== 'granted') {

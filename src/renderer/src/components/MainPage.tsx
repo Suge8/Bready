@@ -30,26 +30,14 @@ const getPreparationIcon = (index: number) => {
 }
 
 // 准备项卡片颜色映射 - 浅色和深色模式
-const getPreparationColor = (index: number, isDark: boolean) => {
-  if (isDark) {
-    // 深色模式：纯黑背景上的深色卡片
-    const darkColors = [
-      'bg-rose-950/40', // 深粉色
-      'bg-violet-950/40', // 深紫色
-      'bg-emerald-950/40', // 深绿色
-      'bg-amber-950/40', // 深黄色
-    ]
-    return darkColors[index % darkColors.length]
-  } else {
-    // 浅色模式：更鲜艳的渐变背景
-    const lightColors = [
-      'bg-gradient-to-br from-pink-100 to-rose-100', // 粉色渐变
-      'bg-gradient-to-br from-violet-100 to-purple-100', // 紫色渐变
-      'bg-gradient-to-br from-emerald-100 to-teal-100', // 绿色渐变
-      'bg-gradient-to-br from-amber-100 to-orange-100', // 橙色渐变
-    ]
-    return lightColors[index % lightColors.length]
-  }
+const getPreparationColor = (index: number) => {
+  const tones = [
+    'bg-[var(--bready-surface)]',
+    'bg-[var(--bready-surface-2)]',
+    'bg-[var(--bready-surface)]',
+    'bg-[var(--bready-surface-2)]'
+  ]
+  return tones[index % tones.length]
 }
 
 const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onReloadData }) => {
@@ -164,15 +152,7 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
   }
 
   // 动态背景类名，根据当前主题决定 - Vercel 风格纯黑
-  const getBackgroundClasses = () => {
-    const isDark = theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)
-    
-    if (isDark) {
-      return 'bg-black' // 纯黑背景
-    } else {
-      return 'bg-gradient-to-br from-gray-50 via-gray-50 to-gray-100'
-    }
-  }
+  const getBackgroundClasses = () => 'bg-[var(--bready-bg)]'
 
   // 判断是否为深色模式
   const isDarkMode = theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)
@@ -191,8 +171,8 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
 
       {/* 顶部导航 */}
       <header className="relative z-50 flex-shrink-0">
-        <div className="h-8 w-full" style={{ WebkitAppRegion: 'drag' } as any}></div>
-        <div className="max-w-6xl mx-auto px-4 -ml-10 flex items-center justify-between pb-3" style={{ WebkitAppRegion: 'no-drag' } as any}>
+        <div className="h-8 w-full app-drag"></div>
+        <div className="max-w-6xl mx-auto px-4 -ml-10 flex items-center justify-between pb-3 app-no-drag">
           {/* Logo 区域 - 左侧留出空间给 mac 按钮 */}
           <motion.div 
             className="flex items-center gap-2.5 ml-16"
@@ -345,7 +325,7 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
                     <div className="flex gap-4 overflow-x-auto scrollbar-hide py-2 px-1">
                       {filteredPreparations.map((preparation, index) => {
                         const IconComponent = getPreparationIcon(index)
-                        const colorClass = getPreparationColor(index, isDarkMode)
+                        const colorClass = getPreparationColor(index)
                         
                         return (
                           <motion.div

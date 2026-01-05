@@ -79,13 +79,11 @@ export const SmartFormValidation: React.FC<SmartFormValidationProps> = ({
 
 interface AutoSaveFormProps {
   formData: Record<string, any>
-  onFormChange: (data: Record<string, any>) => void
   children: React.ReactNode
 }
 
 export const AutoSaveForm: React.FC<AutoSaveFormProps> = ({ 
-  formData, 
-  onFormChange,
+  formData,
   children 
 }) => {
   const { t, locale } = useI18n()

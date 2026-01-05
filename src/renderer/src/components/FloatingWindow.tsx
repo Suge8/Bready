@@ -216,17 +216,6 @@ const FloatingWindow: React.FC = () => {
     }
   }
 
-  const handleDisconnect = async () => {
-    try {
-      await window.bready.disconnectGemini()
-      setIsConnected(false)
-      setIsListening(false)
-      setStatus(t('floating.status.disconnected'))
-    } catch (error) {
-      setStatus(t('floating.status.disconnectError', { error: String(error) }))
-    }
-  }
-
   const handleClearHistory = () => {
     setConversationHistory([])
     setTranscription('')

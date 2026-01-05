@@ -61,11 +61,14 @@ interface BreadyAPI {
   onSessionReady: (callback: () => void) => () => void
   onSessionError: (callback: (error: string) => void) => () => void
   onSessionClosed: (callback: () => void) => () => void
+  onAudioModeChanged: (callback: (modeInfo: AudioModeChangedPayload) => void) => () => void
   onContextCompressed: (callback: (data: ContextCompressedPayload) => void) => () => void
   onAudioStreamInterrupted: (callback: () => void) => () => void
   onAudioStreamRestored: (callback: () => void) => () => void
   onTranscriptionComplete: (callback: (transcription: string) => void) => () => void
   onAudioResponse: (callback: (data: AudioResponsePayload) => void) => () => void
+  onPerformanceMetrics: (callback: (metrics: any) => void) => () => void
+  onCrashReport: (callback: (report: any) => void) => () => void
 }
 
 // 暴露给渲染进程的API
@@ -191,6 +194,18 @@ const breadyAPI: BreadyAPI = {
     const listener = (_: any, data: any) => callback(data)
     ipcRenderer.on('audio-response', listener)
     return () => ipcRenderer.removeListener('audio-response', listener)
+  },
+
+  onPerformanceMetrics: (callback: (metrics: any) => void) => {
+    const listener = (_: any, metrics: any) => callback(metrics)
+    ipcRenderer.on('performance-metrics', listener)
+    return () => ipcRenderer.removeListener('performance-metrics', listener)
+  },
+
+  onCrashReport: (callback: (report: any) => void) => {
+    const listener = (_: any, report: any) => callback(report)
+    ipcRenderer.on('crash-report', listener)
+    return () => ipcRenderer.removeListener('crash-report', listener)
   }
 }
 

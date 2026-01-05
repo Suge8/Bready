@@ -2,11 +2,12 @@ import { app, BrowserWindow, shell } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import { log } from './utils/logging'
+import { getIPCBatcher } from './utils/ipc-batcher'
 
 const MIN_WINDOW_WIDTH = 960
 const MIN_WINDOW_HEIGHT = 640
 const debugIpc = process.env.DEBUG_IPC === '1'
-const lastSendAtByChannel: Record<string, number> = {}
+const batcher = getIPCBatcher()
 
 let mainWindow: BrowserWindow | null = null
 let floatingWindow: BrowserWindow | null = null
@@ -143,17 +144,6 @@ function getFloatingWindow(): BrowserWindow | null {
 }
 
 function broadcastToAllWindows(channel: string, data?: any): void {
-  const now = Date.now()
-  const last = lastSendAtByChannel[channel] || 0
-  const noThrottleChannels = ['transcription-update', 'ai-response-update', 'ai-response']
-  const throttleMs = noThrottleChannels.includes(channel) ? 0 : 500
-
-  if (now - last < throttleMs) {
-    lastSendAtByChannel[channel] = now
-    return
-  }
-
-  lastSendAtByChannel[channel] = now
   const windows = BrowserWindow.getAllWindows()
   if (debugIpc) {
     log('debug', `📡 ${channel} -> ${windows.length} 个窗口`)
@@ -163,7 +153,7 @@ function broadcastToAllWindows(channel: string, data?: any): void {
     if (window && !window.isDestroyed() && window.webContents && !window.webContents.isDestroyed()) {
       try {
         if (window.webContents.getURL()) {
-          window.webContents.send(channel, data)
+          batcher.send(window, channel, data)
         }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error)

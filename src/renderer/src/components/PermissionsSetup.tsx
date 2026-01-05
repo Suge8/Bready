@@ -14,6 +14,8 @@ import {
   Loader2
 } from 'lucide-react'
 import { useI18n } from '../contexts/I18nContext'
+import { Modal } from './ui/Modal'
+import { Button } from './ui/button'
 
 interface PermissionStatus {
   granted: boolean
@@ -128,8 +130,13 @@ const PermissionsSetup: React.FC<PermissionsSetupProps> = ({ onComplete, onSkip,
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-gray-900/20 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-[var(--bready-surface)] border border-[var(--bready-border)] rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto" style={{ WebkitAppRegion: 'no-drag' } as any}>
+    <Modal
+      isOpen={isOpen}
+      onClose={onSkip}
+      size="lg"
+      className="p-0 max-w-2xl max-h-[90vh] overflow-hidden"
+    >
+      <div className="bg-[var(--bready-surface)] border border-[var(--bready-border)] overflow-y-auto max-h-[90vh]">
         <div className="p-6 border-b border-[var(--bready-border)]">
           <h2 className="text-2xl font-semibold text-[var(--bready-text)]">{t('permissionsSetup.title')}</h2>
           <p className="text-[var(--bready-text-muted)] mt-2">
@@ -168,13 +175,10 @@ const PermissionsSetup: React.FC<PermissionsSetupProps> = ({ onComplete, onSkip,
                 </p>
                 
                 {!permissions.screenRecording.granted && (
-                  <button
-                    onClick={() => openSystemPreferences('screen-recording')}
-                    className="flex items-center space-x-2 px-4 py-2 bg-[var(--bready-accent)] text-[var(--bready-accent-contrast)] rounded-lg hover:opacity-90 transition-colors"
-                  >
+                  <Button onClick={() => openSystemPreferences('screen-recording')} size="sm">
                     <ExternalLink className="w-4 h-4" />
                     <span>{t('permissionsSetup.screen.openSettings')}</span>
-                  </button>
+                  </Button>
                 )}
               </div>
 
@@ -202,10 +206,10 @@ const PermissionsSetup: React.FC<PermissionsSetupProps> = ({ onComplete, onSkip,
                 
                 <div className="flex space-x-2">
                   {!permissions.microphone.granted && permissions.microphone.canRequest && (
-                    <button
+                    <Button
                       onClick={requestMicrophonePermission}
                       disabled={testing === 'microphone'}
-                      className="flex items-center space-x-2 px-4 py-2 bg-[var(--bready-accent)] text-[var(--bready-accent-contrast)] rounded-lg hover:opacity-90 transition-colors disabled:opacity-50"
+                      size="sm"
                     >
                       {testing === 'microphone' ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
@@ -213,17 +217,14 @@ const PermissionsSetup: React.FC<PermissionsSetupProps> = ({ onComplete, onSkip,
                         <Mic className="w-4 h-4" />
                       )}
                       <span>{t('permissionsSetup.microphone.request')}</span>
-                    </button>
+                    </Button>
                   )}
                   
                   {!permissions.microphone.granted && !permissions.microphone.canRequest && (
-                    <button
-                      onClick={() => openSystemPreferences('microphone')}
-                      className="flex items-center space-x-2 px-4 py-2 bg-[var(--bready-accent)] text-[var(--bready-accent-contrast)] rounded-lg hover:opacity-90 transition-colors"
-                    >
+                    <Button onClick={() => openSystemPreferences('microphone')} size="sm">
                       <ExternalLink className="w-4 h-4" />
                       <span>{t('permissionsSetup.microphone.openSettings')}</span>
-                    </button>
+                    </Button>
                   )}
                 </div>
                 
@@ -290,10 +291,11 @@ const PermissionsSetup: React.FC<PermissionsSetupProps> = ({ onComplete, onSkip,
                 </p>
                 
                 <div className="flex space-x-2">
-                  <button
+                  <Button
                     onClick={testAudioCapture}
                     disabled={testing === 'audio'}
-                    className="flex items-center space-x-2 px-4 py-2 bg-[var(--bready-surface-2)] text-[var(--bready-text)] rounded-lg hover:bg-[var(--bready-surface-3)] transition-colors disabled:opacity-50"
+                    variant="outline"
+                    size="sm"
                   >
                     {testing === 'audio' ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -301,16 +303,16 @@ const PermissionsSetup: React.FC<PermissionsSetupProps> = ({ onComplete, onSkip,
                       <Play className="w-4 h-4" />
                     )}
                     <span>{t('permissionsSetup.audio.test')}</span>
-                  </button>
+                  </Button>
 
                   {!permissions.audioDevice.granted && (
-                    <button
+                    <Button
                       onClick={() => openSystemPreferences('privacy_ScreenCapture')}
-                      className="flex items-center space-x-2 px-4 py-2 bg-[var(--bready-accent)] text-[var(--bready-accent-contrast)] rounded-lg hover:opacity-90 transition-colors"
+                      size="sm"
                     >
                       <Settings className="w-4 h-4" />
                       <span>{t('permissionsSetup.audio.setup')}</span>
-                    </button>
+                    </Button>
                   )}
                 </div>
                 
@@ -348,18 +350,15 @@ const PermissionsSetup: React.FC<PermissionsSetupProps> = ({ onComplete, onSkip,
         </div>
 
         <div className="p-6 border-t border-[var(--bready-border)] flex justify-between">
-          <button
-            onClick={onSkip}
-            className="px-4 py-2 text-[var(--bready-text-muted)] hover:text-[var(--bready-text)] transition-colors"
-          >
+          <Button variant="ghost" onClick={onSkip}>
             {t('permissionsSetup.actions.skip')}
-          </button>
-          
+          </Button>
+
           <div className="flex space-x-3">
-            <button
+            <Button
               onClick={checkAllPermissions}
               disabled={loading}
-              className="flex items-center space-x-2 px-4 py-2 bg-[var(--bready-surface-2)] text-[var(--bready-text)] rounded-lg hover:bg-[var(--bready-surface-3)] transition-colors disabled:opacity-50"
+              variant="outline"
             >
               {loading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -367,23 +366,17 @@ const PermissionsSetup: React.FC<PermissionsSetupProps> = ({ onComplete, onSkip,
                 <RefreshCw className="w-4 h-4" />
               )}
               <span>{t('permissionsSetup.actions.recheck')}</span>
-            </button>
-            
-            <button
-              onClick={onComplete}
-              disabled={!allPermissionsGranted}
-              className={`px-6 py-2 rounded-lg transition-colors ${
-                allPermissionsGranted
-                  ? 'bg-[var(--bready-accent)] text-[var(--bready-accent-contrast)] hover:opacity-90'
-                  : 'bg-[var(--bready-surface-2)] text-[var(--bready-text-muted)] cursor-not-allowed'
-              }`}
-            >
-              {allPermissionsGranted ? t('permissionsSetup.actions.start') : t('permissionsSetup.actions.complete')}
-            </button>
+            </Button>
+
+            <Button onClick={onComplete} disabled={!allPermissionsGranted}>
+              {allPermissionsGranted
+                ? t('permissionsSetup.actions.start')
+                : t('permissionsSetup.actions.complete')}
+            </Button>
           </div>
         </div>
       </div>
-    </div>
+    </Modal>
   )
 }
 

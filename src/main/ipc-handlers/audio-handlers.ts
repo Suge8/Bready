@@ -17,6 +17,7 @@ ipcMain.handle('stop-audio-capture', () => {
 
 // 音频模式切换处理器
 ipcMain.handle('switch-audio-mode', async (event, mode: AudioMode) => {
+  void event
   return await switchAudioMode(mode)
 })
 
@@ -27,6 +28,7 @@ ipcMain.handle('get-audio-status', () => {
 
 // 接收渲染进程音频数据的处理器
 ipcMain.on('audio-data', (event, audioPacket) => {
+  void event
   try {
     let buffer: Buffer
 
@@ -55,6 +57,7 @@ ipcMain.on('audio-data', (event, audioPacket) => {
 
 // 处理音频模式降级通知
 ipcMain.on('audio-mode-fallback', (event, fallbackInfo) => {
+  void event
   if (debugAudio) {
     console.log('🔄 音频模式降级:', fallbackInfo)
   }

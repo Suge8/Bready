@@ -1,6 +1,6 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { motion } from 'framer-motion'
-import { AlertTriangle, FolderOpen, X } from 'lucide-react'
+import { AlertTriangle, FolderOpen } from 'lucide-react'
 
 interface SkeletonLoaderProps {
   type: 'card' | 'list' | 'detail'

@@ -2,20 +2,22 @@ import { safeStorage } from 'electron'
 import * as crypto from 'crypto'
 import * as path from 'path'
 import * as fs from 'fs/promises'
-import { Logger } from '../utils/Logger'
+import { createLogger } from '../utils/logging'
+
+const toErrorMetadata = (error: unknown): Record<string, any> => ({
+  error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error)
+})
 
 /**
  * 安全密钥管理器
  * 负责API密钥的安全存储、获取和管理
  */
 export class SecureKeyManager {
-  private logger: Logger
+  private logger = createLogger('secure-key')
   private keyCache: Map<string, { value: string; timestamp: number }> = new Map()
   private readonly CACHE_TTL = 3600000 // 1小时缓存过期时间
 
-  constructor() {
-    this.logger = Logger.getInstance()
-  }
+  constructor() {}
 
   /**
    * 安全存储API密钥
@@ -50,8 +52,9 @@ export class SecureKeyManager {
       this.logger.info(`API密钥 ${keyName} 已安全存储`)
       
     } catch (error) {
-      this.logger.error(`存储API密钥失败 [${keyName}]:`, error)
-      throw new Error(`密钥存储失败: ${error.message}`)
+      const message = error instanceof Error ? error.message : String(error)
+      this.logger.error(`存储API密钥失败 [${keyName}]:`, toErrorMetadata(error))
+      throw new Error(`密钥存储失败: ${message}`)
     }
   }
 
@@ -89,7 +92,7 @@ export class SecureKeyManager {
       return decryptedKey
       
     } catch (error) {
-      this.logger.error(`获取API密钥失败 [${keyName}]:`, error)
+      this.logger.error(`获取API密钥失败 [${keyName}]:`, toErrorMetadata(error))
       return null
     }
   }
@@ -117,7 +120,7 @@ export class SecureKeyManager {
       this.logger.info(`API密钥 ${keyName} 已删除`)
       
     } catch (error) {
-      this.logger.error(`删除API密钥失败 [${keyName}]:`, error)
+      this.logger.error(`删除API密钥失败 [${keyName}]:`, toErrorMetadata(error))
       throw error
     }
   }
@@ -149,7 +152,7 @@ export class SecureKeyManager {
         .map(file => file.replace('.key', ''))
         
     } catch (error) {
-      this.logger.error('获取密钥列表失败:', error)
+      this.logger.error('获取密钥列表失败:', toErrorMetadata(error))
       return []
     }
   }
