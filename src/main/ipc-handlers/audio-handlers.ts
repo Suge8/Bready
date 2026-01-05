@@ -73,6 +73,12 @@ ipcMain.on('audio-mode-fallback', (event, fallbackInfo) => {
   })
 })
 
+// 转发渲染进程的设备变更事件给所有窗口
+ipcMain.on('audio-device-changed', (event, deviceInfo) => {
+  void event
+  broadcastToAllWindows('audio-device-changed', deviceInfo)
+})
+
 // SystemAudioDump 相关 IPC 处理器
 
 // 检查 SystemAudioDump 是否可用

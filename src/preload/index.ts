@@ -67,6 +67,7 @@ interface BreadyAPI {
   onAudioStreamRestored: (callback: () => void) => () => void
   onTranscriptionComplete: (callback: (transcription: string) => void) => () => void
   onAudioResponse: (callback: (data: AudioResponsePayload) => void) => () => void
+  onAudioDeviceChanged: (callback: (data: { deviceId: string; deviceLabel: string }) => void) => () => void
   onPerformanceMetrics: (callback: (metrics: any) => void) => () => void
   onCrashReport: (callback: (report: any) => void) => () => void
 }
@@ -194,6 +195,12 @@ const breadyAPI: BreadyAPI = {
     const listener = (_: any, data: any) => callback(data)
     ipcRenderer.on('audio-response', listener)
     return () => ipcRenderer.removeListener('audio-response', listener)
+  },
+
+  onAudioDeviceChanged: (callback: (data: { deviceId: string; deviceLabel: string }) => void) => {
+    const listener = (_: any, data: { deviceId: string; deviceLabel: string }) => callback(data)
+    ipcRenderer.on('audio-device-changed', listener)
+    return () => ipcRenderer.removeListener('audio-device-changed', listener)
   },
 
   onPerformanceMetrics: (callback: (metrics: any) => void) => {

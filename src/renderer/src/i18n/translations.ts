@@ -265,7 +265,8 @@ export const translations: Record<SupportedLanguage, any> = {
         reconnect: '重新连接'
       },
       toasts: {
-        connectionFailed: '连接 AI 服务失败，已返回主页'
+        connectionFailed: '连接 AI 服务失败，已返回主页',
+        deviceSwitched: '麦克风已切换至: {{device}}'
       },
       actions: {
         copy: '复制内容',
@@ -881,7 +882,8 @@ export const translations: Record<SupportedLanguage, any> = {
         reconnect: 'Reconnect'
       },
       toasts: {
-        connectionFailed: 'AI connection failed, returned home'
+        connectionFailed: 'AI connection failed, returned home',
+        deviceSwitched: 'Microphone switched to: {{device}}'
       },
       actions: {
         copy: 'Copy',

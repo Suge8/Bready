@@ -24,9 +24,15 @@ class RendererAudioCapture {
   private ipcListenersInitialized = false
   private audioBuffer: Float32Array = new Float32Array(0) // 音频缓存区（cheating-daddy 方式）
   private usingSystemAudioDump = false
+  private currentMicrophoneDeviceId: string | null = null // 当前使用的麦克风设备ID
+  private currentDeviceLabel: string = '' // 当前设备名称
+  private deviceChangeListenerInitialized = false
+  private deviceChangeTimeoutId: number | null = null
+  private isDeviceSwitching = false
 
   constructor() {
     this.initializeIpcListeners()
+    this.setupDeviceChangeListener()
   }
 
   /**
@@ -357,11 +363,11 @@ class RendererAudioCapture {
   }
 
   /**
-   * 获取麦克风音频流
+   * 获取麦克风音频流 - 智能设备选择
    */
   private async getMicrophoneStream(): Promise<MediaStream> {
     if (debugAudio) {
-      console.log('🎤 尝试获取麦克风音频流...')
+      console.log('🎤 尝试获取麦克风音频流 (智能设备选择)...')
       console.log('🎤 配置:', {
         sampleRate: this.config?.options?.sampleRate,
         channels: this.config?.options?.channels
@@ -369,7 +375,10 @@ class RendererAudioCapture {
     }
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
+      // 智能选择最佳麦克风设备
+      const bestDevice = await this.findBestMicrophoneDevice()
+
+      const constraints: MediaStreamConstraints = {
         audio: {
           sampleRate: this.config?.options?.sampleRate || 24000,
           channelCount: this.config?.options?.channels || 1,
@@ -378,15 +387,44 @@ class RendererAudioCapture {
           autoGainControl: true
         },
         video: false
-      })
+      }
+
+      // 如果找到了最佳设备，使用指定设备ID
+      if (bestDevice) {
+        (constraints.audio as MediaTrackConstraints).deviceId = { ideal: bestDevice.deviceId }
+        if (debugAudio) {
+          console.log('🎤 使用设备:', bestDevice.label, `(${bestDevice.deviceId})`)
+        }
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints)
 
       if (debugAudio) {
         console.log('✅ 麦克风音频流获取成功')
         const audioTracks = stream.getAudioTracks()
         console.log('🎤 音频轨道数量:', audioTracks.length)
         if (audioTracks.length > 0) {
-          console.log('🎤 音频轨道设置:', audioTracks[0].getSettings())
+          const track = audioTracks[0]
+          const settings = track.getSettings()
+          console.log('🎤 音频轨道设置:', settings)
+          console.log('🎤 实际使用设备:', track.label)
         }
+      }
+
+      const audioTracks = stream.getAudioTracks()
+      if (audioTracks.length > 0) {
+        const track = audioTracks[0]
+        const settings = track.getSettings()
+        const resolvedDeviceId = settings.deviceId || bestDevice?.deviceId || null
+        const resolvedLabel = track.label || bestDevice?.label || ''
+
+        this.currentMicrophoneDeviceId = resolvedDeviceId
+        this.currentDeviceLabel = resolvedLabel
+        this.notifyDeviceChanged(resolvedDeviceId, resolvedLabel)
+      } else if (bestDevice) {
+        this.currentMicrophoneDeviceId = bestDevice.deviceId
+        this.currentDeviceLabel = bestDevice.label
+        this.notifyDeviceChanged(bestDevice.deviceId, bestDevice.label)
       }
 
       return stream
@@ -522,35 +560,9 @@ class RendererAudioCapture {
   }
 
   /**
-   * 停止音频捕获
+   * 清理当前音频处理链路
    */
-  stop(): void {
-    if (debugAudio) {
-      console.log('⏹️ 停止渲染进程音频捕获...')
-      console.log('📊 当前状态:', {
-        isCapturing: this.isCapturing,
-        usingSystemAudioDump: this.usingSystemAudioDump,
-        hasProcessor: !!this.processor,
-        hasAudioContext: !!this.audioContext,
-        hasMediaStream: !!this.mediaStream,
-        mode: this.config?.mode
-      })
-    }
-
-    if (this.usingSystemAudioDump) {
-      try {
-        if ((window as any).bready?.ipcRenderer?.invoke) {
-          if (debugAudio) {
-            console.log('⏹️ 正在停止 SystemAudioDump...')
-          }
-          ; (window as any).bready.ipcRenderer.invoke('stop-system-audio-dump')
-        }
-      } catch (error) {
-        console.error('停止 SystemAudioDump 失败:', error)
-      }
-      this.usingSystemAudioDump = false
-    }
-
+  private teardownAudioProcessing(resetBuffer = true) {
     if (this.processor) {
       if (debugAudio) {
         console.log('⏹️ 断开音频处理器...')
@@ -582,8 +594,42 @@ class RendererAudioCapture {
       this.mediaStream = null
     }
 
-    // 清空音频缓存
-    this.audioBuffer = new Float32Array(0)
+    if (resetBuffer) {
+      this.audioBuffer = new Float32Array(0)
+    }
+  }
+
+  /**
+   * 停止音频捕获
+   */
+  stop(): void {
+    if (debugAudio) {
+      console.log('⏹️ 停止渲染进程音频捕获...')
+      console.log('📊 当前状态:', {
+        isCapturing: this.isCapturing,
+        usingSystemAudioDump: this.usingSystemAudioDump,
+        hasProcessor: !!this.processor,
+        hasAudioContext: !!this.audioContext,
+        hasMediaStream: !!this.mediaStream,
+        mode: this.config?.mode
+      })
+    }
+
+    if (this.usingSystemAudioDump) {
+      try {
+        if ((window as any).bready?.ipcRenderer?.invoke) {
+          if (debugAudio) {
+            console.log('⏹️ 正在停止 SystemAudioDump...')
+          }
+          ; (window as any).bready.ipcRenderer.invoke('stop-system-audio-dump')
+        }
+      } catch (error) {
+        console.error('停止 SystemAudioDump 失败:', error)
+      }
+      this.usingSystemAudioDump = false
+    }
+
+    this.teardownAudioProcessing()
 
     this.isCapturing = false
     this.config = null
@@ -600,7 +646,206 @@ class RendererAudioCapture {
     return {
       capturing: this.isCapturing,
       mode: this.config?.mode || 'unknown',
-      config: this.config
+      config: this.config,
+      currentDevice: this.currentDeviceLabel || 'Unknown',
+      currentDeviceId: this.currentMicrophoneDeviceId
+    }
+  }
+
+  /**
+   * 设置设备变更监听器
+   */
+  private setupDeviceChangeListener() {
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices) {
+      return
+    }
+
+    if (this.deviceChangeListenerInitialized) {
+      return
+    }
+
+    navigator.mediaDevices.addEventListener('devicechange', this.scheduleDeviceChangeCheck)
+    this.deviceChangeListenerInitialized = true
+  }
+
+  private scheduleDeviceChangeCheck = () => {
+    if (this.deviceChangeTimeoutId !== null) {
+      window.clearTimeout(this.deviceChangeTimeoutId)
+    }
+    this.deviceChangeTimeoutId = window.setTimeout(() => {
+      void this.handleDeviceChange()
+    }, 250)
+  }
+
+  private async handleDeviceChange() {
+    this.deviceChangeTimeoutId = null
+
+    if (debugAudio) {
+      console.log('🔄 音频设备变更，重新检测可用设备...')
+    }
+
+    if (this.isDeviceSwitching) {
+      return
+    }
+
+    // 如果当前正在使用麦克风模式，尝试自动切换到最佳设备
+    if (this.isCapturing && this.config?.mode === 'microphone') {
+      this.isDeviceSwitching = true
+      try {
+        const bestDevice = await this.findBestMicrophoneDevice()
+        if (bestDevice && bestDevice.deviceId !== this.currentMicrophoneDeviceId) {
+          if (debugAudio) {
+            console.log('🔄 检测到更优设备，自动切换:', bestDevice.label)
+          }
+          await this.switchToDevice(bestDevice)
+        }
+      } finally {
+        this.isDeviceSwitching = false
+      }
+    }
+  }
+
+  /**
+   * 枚举并选择最佳麦克风设备
+   * 优先级: 内置麦克风 > 外接USB/蓝牙麦克风 > iPhone
+   */
+  private async findBestMicrophoneDevice(): Promise<MediaDeviceInfo | null> {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices()
+      const audioInputs = devices.filter(device => device.kind === 'audioinput')
+
+      if (audioInputs.length === 0) {
+        if (debugAudio) {
+          console.log('❌ 未找到任何音频输入设备')
+        }
+        return null
+      }
+
+      if (debugAudio) {
+        console.log('🎤 可用音频设备列表:')
+        audioInputs.forEach((device, index) => {
+          console.log(`  ${index + 1}. ${device.label || 'Unknown Device'} (${device.deviceId})`)
+        })
+      }
+
+      const isIphone = (device: MediaDeviceInfo) => {
+        const label = device.label.toLowerCase()
+        return label.includes('iphone') || label.includes('continuity')
+      }
+
+      const isBuiltIn = (device: MediaDeviceInfo) => {
+        const label = device.label.toLowerCase()
+        return label.includes('built-in') || label.includes('internal')
+      }
+
+      // 优先级1: 内置麦克风
+      const builtInDevice = audioInputs.find(device => isBuiltIn(device))
+
+      if (builtInDevice) {
+        if (debugAudio) {
+          console.log('✅ 使用内置麦克风:', builtInDevice.label)
+        }
+        return builtInDevice
+      }
+
+      // 优先级2: 外接 USB 麦克风或蓝牙设备
+      const externalDevice = audioInputs.find(device => {
+        return (
+          !isBuiltIn(device) &&
+          !isIphone(device) &&
+          device.deviceId !== 'default' &&
+          device.deviceId !== 'communications'
+        )
+      })
+
+      if (externalDevice) {
+        if (debugAudio) {
+          console.log('✅ 找到外接麦克风:', externalDevice.label)
+        }
+        return externalDevice
+      }
+
+      // 优先级3: iPhone (通过 Continuity Camera)
+      const iphoneDevice = audioInputs.find(device => isIphone(device))
+
+      if (iphoneDevice) {
+        if (debugAudio) {
+          console.log('✅ 找到 iPhone 麦克风:', iphoneDevice.label)
+        }
+        return iphoneDevice
+      }
+
+      // 如果都没找到，返回第一个可用设备
+      if (debugAudio) {
+        console.log('⚠️ 使用默认音频设备:', audioInputs[0].label)
+      }
+      return audioInputs[0]
+
+    } catch (error) {
+      console.error('❌ 枚举音频设备失败:', error)
+      return null
+    }
+  }
+
+  /**
+   * 切换到指定设备
+   */
+  private async switchToDevice(device: MediaDeviceInfo): Promise<boolean> {
+    try {
+      if (debugAudio) {
+        console.log('🔄 切换麦克风设备到:', device.label)
+      }
+
+      this.teardownAudioProcessing()
+
+      // 使用指定设备创建新的音频流
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          deviceId: { exact: device.deviceId },
+          sampleRate: this.config?.options?.sampleRate || 24000,
+          channelCount: this.config?.options?.channels || 1,
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        },
+        video: false
+      })
+
+      const audioTracks = stream.getAudioTracks()
+      if (audioTracks.length > 0) {
+        const track = audioTracks[0]
+        const settings = track.getSettings()
+        const resolvedDeviceId = settings.deviceId || device.deviceId || null
+        const resolvedLabel = track.label || device.label
+
+        this.currentMicrophoneDeviceId = resolvedDeviceId
+        this.currentDeviceLabel = resolvedLabel
+        this.notifyDeviceChanged(resolvedDeviceId, resolvedLabel)
+      } else {
+        this.currentMicrophoneDeviceId = device.deviceId
+        this.currentDeviceLabel = device.label
+        this.notifyDeviceChanged(device.deviceId, device.label)
+      }
+
+      // 重新设置音频处理管道
+      return this.setupAudioProcessing(stream)
+
+    } catch (error) {
+      console.error('❌ 切换设备失败:', error)
+      return false
+    }
+  }
+
+  private notifyDeviceChanged(deviceId: string | null, deviceLabel: string) {
+    if (!deviceLabel) {
+      return
+    }
+
+    if ((window as any).bready?.ipcRenderer?.send) {
+      (window as any).bready.ipcRenderer.send('audio-device-changed', {
+        deviceId: deviceId || '',
+        deviceLabel: deviceLabel
+      })
     }
   }
 }
