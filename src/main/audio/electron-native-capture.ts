@@ -5,15 +5,11 @@
 
 import { systemPreferences } from 'electron'
 import { EventEmitter } from 'events'
+import type { AudioCaptureOptions, AudioMode, AudioStatus } from '../../shared/ipc'
 
 const debugAudio = process.env.DEBUG_AUDIO === '1'
 
-export interface AudioCaptureOptions {
-  sampleRate: number
-  channels: number
-  bitDepth: number
-  mode: 'system' | 'microphone'
-}
+export type { AudioCaptureOptions } from '../../shared/ipc'
 
 export class ElectronNativeAudioCapture extends EventEmitter {
   private isCapturing = false
@@ -182,7 +178,7 @@ export class ElectronNativeAudioCapture extends EventEmitter {
   /**
    * 切换音频模式
    */
-  async switchMode(mode: 'system' | 'microphone'): Promise<boolean> {
+  async switchMode(mode: AudioMode): Promise<boolean> {
     if (this.options.mode === mode) {
       if (debugAudio) {
         console.log(`🔄 已经是 ${mode} 模式，无需切换`)
@@ -227,7 +223,7 @@ export class ElectronNativeAudioCapture extends EventEmitter {
   /**
    * 获取当前状态
    */
-  getStatus(): { capturing: boolean; mode: string; options: AudioCaptureOptions } {
+  getStatus(): AudioStatus {
     return {
       capturing: this.isCapturing,
       mode: this.options.mode,

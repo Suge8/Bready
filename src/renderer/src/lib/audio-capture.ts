@@ -3,18 +3,16 @@
  * 处理实际的 getUserMedia 和 desktopCapturer 调用
  */
 
+import type { AudioCaptureOptions, AudioMode } from '../../shared/ipc'
+
 const debugAudio = import.meta.env.VITE_DEBUG_AUDIO === '1'
 if (debugAudio) {
   console.log('🎵 音频捕获模块开始加载...')
 }
 
 interface AudioCaptureConfig {
-  mode: 'system' | 'microphone'
-  options: {
-    sampleRate: number
-    channels: number
-    bitDepth: number
-  }
+  mode: AudioMode
+  options: AudioCaptureOptions
 }
 
 class RendererAudioCapture {

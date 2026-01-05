@@ -60,24 +60,6 @@ export class StartupOptimizer {
   }
 
   /**
-   * 异步设置IPC处理器
-   */
-  async setupIPCAsync() {
-    const startTime = Date.now()
-    try {
-      const { setupAllHandlers } = await import('../ipc-handlers')
-      setupAllHandlers()
-      if (debugStartup) {
-        console.log('✅ IPC处理器异步设置完成')
-      }
-    } catch (error) {
-      console.error('❌ IPC处理器设置失败:', error)
-    } finally {
-      this.recordMetric('ipcSetupTime', Date.now() - startTime)
-    }
-  }
-
-  /**
    * 预加载关键模块
    */
   async preloadCriticalModules() {
@@ -137,7 +119,6 @@ export async function optimizedStartup(createWindow: () => BrowserWindow) {
   // 2. 异步初始化其他组件
   const initTasks = [
     optimizer.initializeDatabaseAsync(),
-    optimizer.setupIPCAsync(),
     optimizer.preloadCriticalModules()
   ]
 

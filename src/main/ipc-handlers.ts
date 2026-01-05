@@ -11,6 +11,13 @@ import {
   UserLevel 
 } from './database'
 
+// 导入所有 IPC 处理器模块
+import './ipc-handlers/window-handlers'
+import './ipc-handlers/gemini-handlers'
+import './ipc-handlers/audio-handlers'
+import './ipc-handlers/permission-handlers'
+import './ipc-handlers/debug-handlers'
+
 // 认证相关 IPC 处理器
 export function setupAuthHandlers() {
   // 用户注册
@@ -197,7 +204,6 @@ export function setupMembershipHandlers() {
          updated_at = NOW() 
          WHERE id = $1`,
         [
-          userId, 
           expiresAt.toISOString(),
           (currentUser.remaining_interview_minutes || 0) + packageData.interview_minutes,
           (currentUser.total_purchased_minutes || 0) + packageData.interview_minutes

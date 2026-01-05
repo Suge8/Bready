@@ -1,4 +1,17 @@
 import { contextBridge, ipcRenderer } from 'electron'
+import type {
+  AnalyzePreparationRequest,
+  AnalyzePreparationResponse,
+  AudioMode,
+  AudioModeChangedPayload,
+  AudioResponsePayload,
+  AudioStatus,
+  ContextCompressedPayload,
+  ExtractFileContentRequest,
+  ExtractFileContentResponse,
+  PermissionStatus,
+  SystemPermissions
+} from '../shared/ipc'
 
 // 自定义API接口
 interface BreadyAPI {
@@ -15,8 +28,8 @@ interface BreadyAPI {
   // 音频捕获
   startAudioCapture: () => Promise<boolean>
   stopAudioCapture: () => Promise<boolean>
-  switchAudioMode: (mode: 'system' | 'microphone') => Promise<boolean>
-  getAudioStatus: () => Promise<{ capturing: boolean; mode: string; options: any }>
+  switchAudioMode: (mode: AudioMode) => Promise<boolean>
+  getAudioStatus: () => Promise<AudioStatus>
 
   // Gemini 连接管理
   reconnectGemini: () => Promise<boolean>
@@ -24,43 +37,20 @@ interface BreadyAPI {
   disconnectGemini: () => Promise<boolean>
 
   // 权限管理
-  checkPermissions: () => Promise<any>
-  checkScreenRecordingPermission: () => Promise<any>
-  checkMicrophonePermission: () => Promise<any>
-  checkApiKeyStatus: () => Promise<any>
-  checkAudioDeviceStatus: () => Promise<any>
+  checkPermissions: () => Promise<SystemPermissions>
+  checkScreenRecordingPermission: () => Promise<PermissionStatus>
+  checkMicrophonePermission: () => Promise<PermissionStatus>
+  checkApiKeyStatus: () => Promise<PermissionStatus>
+  checkAudioDeviceStatus: () => Promise<PermissionStatus>
   openSystemPreferences: (pane: string) => Promise<boolean>
-  testAudioCapture: () => Promise<any>
-  requestMicrophonePermission: () => Promise<any>
+  testAudioCapture: () => Promise<{ success: boolean; message: string; audioData?: number; silencePercentage?: number; recommendation?: string }>
+  requestMicrophonePermission: () => Promise<{ granted: boolean; message: string }>
 
   // AI 分析
-  analyzePreparation: (preparationData: {
-    name: string
-    jobDescription: string
-    resume?: string
-  }) => Promise<{
-    success: boolean
-    analysis?: {
-      matchScore: number
-      jobRequirements: string[]
-      strengths: string[]
-      weaknesses: string[]
-      suggestions: string[]
-      systemPrompt: string
-    }
-    error?: string
-  }>
+  analyzePreparation: (preparationData: AnalyzePreparationRequest) => Promise<AnalyzePreparationResponse>
 
   // 文件内容提取
-  extractFileContent: (fileData: {
-    fileName: string
-    fileType: string
-    base64Data: string
-  }) => Promise<{
-    success: boolean
-    content?: string
-    error?: string
-  }>
+  extractFileContent: (fileData: ExtractFileContentRequest) => Promise<ExtractFileContentResponse>
 
   // 事件监听
   onStatusUpdate: (callback: (status: string) => void) => () => void
@@ -71,11 +61,11 @@ interface BreadyAPI {
   onSessionReady: (callback: () => void) => () => void
   onSessionError: (callback: (error: string) => void) => () => void
   onSessionClosed: (callback: () => void) => () => void
-  onContextCompressed: (callback: (data: { previousCount: number, newCount: number }) => void) => () => void
+  onContextCompressed: (callback: (data: ContextCompressedPayload) => void) => () => void
   onAudioStreamInterrupted: (callback: () => void) => () => void
   onAudioStreamRestored: (callback: () => void) => () => void
   onTranscriptionComplete: (callback: (transcription: string) => void) => () => void
-  onAudioResponse: (callback: (data: { data: string, mimeType: string }) => void) => () => void
+  onAudioResponse: (callback: (data: AudioResponsePayload) => void) => () => void
 }
 
 // 暴露给渲染进程的API
@@ -167,14 +157,14 @@ const breadyAPI: BreadyAPI = {
     return () => ipcRenderer.removeListener('session-closed', listener)
   },
 
-  onAudioModeChanged: (callback) => {
-    const listener = (_: any, modeInfo: any) => callback(modeInfo)
+  onAudioModeChanged: (callback: (modeInfo: AudioModeChangedPayload) => void) => {
+    const listener = (_: any, modeInfo: AudioModeChangedPayload) => callback(modeInfo)
     ipcRenderer.on('audio-mode-changed', listener)
     return () => ipcRenderer.removeListener('audio-mode-changed', listener)
   },
 
   onContextCompressed: (callback) => {
-    const listener = (_event: any, data: { previousCount: number, newCount: number }) => callback(data)
+    const listener = (_event: any, data: ContextCompressedPayload) => callback(data)
     ipcRenderer.on('context-compressed', listener)
     return () => ipcRenderer.removeListener('context-compressed', listener)
   },
@@ -197,7 +187,7 @@ const breadyAPI: BreadyAPI = {
     return () => ipcRenderer.removeListener('transcription-complete', listener)
   },
 
-  onAudioResponse: (callback: (data: { data: string, mimeType: string }) => void) => {
+  onAudioResponse: (callback: (data: AudioResponsePayload) => void) => {
     const listener = (_: any, data: any) => callback(data)
     ipcRenderer.on('audio-response', listener)
     return () => ipcRenderer.removeListener('audio-response', listener)
