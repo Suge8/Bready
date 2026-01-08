@@ -3,7 +3,7 @@ import { app, BrowserWindow } from 'electron'
 import { electronAudioCapture } from './audio/electron-native-capture'
 import { saveDebugAudio } from './audioUtils'
 import { broadcastToAllWindows } from './window-manager'
-import { getGeminiService } from './gemini-service'
+import { getAiProvider, getAiService } from './ai-service'
 import { log, logSampled } from './utils/logging'
 import { recordMetric } from './utils/metrics'
 import type { AudioMode, AudioStatus } from '../shared/ipc'
@@ -11,9 +11,27 @@ import type { AudioMode, AudioStatus } from '../shared/ipc'
 // 状态变量
 let systemAudioProc: ChildProcess | null = null
 let mainWindow: BrowserWindow | null = null
+let lastSystemNonSilentAt = 0
+let hasSystemSpeech = false
 
 // 调试标志
 const debugAudio = process.env.DEBUG_AUDIO === '1'
+const GEMINI_SAMPLE_RATE = 24000
+const DOUBAO_SAMPLE_RATE = 16000
+const SYSTEM_INPUT_SAMPLE_RATE = 48000
+
+function resolveAiProvider(): 'gemini' | 'doubao' {
+  const provider = (process.env.AI_PROVIDER || 'gemini').toLowerCase()
+  return provider === 'doubao' ? 'doubao' : 'gemini'
+}
+
+function getTargetSampleRate(): number {
+  return resolveAiProvider() === 'doubao' ? DOUBAO_SAMPLE_RATE : GEMINI_SAMPLE_RATE
+}
+
+function getAudioMimeType(): string {
+  return `audio/pcm;rate=${getTargetSampleRate()}`
+}
 
 // 音频流稳定性管理
 let audioRestartCount = 0
@@ -26,16 +44,65 @@ function sendToRenderer(channel: string, data?: any): void {
   broadcastToAllWindows(channel, data)
 }
 
-function sendAudioToGemini(base64Data: string): void {
+let audioSendCount = 0
+
+function sendAudioToAI(base64Data: string, mimeType?: string): void {
   if (!base64Data || typeof base64Data !== 'string') return
-  const service = getGeminiService()
-  if (!service) return
+  const service = getAiService()
+
+  audioSendCount++
+
+  // 首次调用或每 50 次打印一次日志
+  if (audioSendCount === 1 || audioSendCount % 50 === 0) {
+    // 检查音频数据质量
+    try {
+      const buffer = Buffer.from(base64Data, 'base64')
+      const sampleCount = Math.floor(buffer.length / 2)
+      const view = new Int16Array(buffer.buffer, buffer.byteOffset, sampleCount)
+
+      // 计算 RMS 能量
+      let sumOfSquares = 0
+      for (let i = 0; i < Math.min(sampleCount, 1000); i += 4) {
+        sumOfSquares += view[i] * view[i]
+      }
+      const rms = Math.sqrt(sumOfSquares / (Math.min(sampleCount, 1000) / 4))
+
+      log('info', `📤 audio-manager #${audioSendCount}, provider: ${getAiProvider()}, RMS: ${Math.round(rms)}`)
+    } catch (error) {
+      log('info', `📤 audio-manager #${audioSendCount}, provider: ${getAiProvider()}`)
+    }
+  }
+
+  if (!service) {
+    if (debugAudio) {
+      log('debug', '⚠️ AI 服务未初始化')
+    }
+    return
+  }
 
   try {
-    service.sendAudioToGemini(base64Data)
+    // 通用 AI 音频发送方法，支持多个渠道（Gemini、豆包等）
+    // 让服务内部处理会话状态和重连逻辑
+    service.sendAudio(base64Data, mimeType || getAudioMimeType())
   } catch (error) {
-    log('error', '发送音频到 Gemini 失败:', error)
+    log('error', '发送音频到 AI 服务失败:', error)
   }
+}
+
+function isLikelySilence(buffer: Buffer, threshold = 200): boolean {
+  const sampleCount = Math.floor(buffer.length / 2)
+  if (sampleCount === 0) return true
+  const view = new Int16Array(buffer.buffer, buffer.byteOffset, sampleCount)
+  const stride = 8
+  let silent = 0
+  let checked = 0
+  for (let i = 0; i < sampleCount; i += stride) {
+    checked++
+    if (Math.abs(view[i]) < threshold) {
+      silent++
+    }
+  }
+  return silent / checked > 0.8
 }
 
 // 辅助函数
@@ -54,6 +121,28 @@ function convertStereoToMono(stereoBuffer: Buffer): Buffer {
   return monoBuffer
 }
 
+function resamplePcm16(buffer: Buffer, inputRate: number, outputRate: number): Buffer {
+  if (inputRate === outputRate) {
+    return buffer
+  }
+  const input = new Int16Array(buffer.buffer, buffer.byteOffset, buffer.length / 2)
+  if (input.length === 0) {
+    return buffer
+  }
+  const ratio = inputRate / outputRate
+  const outputLength = Math.floor(input.length / ratio)
+  const output = new Int16Array(outputLength)
+
+  for (let i = 0; i < outputLength; i++) {
+    const pos = i * ratio
+    const idx = Math.floor(pos)
+    const next = Math.min(idx + 1, input.length - 1)
+    const weight = pos - idx
+    output[i] = input[idx] + (input[next] - input[idx]) * weight
+  }
+
+  return Buffer.from(output.buffer)
+}
 // 清理现有的 SystemAudioDump 进程
 async function killExistingSystemAudioDump(): Promise<void> {
   return new Promise((resolve) => {
@@ -120,7 +209,7 @@ async function startAudioCapture(): Promise<boolean> {
     // 设置音频数据处理
     electronAudioCapture.on('audioData', (pcmData: Buffer) => {
       if (pcmData.length > 0) {
-        sendAudioToGemini(pcmData.toString('base64'))
+        sendAudioToAI(pcmData.toString('base64'))
       }
     })
 
@@ -170,16 +259,24 @@ function stopAudioCapture(): boolean {
 // 切换音频模式
 async function switchAudioMode(mode: AudioMode): Promise<boolean> {
   try {
-    if (debugAudio) {
-      log('debug', `🔄 切换音频模式到: ${mode}`)
+    log('info', `🔄 切换音频模式到: ${mode}`)
+
+    // 切换前清理豆包服务的转录状态
+    const service = getAiService()
+    if (service && getAiProvider() === 'doubao' && typeof (service as any).clearTranscriptionState === 'function') {
+      ; (service as any).clearTranscriptionState()
     }
+
+    // 只切换音频捕获模式，保持 WebSocket 连接不变
     const success = await electronAudioCapture.switchMode(mode)
+
     if (success) {
-      if (debugAudio) {
-        log('debug', `✅ 音频模式切换成功: ${mode}`)
-      }
+      log('info', `✅ 音频模式切换成功: ${mode}`)
       sendToRenderer('update-status', `已切换到${mode === 'system' ? '系统音频' : '麦克风'}模式`)
+    } else {
+      log('error', `❌ 音频模式切换失败: ${mode}`)
     }
+
     return success
   } catch (error) {
     log('error', '❌ 音频模式切换失败:', error)
@@ -254,6 +351,11 @@ async function startSystemAudioDump(): Promise<{ success: boolean; error?: strin
 
     // 设置音频处理参数
     const CHANNELS = 2
+    const targetSampleRate = getTargetSampleRate()
+    const audioMimeType = `audio/pcm;rate=${targetSampleRate}`
+    const samplesPerChunk = Math.floor(targetSampleRate * 0.1)
+    const bytesPerChunk = samplesPerChunk * 2
+    let pendingPcm = Buffer.alloc(0)
 
     if (systemAudioProc.stdout) {
       let audioRemainder = Buffer.alloc(0)
@@ -268,12 +370,21 @@ async function startSystemAudioDump(): Promise<{ success: boolean; error?: strin
         if (alignedBuffer.length === 0) return
 
         const monoChunk = CHANNELS === 2 ? convertStereoToMono(alignedBuffer) : alignedBuffer
-        const base64Data = monoChunk.toString('base64')
+        const resampledChunk = resamplePcm16(monoChunk, SYSTEM_INPUT_SAMPLE_RATE, targetSampleRate)
+        if (resampledChunk.length === 0) return
 
-        sendAudioToGemini(base64Data)
+        pendingPcm = pendingPcm.length ? Buffer.concat([pendingPcm, resampledChunk]) : resampledChunk
 
-        if (process.env.DEBUG_AUDIO) {
-          saveDebugAudio(monoChunk, 'system_audio')
+        while (pendingPcm.length >= bytesPerChunk) {
+          const chunk = pendingPcm.subarray(0, bytesPerChunk)
+          pendingPcm = pendingPcm.subarray(bytesPerChunk)
+
+          // bigmodel_async 模式：服务端 VAD 自动判停，不需要客户端静音检测
+          sendAudioToAI(chunk.toString('base64'), audioMimeType)
+
+          if (process.env.DEBUG_AUDIO) {
+            saveDebugAudio(chunk, 'system_audio')
+          }
         }
       })
     }
@@ -323,7 +434,7 @@ async function startSystemAudioDump(): Promise<{ success: boolean; error?: strin
         log('info', 'SystemAudioDump 进程关闭，退出码:', code)
       }
 
-      const geminiService = getGeminiService()
+      const geminiService = getAiService()
       const shouldRestart = !!geminiService?.isSessionReady?.()
 
       if (code !== 0 && code !== null && shouldRestart) {

@@ -5,7 +5,7 @@ import { config } from 'dotenv'
 import { initializeDatabase } from './database'
 import { setupAllHandlers } from './ipc-handlers'
 import { createWindow, setMainWindow, broadcastToAllWindows } from './window-manager'
-import { initializeGeminiService } from './gemini-service'
+import { initializeAiService } from './ai-service'
 import { setMainWindow as setAudioManagerWindow, stopSystemAudioCapture as stopSystemAudioCaptureFromAudioManager } from './audio-manager'
 import { registerCleanup, runCleanup } from './utils/cleanup'
 
@@ -41,9 +41,9 @@ if (process.env.ALLOW_INSECURE_TLS === '1') {
 
 registerCleanup(() => stopSystemAudioCaptureFromAudioManager())
 
-// 初始化 Gemini 服务
-function initializeGeminiServices() {
-  const service = initializeGeminiService((event, data) => {
+// 初始化 AI 服务
+function initializeAiServices() {
+  const service = initializeAiService((event, data) => {
     broadcastToAllWindows(event, data)
   })
   registerCleanup(() => {
@@ -73,8 +73,8 @@ app.whenReady().then(async () => {
       setAudioManagerWindow(mainWindowInstance)
     }
 
-    // 初始化 Gemini 服务
-    initializeGeminiServices()
+    // 初始化 AI 服务
+    initializeAiServices()
 
     // 启动内存监控
     const { MemoryOptimizer } = await import('./performance/memory-optimizer')
@@ -142,8 +142,8 @@ app.whenReady().then(async () => {
     setMainWindow(mainWindow)
     setAudioManagerWindow(mainWindow)
 
-    // 初始化 Gemini 服务
-    initializeGeminiServices()
+    // 初始化 AI 服务
+    initializeAiServices()
   }
 
   // 注册所有 IPC 处理器

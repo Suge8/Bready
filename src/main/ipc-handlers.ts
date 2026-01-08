@@ -1,4 +1,5 @@
 import { ipcMain } from 'electron'
+import { randomInt } from 'crypto'
 import { buildUpdateSetClause } from './utils/sql'
 import { AuthService, query } from './database'
 
@@ -8,6 +9,50 @@ import './ipc-handlers/gemini-handlers'
 import './ipc-handlers/audio-handlers'
 import './ipc-handlers/permission-handlers'
 import './ipc-handlers/debug-handlers'
+
+type PagedRequest = {
+  userId: string
+  limit?: number
+  offset?: number
+}
+
+const normalizePagedRequest = (payload: string | PagedRequest): PagedRequest => {
+  if (typeof payload === 'string') {
+    return { userId: payload }
+  }
+  return payload
+}
+
+const clampPageSize = (limit?: number): number | null => {
+  if (!limit || Number.isNaN(limit)) return null
+  return Math.min(Math.max(limit, 1), 100)
+}
+
+const phoneCodeStore = new Map<string, { code: string; expiresAt: number; lastSentAt: number }>()
+const PHONE_CODE_TTL_MS = 5 * 60 * 1000
+const PHONE_CODE_COOLDOWN_MS = 60 * 1000
+
+const getUserFromToken = async (token?: string) => {
+  if (!token) {
+    throw new Error('未登录')
+  }
+  const user = await AuthService.verifySession(token)
+  if (!user) {
+    throw new Error('会话已失效，请重新登录')
+  }
+  return user
+}
+
+const isValidPhone = (phone: string) => /^1\d{10}$/.test(phone)
+const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+
+const purgeExpiredPhoneCodes = (now: number) => {
+  for (const [key, entry] of phoneCodeStore.entries()) {
+    if (entry.expiresAt <= now) {
+      phoneCodeStore.delete(key)
+    }
+  }
+}
 
 // 认证相关 IPC 处理器
 export function setupAuthHandlers() {
@@ -55,6 +100,106 @@ export function setupAuthHandlers() {
       return true
     } catch (error: any) {
       throw new Error(error.message)
+    }
+  })
+
+  // 修改密码
+  ipcMain.handle('auth:change-password', async (event, { token, oldPassword, newPassword }) => {
+    void event
+    try {
+      const user = await getUserFromToken(token)
+      if (!oldPassword || !newPassword || newPassword.length < 6) {
+        return { success: false, error: '新密码格式不正确' }
+      }
+      await AuthService.changePassword(user.id, oldPassword, newPassword)
+      return { success: true }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  // 发送手机验证码
+  ipcMain.handle('auth:send-phone-code', async (event, { token, phone }) => {
+    void event
+    try {
+      const user = await getUserFromToken(token)
+      const trimmedPhone = String(phone || '').trim()
+      if (!isValidPhone(trimmedPhone)) {
+        return { success: false, error: '手机号格式不正确' }
+      }
+
+      const now = Date.now()
+      purgeExpiredPhoneCodes(now)
+
+      const key = `${user.id}:${trimmedPhone}`
+      const existing = phoneCodeStore.get(key)
+      if (existing && now - existing.lastSentAt < PHONE_CODE_COOLDOWN_MS) {
+        const remaining = Math.ceil((PHONE_CODE_COOLDOWN_MS - (now - existing.lastSentAt)) / 1000)
+        return { success: false, error: `请稍后再试 (${remaining}s)`, cooldownSeconds: remaining }
+      }
+
+      const code = randomInt(100000, 1000000).toString()
+      phoneCodeStore.set(key, {
+        code,
+        expiresAt: now + PHONE_CODE_TTL_MS,
+        lastSentAt: now
+      })
+
+      if (process.env.DEBUG_AUTH === '1') {
+        console.log('📨 手机验证码:', trimmedPhone, code)
+      }
+
+      return { success: true, cooldownSeconds: Math.floor(PHONE_CODE_COOLDOWN_MS / 1000) }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  // 绑定手机号
+  ipcMain.handle('auth:bind-phone', async (event, { token, phone, code }) => {
+    void event
+    try {
+      const user = await getUserFromToken(token)
+      const trimmedPhone = String(phone || '').trim()
+      if (!isValidPhone(trimmedPhone)) {
+        return { success: false, error: '手机号格式不正确' }
+      }
+
+      purgeExpiredPhoneCodes(Date.now())
+      const key = `${user.id}:${trimmedPhone}`
+      const entry = phoneCodeStore.get(key)
+      if (!entry || entry.expiresAt < Date.now()) {
+        if (entry) {
+          phoneCodeStore.delete(key)
+        }
+        return { success: false, error: '验证码已过期，请重新获取' }
+      }
+      if (String(code || '').trim() !== entry.code) {
+        return { success: false, error: '验证码错误' }
+      }
+
+      await AuthService.updatePhone(user.id, trimmedPhone)
+      phoneCodeStore.delete(key)
+      return { success: true }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  // 绑定邮箱
+  ipcMain.handle('auth:bind-email', async (event, { token, email }) => {
+    void event
+    try {
+      const user = await getUserFromToken(token)
+      const trimmedEmail = String(email || '').trim().toLowerCase()
+      if (!isValidEmail(trimmedEmail)) {
+        return { success: false, error: '邮箱格式不正确' }
+      }
+
+      await AuthService.updateEmail(user.id, trimmedEmail)
+      return { success: true }
+    } catch (error: any) {
+      return { success: false, error: error.message }
     }
   })
 }
@@ -219,18 +364,39 @@ export function setupMembershipHandlers() {
   })
 
   // 获取用户购买记录
-  ipcMain.handle('membership:get-user-purchases', async (event, userId) => {
+  ipcMain.handle('membership:get-user-purchases', async (event, payload) => {
     void event
     try {
+      const { userId, limit, offset } = normalizePagedRequest(payload)
+      const safeLimit = clampPageSize(limit)
+      const safeOffset = Math.max(0, offset || 0)
+
+      if (!safeLimit) {
+        const result = await query(
+          `SELECT pr.*, mp.name as package_name, mp.level as package_level 
+           FROM purchase_records pr 
+           JOIN membership_packages mp ON pr.package_id = mp.id 
+           WHERE pr.user_id = $1 
+           ORDER BY pr.created_at DESC`,
+          [userId]
+        )
+        return result.rows
+      }
+
       const result = await query(
         `SELECT pr.*, mp.name as package_name, mp.level as package_level 
          FROM purchase_records pr 
          JOIN membership_packages mp ON pr.package_id = mp.id 
          WHERE pr.user_id = $1 
-         ORDER BY pr.created_at DESC`,
-        [userId]
+         ORDER BY pr.created_at DESC 
+         LIMIT $2 OFFSET $3`,
+        [userId, safeLimit + 1, safeOffset]
       )
-      return result.rows
+      const rows = result.rows
+      return {
+        records: rows.slice(0, safeLimit),
+        hasMore: rows.length > safeLimit
+      }
     } catch (error: any) {
       throw new Error(error.message)
     }
@@ -283,18 +449,39 @@ export function setupUsageHandlers() {
   })
 
   // 获取用户使用记录
-  ipcMain.handle('usage:get-user-records', async (event, userId) => {
+  ipcMain.handle('usage:get-user-records', async (event, payload) => {
     void event
     try {
+      const { userId, limit, offset } = normalizePagedRequest(payload)
+      const safeLimit = clampPageSize(limit)
+      const safeOffset = Math.max(0, offset || 0)
+
+      if (!safeLimit) {
+        const result = await query(
+          `SELECT iur.*, p.name as preparation_name 
+           FROM interview_usage_records iur 
+           LEFT JOIN preparations p ON iur.preparation_id = p.id 
+           WHERE iur.user_id = $1 
+           ORDER BY iur.created_at DESC`,
+          [userId]
+        )
+        return result.rows
+      }
+
       const result = await query(
         `SELECT iur.*, p.name as preparation_name 
          FROM interview_usage_records iur 
          LEFT JOIN preparations p ON iur.preparation_id = p.id 
          WHERE iur.user_id = $1 
-         ORDER BY iur.created_at DESC`,
-        [userId]
+         ORDER BY iur.created_at DESC 
+         LIMIT $2 OFFSET $3`,
+        [userId, safeLimit + 1, safeOffset]
       )
-      return result.rows
+      const rows = result.rows
+      return {
+        records: rows.slice(0, safeLimit),
+        hasMore: rows.length > safeLimit
+      }
     } catch (error: any) {
       throw new Error(error.message)
     }

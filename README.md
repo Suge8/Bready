@@ -42,6 +42,45 @@ npm run dist
 npm run dist:all
 ```
 
+### 调试与日志
+在 `.env.local` 中开启调试（修改后需重启应用）：
+
+```bash
+# 日志级别与格式
+LOG_LEVEL=debug
+LOG_FORMAT=json
+LOG_SAMPLE_DEBUG=1
+LOG_SAMPLE_INFO=1
+LOG_SAMPLE_WARN=1
+LOG_SAMPLE_ERROR=1
+
+# AI 服务
+DEBUG_DOUBAO=1
+DEBUG_GEMINI=1
+
+# 音频与 IPC
+DEBUG_AUDIO=1
+DEBUG_IPC=1
+VITE_DEBUG_AUDIO=1
+
+# 性能与启动
+DEBUG_STARTUP=1
+DEBUG_MEMORY=1
+
+# 数据库与认证
+DEBUG_DB=1
+DEBUG_AUTH=1
+
+# 应用与 DevTools
+DEBUG_APP=1
+DEBUG_DEVTOOLS=1
+```
+
+说明：
+- `DEBUG_*` 为主进程调试开关，值设为 `1` 即可。
+- `VITE_DEBUG_AUDIO` 只影响渲染进程（前端）日志。
+- 终端输出为主进程日志；开启 `DEBUG_DEVTOOLS=1` 可在 DevTools Console 查看渲染进程日志。
+
 ### 文档
 - 设计说明: `docs/UI_DESIGN.md`
 
@@ -74,6 +113,45 @@ npm run build
 npm run dist
 npm run dist:all
 ```
+
+### Debug & Logs
+Enable debug flags in `.env.local` (restart the app after changes):
+
+```bash
+# Log level & format
+LOG_LEVEL=debug
+LOG_FORMAT=json
+LOG_SAMPLE_DEBUG=1
+LOG_SAMPLE_INFO=1
+LOG_SAMPLE_WARN=1
+LOG_SAMPLE_ERROR=1
+
+# AI services
+DEBUG_DOUBAO=1
+DEBUG_GEMINI=1
+
+# Audio & IPC
+DEBUG_AUDIO=1
+DEBUG_IPC=1
+VITE_DEBUG_AUDIO=1
+
+# Performance & startup
+DEBUG_STARTUP=1
+DEBUG_MEMORY=1
+
+# Database & auth
+DEBUG_DB=1
+DEBUG_AUTH=1
+
+# App & DevTools
+DEBUG_APP=1
+DEBUG_DEVTOOLS=1
+```
+
+Notes:
+- `DEBUG_*` flags are for the main process; set to `1` to enable.
+- `VITE_DEBUG_AUDIO` affects renderer (frontend) logs only.
+- Main process logs go to the terminal; use `DEBUG_DEVTOOLS=1` to inspect renderer logs in DevTools Console.
 
 ### Docs
 - Design notes: `docs/UI_DESIGN.md`

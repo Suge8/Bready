@@ -2,6 +2,7 @@ import { ipcMain, systemPreferences, desktopCapturer } from 'electron'
 import { exec } from 'child_process'
 import { promisify } from 'util'
 import { electronAudioCapture } from '../audio/electron-native-capture'
+import { getAiProvider } from '../ai-service'
 import type { PermissionStatus, SystemPermissions } from '../../shared/ipc'
 
 const debugAudio = process.env.DEBUG_AUDIO === '1'
@@ -76,6 +77,37 @@ async function checkMicrophonePermission(): Promise<PermissionStatus> {
 
 async function checkApiKeyStatus(): Promise<PermissionStatus> {
   try {
+    const provider = getAiProvider()
+
+    if (provider === 'doubao') {
+      const chatKey = process.env.DOUBAO_CHAT_API_KEY || ''
+      const asrAppId = process.env.DOUBAO_ASR_APP_ID || ''
+      const asrAccessKey = process.env.DOUBAO_ASR_ACCESS_KEY || ''
+      const asrResourceId = process.env.DOUBAO_ASR_RESOURCE_ID || 'volc.bigasr.sauc.duration'
+
+      if (!chatKey.trim()) {
+        return {
+          granted: false,
+          canRequest: true,
+          message: '豆包文本模型 API Key 未配置'
+        }
+      }
+
+      if (!asrAppId.trim() || !asrAccessKey.trim() || !asrResourceId.trim()) {
+        return {
+          granted: false,
+          canRequest: true,
+          message: '豆包语音识别配置未完成'
+        }
+      }
+
+      return {
+        granted: true,
+        canRequest: false,
+        message: '豆包 API 配置正确'
+      }
+    }
+
     const apiKey = process.env.VITE_GEMINI_API_KEY
 
     if (!apiKey || apiKey.trim() === '') {

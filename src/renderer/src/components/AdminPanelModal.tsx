@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { userProfileService, type UserProfile, type UserLevel } from '../lib/supabase'
 import UserLevelBadge from './UserLevelBadge'
 import { useI18n } from '../contexts/I18nContext'
+import { useTheme } from './ui/theme-provider'
 import { Modal } from './ui/Modal'
 
 interface AdminPanelModalProps {
@@ -16,11 +17,13 @@ type TabType = 'users' | 'usage'
 const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) => {
   const { user, profile } = useAuth()
   const { t, locale } = useI18n()
+  const { theme } = useTheme()
   const [activeTab, setActiveTab] = useState<TabType>('users')
   const [users, setUsers] = useState<UserProfile[]>([])
   const [loading, setLoading] = useState(false)
   const [showRoleDropdown, setShowRoleDropdown] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
+  const isDarkMode = theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)
 
   // 分页状态
   const [currentPage, setCurrentPage] = useState(1)
@@ -245,7 +248,7 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
                               <h3 className="font-medium text-[var(--bready-text)] text-sm truncate">
                                 {userItem.full_name || userItem.username || t('common.none')}
                               </h3>
-                              <UserLevelBadge level={userItem.user_level} size="sm" showIcon={true} />
+                              <UserLevelBadge level={userItem.user_level} size="sm" showIcon={true} isDarkMode={isDarkMode} />
                               {userItem.id === user?.id && (
                                 <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-100 text-emerald-700 flex-shrink-0">
                                   {t('admin.currentUser')}

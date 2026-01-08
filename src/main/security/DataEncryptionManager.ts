@@ -104,14 +104,14 @@ export class DataEncryptionManager {
 
       try {
         const decipher = crypto.createDecipheriv(this.ALGORITHM, key, iv) as crypto.DecipherGCM
-        const decrypted = this.decryptPayload(decipher, encrypted, tag)
+        const decrypted = this.decryptPayload(decipher, encrypted, tag, true)
         this.logger.debug('数据解密成功')
         return decrypted
       } catch (error) {
-        this.logger.warn('数据解密失败，尝试兼容旧算法', toErrorMetadata(error))
-        const legacyDecipher = crypto.createDecipher(this.ALGORITHM, key) as crypto.DecipherGCM
-        const decrypted = this.decryptPayload(legacyDecipher, encrypted, tag)
-        this.logger.debug('数据解密成功（兼容旧算法）')
+        this.logger.warn('数据解密失败，尝试兼容旧格式（无 AAD）', toErrorMetadata(error))
+        const legacyDecipher = crypto.createDecipheriv(this.ALGORITHM, key, iv) as crypto.DecipherGCM
+        const decrypted = this.decryptPayload(legacyDecipher, encrypted, tag, false)
+        this.logger.debug('数据解密成功（兼容旧格式）')
         return decrypted
       }
     } catch (error) {
@@ -200,8 +200,10 @@ export class DataEncryptionManager {
     return crypto.pbkdf2Sync(password, salt, 100000, this.KEY_LENGTH, 'sha256')
   }
 
-  private decryptPayload(decipher: crypto.DecipherGCM, encrypted: string, tag: Buffer): string {
-    decipher.setAAD(this.AAD)
+  private decryptPayload(decipher: crypto.DecipherGCM, encrypted: string, tag: Buffer, useAAD: boolean): string {
+    if (useAAD) {
+      decipher.setAAD(this.AAD)
+    }
     decipher.setAuthTag(tag)
 
     let decrypted = decipher.update(encrypted, 'hex', 'utf8')

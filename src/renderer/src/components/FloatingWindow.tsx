@@ -16,8 +16,8 @@ const FloatingWindow: React.FC = () => {
   const transcriptionRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    // 初始化 Gemini API
-    const initializeGemini = async () => {
+    // 初始化 AI API
+    const initializeAI = async () => {
       try {
         // 尝试多种方式获取API密钥
         let apiKey = ''
@@ -62,7 +62,7 @@ const FloatingWindow: React.FC = () => {
         console.log('初始化参数:', { customPrompt, language, purpose })
 
         setStatus(t('floating.status.connecting'))
-        const success = await window.bready.initializeGemini(apiKey, customPrompt, purpose, language)
+        const success = await window.bready.initializeAI(apiKey, customPrompt, purpose, language)
 
         if (success) {
           setStatus(t('floating.status.connected'))
@@ -161,7 +161,7 @@ const FloatingWindow: React.FC = () => {
       }
     }
 
-    initializeGemini()
+    initializeAI()
     const cleanup = setupEventListeners()
 
     return () => {
@@ -204,7 +204,7 @@ const FloatingWindow: React.FC = () => {
   const handleReconnect = async () => {
     setStatus(t('floating.status.reconnecting'))
     try {
-      const success = await window.bready.reconnectGemini()
+      const success = await window.bready.reconnectAI()
       if (success) {
         setIsConnected(true)
         setStatus(t('floating.status.reconnectSuccess'))

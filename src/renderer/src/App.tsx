@@ -23,15 +23,23 @@ declare global {
       closeFloatingWindow: () => Promise<boolean>
       enterCollaborationMode: () => Promise<boolean>
       exitCollaborationMode: () => Promise<boolean>
+
+      // AI API（通用）
+      initializeAI: (apiKey: string, customPrompt?: string, profile?: string, language?: string) => Promise<boolean>
+      reconnectAI: () => Promise<boolean>
+      disconnectAI: () => Promise<boolean>
+
+      // 旧方法（向后兼容）
       initializeGemini: (apiKey: string, customPrompt?: string, profile?: string, language?: string) => Promise<boolean>
+      reconnectGemini: () => Promise<boolean>
+      disconnectGemini: () => Promise<boolean>
+
       sendTextMessage: (message: string) => Promise<{ success: boolean; error?: string }>
       startAudioCapture: () => Promise<boolean>
       stopAudioCapture: () => Promise<boolean>
       switchAudioMode: (mode: 'system' | 'microphone') => Promise<boolean>
       getAudioStatus: () => Promise<{ capturing: boolean; mode: string; options: any }>
-      reconnectGemini: () => Promise<boolean>
       manualReconnect: () => Promise<boolean>
-      disconnectGemini: () => Promise<boolean>
 
       // 权限管理
       checkPermissions: () => Promise<any>
@@ -52,6 +60,7 @@ declare global {
       onSessionError: (callback: (error: string) => void) => () => void
       onSessionClosed: (callback: () => void) => () => void
       onAudioModeChanged: (callback: (modeInfo: { mode: 'system' | 'microphone'; fallback?: boolean; reason?: string }) => void) => () => void
+      onAudioDeviceChanged: (callback: (data: { deviceId: string; deviceLabel: string }) => void) => () => void
       onContextCompressed: (callback: (data: { previousCount: number, newCount: number }) => void) => () => void
       onAudioStreamInterrupted: (callback: () => void) => () => void
       onAudioStreamRestored: (callback: () => void) => () => void
@@ -76,8 +85,8 @@ const CollaborationModeWrapper: React.FC = () => {
 
   const handleExit = async () => {
     try {
-      // 断开 Gemini API 连接
-      await window.bready.disconnectGemini()
+      // 断开 AI 连接
+      await window.bready.disconnectAI()
 
       // 停止音频捕获
       await window.bready.stopAudioCapture()

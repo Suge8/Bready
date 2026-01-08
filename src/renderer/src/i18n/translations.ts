@@ -311,7 +311,9 @@ export const translations: Record<SupportedLanguage, any> = {
       membership: '会员信息',
       remainingTime: '剩余面试时间',
       expiry: '会员到期时间',
+      expired: '已过期',
       totalPurchased: '累计购买时间',
+      usageProgress: '使用进度',
       packages: '购买套餐',
       minutes: '{{count}} 分钟',
       discount: '{{percent}}%折扣',
@@ -325,6 +327,68 @@ export const translations: Record<SupportedLanguage, any> = {
         light: '浅色',
         dark: '深色',
         auto: '跟随系统'
+      },
+      tabs: {
+        profile: '个人信息',
+        membership: '会员中心',
+        history: '历史记录',
+        settings: '设置'
+      },
+      editor: {
+        title: '编辑资料',
+        nickname: '昵称',
+        nicknamePlaceholder: '请输入昵称',
+        notSet: '未设置',
+        email: '邮箱',
+        createdAt: '注册时间'
+      },
+      avatar: {
+        title: '选择头像',
+        label: '头像',
+        change: '更换',
+        hint: '点击选择头像'
+      },
+      security: {
+        title: '账户安全',
+        changePassword: '修改密码',
+        currentPassword: '当前密码',
+        newPassword: '新密码',
+        confirmPassword: '确认新密码',
+        passwordMismatch: '两次输入的密码不一致',
+        passwordTooShort: '密码长度至少6位',
+        passwordChanged: '密码修改成功',
+        passwordChangeFailed: '密码修改失败',
+        bindPhone: '绑定手机',
+        phonePlaceholder: '请输入手机号',
+        codePlaceholder: '验证码',
+        sendCode: '发送验证码',
+        codeSent: '验证码已发送',
+        invalidPhone: '请输入有效的手机号',
+        invalidCode: '请输入6位验证码',
+        phoneBound: '手机绑定成功',
+        phoneBindFailed: '手机绑定失败',
+        bindEmail: '绑定邮箱',
+        emailPlaceholder: '请输入邮箱地址',
+        invalidEmail: '请输入有效的邮箱地址',
+        emailBound: '邮箱绑定成功',
+        emailBindFailed: '邮箱绑定失败'
+      },
+      history: {
+        usage: '使用记录',
+        purchase: '购买记录',
+        collaboration: '协作模式',
+        liveInterview: '实时面试',
+        consumed: '已消耗',
+        noUsage: '暂无使用记录',
+        noPurchase: '暂无购买记录',
+        loadMore: '加载更多',
+        expiresAt: '有效期至',
+        saved: '节省',
+        status: {
+          completed: '已完成',
+          pending: '处理中',
+          cancelled: '已取消'
+        }
       }
     },
     login: {
@@ -928,7 +992,9 @@ export const translations: Record<SupportedLanguage, any> = {
       membership: 'Membership',
       remainingTime: 'Remaining interview time',
       expiry: 'Membership expiry',
+      expired: 'Expired',
       totalPurchased: 'Total purchased time',
+      usageProgress: 'Usage progress',
       packages: 'Packages',
       minutes: '{{count}} min',
       discount: '{{percent}}% off',
@@ -942,6 +1008,68 @@ export const translations: Record<SupportedLanguage, any> = {
         light: 'Light',
         dark: 'Dark',
         auto: 'System'
+      },
+      tabs: {
+        profile: 'Profile',
+        membership: 'Membership',
+        history: 'History',
+        settings: 'Settings'
+      },
+      editor: {
+        title: 'Edit Profile',
+        nickname: 'Nickname',
+        nicknamePlaceholder: 'Enter nickname',
+        notSet: 'Not set',
+        email: 'Email',
+        createdAt: 'Registered'
+      },
+      avatar: {
+        title: 'Select Avatar',
+        label: 'Avatar',
+        change: 'Change',
+        hint: 'Click to select'
+      },
+      security: {
+        title: 'Account Security',
+        changePassword: 'Change Password',
+        currentPassword: 'Current password',
+        newPassword: 'New password',
+        confirmPassword: 'Confirm new password',
+        passwordMismatch: 'Passwords do not match',
+        passwordTooShort: 'Password must be at least 6 characters',
+        passwordChanged: 'Password changed successfully',
+        passwordChangeFailed: 'Failed to change password',
+        bindPhone: 'Link Phone',
+        phonePlaceholder: 'Enter phone number',
+        codePlaceholder: 'Verification code',
+        sendCode: 'Send code',
+        codeSent: 'Verification code sent',
+        invalidPhone: 'Please enter a valid phone number',
+        invalidCode: 'Please enter 6-digit code',
+        phoneBound: 'Phone linked successfully',
+        phoneBindFailed: 'Failed to link phone',
+        bindEmail: 'Link Email',
+        emailPlaceholder: 'Enter email address',
+        invalidEmail: 'Please enter a valid email',
+        emailBound: 'Email linked successfully',
+        emailBindFailed: 'Failed to link email'
+      },
+      history: {
+        usage: 'Usage History',
+        purchase: 'Purchase History',
+        collaboration: 'Collaboration',
+        liveInterview: 'Live Interview',
+        consumed: 'Used',
+        noUsage: 'No usage records',
+        noPurchase: 'No purchase records',
+        loadMore: 'Load more',
+        expiresAt: 'Valid until',
+        saved: 'Saved',
+        status: {
+          completed: 'Completed',
+          pending: 'Pending',
+          cancelled: 'Cancelled'
+        }
       }
     },
     login: {
@@ -1558,6 +1686,31 @@ export const translations: Record<SupportedLanguage, any> = {
         light: 'ライト',
         dark: 'ダーク',
         auto: 'システム'
+      },
+      security: {
+        title: 'アカウントセキュリティ',
+        changePassword: 'パスワード変更',
+        currentPassword: '現在のパスワード',
+        newPassword: '新しいパスワード',
+        confirmPassword: '新しいパスワードの確認',
+        passwordMismatch: 'パスワードが一致しません',
+        passwordTooShort: 'パスワードは6文字以上',
+        passwordChanged: 'パスワードを変更しました',
+        passwordChangeFailed: 'パスワード変更に失敗しました',
+        bindPhone: '電話番号を連携',
+        phonePlaceholder: '電話番号を入力',
+        codePlaceholder: '確認コード',
+        sendCode: 'コード送信',
+        codeSent: 'コードを送信しました',
+        invalidPhone: '有効な電話番号を入力してください',
+        invalidCode: '6桁のコードを入力してください',
+        phoneBound: '電話番号を連携しました',
+        phoneBindFailed: '電話番号の連携に失敗しました',
+        bindEmail: 'メールを連携',
+        emailPlaceholder: 'メールアドレスを入力',
+        invalidEmail: '有効なメールアドレスを入力してください',
+        emailBound: 'メールを連携しました',
+        emailBindFailed: 'メールの連携に失敗しました'
       }
     },
     login: {
@@ -2171,6 +2324,31 @@ export const translations: Record<SupportedLanguage, any> = {
         light: 'Clair',
         dark: 'Sombre',
         auto: 'Système'
+      },
+      security: {
+        title: 'Sécurité du compte',
+        changePassword: 'Changer le mot de passe',
+        currentPassword: 'Mot de passe actuel',
+        newPassword: 'Nouveau mot de passe',
+        confirmPassword: 'Confirmer le nouveau mot de passe',
+        passwordMismatch: 'Les mots de passe ne correspondent pas',
+        passwordTooShort: 'Le mot de passe doit contenir au moins 6 caractères',
+        passwordChanged: 'Mot de passe modifié',
+        passwordChangeFailed: 'Échec de modification du mot de passe',
+        bindPhone: 'Lier le téléphone',
+        phonePlaceholder: 'Entrez votre numéro',
+        codePlaceholder: 'Code de vérification',
+        sendCode: 'Envoyer le code',
+        codeSent: 'Code envoyé',
+        invalidPhone: 'Veuillez entrer un numéro valide',
+        invalidCode: 'Veuillez entrer un code à 6 chiffres',
+        phoneBound: 'Téléphone lié',
+        phoneBindFailed: 'Échec de liaison du téléphone',
+        bindEmail: 'Lier l’email',
+        emailPlaceholder: 'Entrez votre email',
+        invalidEmail: 'Veuillez entrer un email valide',
+        emailBound: 'Email lié',
+        emailBindFailed: 'Échec de liaison de l’email'
       }
     },
     login: {

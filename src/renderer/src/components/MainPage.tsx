@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowRight, Plus, Sparkles, UserCircle, Calendar, Trash2, FileText, Users, Code, Briefcase } from 'lucide-react'
 import SelectPreparationModal from './SelectPreparationModal'
 import AllPreparationsModal from './AllPreparationsModal'
-import UserProfileModal from './UserProfileModal'
+import UserProfileModal from './user-profile/UserProfileModal'
 import AdminPanelModal from './AdminPanelModal'
 import PreparationDetailModal from './PreparationDetailModal'
 import EditPreparationModal from './EditPreparationModal'
@@ -34,19 +34,19 @@ const getCardVisualLayer = (index: number, isDark: boolean) => {
   // 定义5个视觉层次，循环使用
   const layers = isDark
     ? [
-        { bg: 'bg-zinc-900/80', border: 'border-zinc-700/40', shadow: 'shadow-lg shadow-black/20', accent: 'from-blue-500/10' },
-        { bg: 'bg-zinc-900/60', border: 'border-zinc-700/30', shadow: 'shadow-md shadow-black/15', accent: 'from-emerald-500/10' },
-        { bg: 'bg-zinc-900/50', border: 'border-zinc-700/25', shadow: 'shadow-sm shadow-black/10', accent: 'from-violet-500/10' },
-        { bg: 'bg-zinc-900/40', border: 'border-zinc-800/40', shadow: 'shadow-sm shadow-black/5', accent: 'from-amber-500/10' },
-        { bg: 'bg-zinc-900/30', border: 'border-zinc-800/30', shadow: '', accent: 'from-rose-500/10' },
-      ]
+      { bg: 'bg-zinc-900/80', border: 'border-zinc-700/40', shadow: 'shadow-lg shadow-black/20', accent: 'from-blue-500/10' },
+      { bg: 'bg-zinc-900/60', border: 'border-zinc-700/30', shadow: 'shadow-md shadow-black/15', accent: 'from-emerald-500/10' },
+      { bg: 'bg-zinc-900/50', border: 'border-zinc-700/25', shadow: 'shadow-sm shadow-black/10', accent: 'from-violet-500/10' },
+      { bg: 'bg-zinc-900/40', border: 'border-zinc-800/40', shadow: 'shadow-sm shadow-black/5', accent: 'from-amber-500/10' },
+      { bg: 'bg-zinc-900/30', border: 'border-zinc-800/30', shadow: '', accent: 'from-rose-500/10' },
+    ]
     : [
-        { bg: 'bg-white', border: 'border-gray-200/80', shadow: 'shadow-lg shadow-gray-200/50', accent: 'from-blue-50' },
-        { bg: 'bg-gray-50/80', border: 'border-gray-200/60', shadow: 'shadow-md shadow-gray-200/40', accent: 'from-emerald-50' },
-        { bg: 'bg-gray-50/60', border: 'border-gray-200/50', shadow: 'shadow-sm shadow-gray-200/30', accent: 'from-violet-50' },
-        { bg: 'bg-gray-100/50', border: 'border-gray-200/40', shadow: 'shadow-sm shadow-gray-100/20', accent: 'from-amber-50' },
-        { bg: 'bg-gray-100/40', border: 'border-gray-200/30', shadow: '', accent: 'from-rose-50' },
-      ]
+      { bg: 'bg-white', border: 'border-gray-200/80', shadow: 'shadow-lg shadow-gray-200/50', accent: 'from-blue-50' },
+      { bg: 'bg-gray-50/80', border: 'border-gray-200/60', shadow: 'shadow-md shadow-gray-200/40', accent: 'from-emerald-50' },
+      { bg: 'bg-gray-50/60', border: 'border-gray-200/50', shadow: 'shadow-sm shadow-gray-200/30', accent: 'from-violet-50' },
+      { bg: 'bg-gray-100/50', border: 'border-gray-200/40', shadow: 'shadow-sm shadow-gray-100/20', accent: 'from-amber-50' },
+      { bg: 'bg-gray-100/40', border: 'border-gray-200/30', shadow: '', accent: 'from-rose-50' },
+    ]
   return layers[index % layers.length]
 }
 
@@ -150,7 +150,7 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
 
   const cardHoverVariants = {
     rest: { scale: 1, y: 0 },
-    hover: { 
+    hover: {
       scale: 1.02,
       y: -4,
       transition: {
@@ -172,7 +172,7 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
       {/* 装饰性背景元素 */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         {/* 细微的噪点纹理 */}
-        <div className={`absolute inset-0 ${theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'opacity-[0.05]' : 'opacity-[0.02]'}`} 
+        <div className={`absolute inset-0 ${theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'opacity-[0.05]' : 'opacity-[0.02]'}`}
           style={{
             backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`
           }}
@@ -184,7 +184,7 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
         <div className="h-8 w-full app-drag"></div>
         <div className="max-w-6xl mx-auto px-4 -ml-10 flex items-center justify-between pb-3 app-no-drag">
           {/* Logo 区域 - 左侧留出空间给 mac 按钮 */}
-          <motion.div 
+          <motion.div
             className="flex items-center gap-2.5 ml-16"
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -210,9 +210,9 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
               onClick={() => setShowUserProfileModal(true)}
             >
               {profile?.avatar_url ? (
-                <img 
-                  src={profile.avatar_url} 
-                  alt="avatar" 
+                <img
+                  src={profile.avatar_url}
+                  alt="avatar"
                   className="w-8 h-8 object-cover rounded-full"
                 />
               ) : (
@@ -227,7 +227,7 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
       <main className="flex-1 flex flex-col px-8 overflow-hidden">
         <div className="flex-1 flex flex-col max-w-5xl w-full mx-auto">
           {/* 上方：Hero 区域 */}
-          <motion.div 
+          <motion.div
             className="flex-1 flex flex-col justify-center items-center text-center min-h-0"
             variants={containerVariants}
             initial="hidden"
@@ -235,7 +235,7 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
           >
             <motion.div className="max-w-2xl" variants={itemVariants}>
               {/* 主标题 - 更大 */}
-              <motion.h1 
+              <motion.h1
                 className="text-5xl md:text-6xl font-bold mb-4 leading-[1.1] tracking-tight"
                 variants={itemVariants}
               >
@@ -245,7 +245,7 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
               </motion.h1>
 
               {/* 副标题 */}
-              <motion.p 
+              <motion.p
                 className={`text-lg ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} leading-relaxed mb-10 max-w-md mx-auto`}
                 variants={itemVariants}
               >
@@ -269,8 +269,8 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
             </motion.div>
           </motion.div>
 
-            {/* 下方：我的准备列表 */}
-          <motion.div 
+          {/* 下方：我的准备列表 */}
+          <motion.div
             className="w-full pb-4 flex-shrink-0"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -298,12 +298,12 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
               {/* 准备项列表 */}
               <div>
                 {filteredPreparations.length === 0 ? (
-                  <motion.div 
+                  <motion.div
                     className={`p-8 ${isDarkMode ? 'bg-gray-900/40 border-gray-700/40' : 'bg-white/60 border-gray-200/60'} backdrop-blur-xl border rounded-2xl flex flex-col items-center justify-center text-center relative overflow-hidden group shadow-sm`}
                     whileHover={{ scale: 1.01 }}
                     transition={{ type: 'spring', stiffness: 300, damping: 25 }}
                   >
-                    <motion.div 
+                    <motion.div
                       className={`w-14 h-14 mb-4 ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'} rounded-2xl flex items-center justify-center`}
                       animate={{ rotate: [0, 5, -5, 0] }}
                       transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}

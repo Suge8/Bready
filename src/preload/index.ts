@@ -21,8 +21,16 @@ interface BreadyAPI {
   enterCollaborationMode: () => Promise<boolean>
   exitCollaborationMode: () => Promise<boolean>
 
-  // Gemini API
+  // AI API（通用，支持多个渠道）
+  initializeAI: (apiKey: string, customPrompt?: string, profile?: string, language?: string) => Promise<boolean>
+  reconnectAI: () => Promise<boolean>
+  disconnectAI: () => Promise<boolean>
+
+  // 旧方法（保持向后兼容）
   initializeGemini: (apiKey: string, customPrompt?: string, profile?: string, language?: string) => Promise<boolean>
+  reconnectGemini: () => Promise<boolean>
+  disconnectGemini: () => Promise<boolean>
+
   sendTextMessage: (message: string) => Promise<{ success: boolean; error?: string }>
 
   // 音频捕获
@@ -31,10 +39,8 @@ interface BreadyAPI {
   switchAudioMode: (mode: AudioMode) => Promise<boolean>
   getAudioStatus: () => Promise<AudioStatus>
 
-  // Gemini 连接管理
-  reconnectGemini: () => Promise<boolean>
+  // 连接管理
   manualReconnect: () => Promise<boolean>
-  disconnectGemini: () => Promise<boolean>
 
   // 权限管理
   checkPermissions: () => Promise<SystemPermissions>
@@ -80,9 +86,18 @@ const breadyAPI: BreadyAPI = {
   enterCollaborationMode: () => ipcRenderer.invoke('enter-collaboration-mode'),
   exitCollaborationMode: () => ipcRenderer.invoke('exit-collaboration-mode'),
 
-  // Gemini API
+  // AI API（通用，支持多个渠道）
+  initializeAI: (apiKey, customPrompt = '', profile = 'interview', language = 'cmn-CN') =>
+    ipcRenderer.invoke('initialize-ai', apiKey, customPrompt, profile, language),
+  reconnectAI: () => ipcRenderer.invoke('reconnect-ai'),
+  disconnectAI: () => ipcRenderer.invoke('disconnect-ai'),
+
+  // 旧方法（保持向后兼容）
   initializeGemini: (apiKey, customPrompt = '', profile = 'interview', language = 'cmn-CN') =>
-    ipcRenderer.invoke('initialize-gemini', apiKey, customPrompt, profile, language),
+    ipcRenderer.invoke('initialize-ai', apiKey, customPrompt, profile, language),
+  reconnectGemini: () => ipcRenderer.invoke('reconnect-ai'),
+  disconnectGemini: () => ipcRenderer.invoke('disconnect-ai'),
+
   sendTextMessage: (message: string) => ipcRenderer.invoke('send-text-message', message),
 
   // 音频捕获
@@ -91,10 +106,8 @@ const breadyAPI: BreadyAPI = {
   switchAudioMode: (mode: 'system' | 'microphone') => ipcRenderer.invoke('switch-audio-mode', mode),
   getAudioStatus: () => ipcRenderer.invoke('get-audio-status'),
 
-  // Gemini 连接管理
-  reconnectGemini: () => ipcRenderer.invoke('reconnect-gemini'),
+  // 连接管理
   manualReconnect: () => ipcRenderer.invoke('manual-reconnect'),
-  disconnectGemini: () => ipcRenderer.invoke('disconnect-gemini'),
 
   // 权限管理
   checkPermissions: () => ipcRenderer.invoke('check-permissions'),
@@ -234,8 +247,13 @@ contextBridge.exposeInMainWorld('bready', {
 })
 
 // 也可以暴露Node.js环境变量
+const aiProvider = (process.env.AI_PROVIDER || 'gemini').toLowerCase()
+const geminiApiKey = process.env.VITE_GEMINI_API_KEY
+const doubaoApiKey = process.env.DOUBAO_CHAT_API_KEY
+const exposedApiKey = aiProvider === 'doubao' ? doubaoApiKey : geminiApiKey
+
 contextBridge.exposeInMainWorld('env', {
-  GEMINI_API_KEY: process.env.VITE_GEMINI_API_KEY,
+  GEMINI_API_KEY: exposedApiKey,
   SUPABASE_URL: process.env.VITE_SUPABASE_URL,
   SUPABASE_ANON_KEY: process.env.VITE_SUPABASE_ANON_KEY,
   DEV_MODE: process.env.VITE_DEV_MODE

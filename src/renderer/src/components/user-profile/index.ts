@@ -1,0 +1,13 @@
+// User Profile Module - Public API
+export { default as UserProfileModal } from './UserProfileModal'
+export { default as ProfileHeader } from './ProfileHeader'
+export { default as ProfileEditor } from './ProfileEditor'
+export { default as MembershipCard } from './MembershipCard'
+export { default as PackageList } from './PackageList'
+export { default as UsageHistory } from './UsageHistory'
+export { default as PurchaseHistory } from './PurchaseHistory'
+export { default as SecuritySettings } from './SecuritySettings'
+export { default as AppearanceSettings } from './AppearanceSettings'
+export { AvatarSelector, AvatarDisplay, PRESET_AVATARS } from './AvatarSelector'
+export * from './SkeletonLoaders'
+export * from './hooks'

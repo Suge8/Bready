@@ -1,6 +1,8 @@
 import React from "react"
-import { ArrowLeft, Mic, Settings } from "lucide-react"
+import { ArrowLeft, Settings } from "lucide-react"
 import { cn } from "../../lib/utils"
+import MicrophoneSelector from "./MicrophoneSelector"
+import { useTheme } from "../ui/theme-provider"
 
 interface AudioModeOption {
   value: "system" | "microphone"
@@ -21,7 +23,8 @@ interface CollaborationHeaderProps {
   onAudioModeChange: (mode: "system" | "microphone") => void
   onOpenPermissions: () => void
   onExit: () => void
-  currentMicrophoneDevice?: string
+  currentMicrophoneDeviceId?: string
+  onMicrophoneDeviceChange?: (deviceId: string, label: string) => void
 }
 
 const CollaborationHeader: React.FC<CollaborationHeaderProps> = ({
@@ -36,8 +39,11 @@ const CollaborationHeader: React.FC<CollaborationHeaderProps> = ({
   onAudioModeChange,
   onOpenPermissions,
   onExit,
-  currentMicrophoneDevice,
+  currentMicrophoneDeviceId,
+  onMicrophoneDeviceChange,
 }) => {
+  const { theme } = useTheme()
+  const isDarkMode = theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)
   return (
     <div className="w-full bg-[var(--bready-bg)] z-50 flex-shrink-0 app-drag pt-[15px]">
       <div className="h-8 w-full flex items-center justify-between app-drag">
@@ -61,12 +67,6 @@ const CollaborationHeader: React.FC<CollaborationHeaderProps> = ({
             )}
             <span>{status}</span>
           </div>
-          {currentAudioMode === "microphone" && currentMicrophoneDevice ? (
-            <div className="flex items-center justify-center space-x-1 text-[11px] text-[var(--bready-text-muted)]">
-              <Mic className="w-3 h-3" />
-              <span className="max-w-[220px] truncate">{currentMicrophoneDevice}</span>
-            </div>
-          ) : null}
         </div>
 
         <div className="flex items-center space-x-2 app-no-drag">
@@ -84,7 +84,7 @@ const CollaborationHeader: React.FC<CollaborationHeaderProps> = ({
             </button>
 
             {showAudioModeDropdown && (
-              <div className="absolute top-full right-0 mt-1 bg-[var(--bready-surface)] border border-[var(--bready-border)] rounded-xl shadow-lg z-50 min-w-48">
+              <div className="absolute top-full right-0 mt-1 bg-[var(--bready-surface)] border border-[var(--bready-border)] rounded-xl shadow-lg z-50 min-w-64">
                 {audioModeOptions.map((option) => (
                   <button
                     key={option.value}
@@ -125,6 +125,21 @@ const CollaborationHeader: React.FC<CollaborationHeaderProps> = ({
                     </div>
                   </button>
                 ))}
+
+                {/* 麦克风设备选择器 - 仅在麦克风模式下显示 */}
+                {currentAudioMode === "microphone" && (
+                  <div className="px-3 py-3 border-t border-[var(--bready-border)]">
+                    <div className="text-xs text-[var(--bready-text-muted)] mb-2 font-medium">
+                      选择麦克风设备
+                    </div>
+                    <MicrophoneSelector
+                      currentDeviceId={currentMicrophoneDeviceId || ''}
+                      isDarkMode={isDarkMode}
+                      onDeviceChange={onMicrophoneDeviceChange}
+                      className="w-full"
+                    />
+                  </div>
+                )}
               </div>
             )}
           </div>

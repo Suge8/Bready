@@ -25,10 +25,18 @@ class RendererAudioCapture {
   private audioBuffer: Float32Array = new Float32Array(0) // 音频缓存区（cheating-daddy 方式）
   private usingSystemAudioDump = false
   private currentMicrophoneDeviceId: string | null = null // 当前使用的麦克风设备ID
+  private preferredMicrophoneDeviceId: string | null = null // 用户手动选择的设备
+  private preferredMicrophoneDeviceLabel: string | null = null // 用户手动选择的设备名称
   private currentDeviceLabel: string = '' // 当前设备名称
   private deviceChangeListenerInitialized = false
   private deviceChangeTimeoutId: number | null = null
   private isDeviceSwitching = false
+  private hasLoggedSampleRate = false
+  private hasLoggedFirstSend = false  // 是否已记录首次发送日志
+  private hasLoggedFirstSuccess = false  // 是否已记录首次成功日志
+  private isDoubaoMode(): boolean {
+    return (this.config?.options?.sampleRate || 0) === 16000
+  }
 
   constructor() {
     this.initializeIpcListeners()
@@ -59,6 +67,9 @@ class RendererAudioCapture {
 
         // 监听开始音频捕获指令
         ipcRenderer.on('audio-capture-start', async (config: AudioCaptureConfig) => {
+          // 无条件日志，用于调试
+          console.log('🎤 [渲染进程] 收到音频捕获启动指令:', config?.mode)
+
           if (debugAudio) {
             console.log('📷 渲染进程收到音频捕获启动指令:', config)
           }
@@ -144,6 +155,9 @@ class RendererAudioCapture {
     this.usingSystemAudioDump = false
 
     try {
+      // 无条件日志
+      console.log(`🎤 [渲染进程] 启动${config.mode === 'system' ? '系统' : '麦克风'}音频捕获...`)
+
       if (debugAudio) {
         console.log(`🚀 启动${config.mode === 'system' ? '系统' : '麦克风'}音频捕获...`)
       }
@@ -153,10 +167,12 @@ class RendererAudioCapture {
       if (config.mode === 'system') {
         stream = await this.getSystemAudioStream()
       } else {
+        console.log('🎤 [渲染进程] 麦克风模式，获取麦克风流...')
         if (debugAudio) {
           console.log('🎤 用户选择麦克风模式')
         }
         stream = await this.getMicrophoneStream()
+        console.log('🎤 [渲染进程] 麦克风流获取结果:', stream ? '成功' : '失败')
       }
 
       if (!stream) {
@@ -378,20 +394,27 @@ class RendererAudioCapture {
       // 智能选择最佳麦克风设备
       const bestDevice = await this.findBestMicrophoneDevice()
 
+      const targetSampleRate = this.config?.options?.sampleRate || 24000
+      const targetChannels = this.config?.options?.channels || 1
+      const audioConstraints: MediaTrackConstraints = {
+        sampleRate: this.isDoubaoMode() ? { ideal: targetSampleRate } : targetSampleRate,
+        channelCount: this.isDoubaoMode() ? { ideal: targetChannels } : targetChannels,
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true
+      }
       const constraints: MediaStreamConstraints = {
-        audio: {
-          sampleRate: this.config?.options?.sampleRate || 24000,
-          channelCount: this.config?.options?.channels || 1,
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        },
+        audio: audioConstraints,
         video: false
       }
 
       // 如果找到了最佳设备，使用指定设备ID
       if (bestDevice) {
-        (constraints.audio as MediaTrackConstraints).deviceId = { ideal: bestDevice.deviceId }
+        const useExact = this.preferredMicrophoneDeviceId
+          && bestDevice.deviceId === this.preferredMicrophoneDeviceId
+          ; (constraints.audio as MediaTrackConstraints).deviceId = useExact
+            ? { exact: bestDevice.deviceId }
+            : { ideal: bestDevice.deviceId }
         if (debugAudio) {
           console.log('🎤 使用设备:', bestDevice.label, `(${bestDevice.deviceId})`)
         }
@@ -463,19 +486,29 @@ class RendererAudioCapture {
         this.config!.options.channels
       )
 
+      const targetSampleRate = this.config!.options.sampleRate
+      if (debugAudio && !this.hasLoggedSampleRate) {
+        this.hasLoggedSampleRate = true
+        console.log('🎛️ AudioContext 采样率:', this.audioContext.sampleRate, '目标采样率:', targetSampleRate)
+      }
+
       this.processor.onaudioprocess = (event) => {
         const inputBuffer = event.inputBuffer
         const inputData = inputBuffer.getChannelData(0)
+        const inputSampleRate = inputBuffer.sampleRate
+        const processedData = inputSampleRate === targetSampleRate
+          ? inputData
+          : this.resampleFloat32(inputData, inputSampleRate, targetSampleRate)
 
         // 采用 cheating-daddy 的简单方式：直接缓存和发送
         // 但保持我们的 IPC 架构
-        const newBuffer = new Float32Array(this.audioBuffer.length + inputData.length)
+        const newBuffer = new Float32Array(this.audioBuffer.length + processedData.length)
         newBuffer.set(this.audioBuffer)
-        newBuffer.set(inputData, this.audioBuffer.length)
+        newBuffer.set(processedData, this.audioBuffer.length)
         this.audioBuffer = newBuffer
 
         // 每 100ms 发送一次（与 cheating-daddy 一致）
-        const samplesPerChunk = this.config!.options.sampleRate * 0.1 // 100ms = 2400 samples
+        const samplesPerChunk = targetSampleRate * 0.1 // 100ms = 1600 samples
 
         while (this.audioBuffer.length >= samplesPerChunk) {
           const chunk = this.audioBuffer.slice(0, samplesPerChunk)
@@ -484,6 +517,12 @@ class RendererAudioCapture {
           // 转换为 Int16 PCM（与 cheating-daddy 一致）
           const pcmData16 = this.convertFloat32ToInt16(chunk)
           const base64Data = this.arrayBufferToBase64(pcmData16.buffer)
+
+          // 首次发送日志
+          if (!this.hasLoggedFirstSend) {
+            this.hasLoggedFirstSend = true
+            console.log('🎤 [渲染进程] 首次发送音频数据到主进程，长度:', base64Data.length)
+          }
 
           // 通过 IPC 发送到主进程（保持我们的架构）
           this.sendOptimizedAudioToMain(base64Data)
@@ -520,6 +559,25 @@ class RendererAudioCapture {
     return int16Array
   }
 
+  private resampleFloat32(buffer: Float32Array, inputRate: number, outputRate: number): Float32Array {
+    if (inputRate === outputRate || buffer.length === 0) {
+      return buffer
+    }
+    const ratio = inputRate / outputRate
+    const outputLength = Math.floor(buffer.length / ratio)
+    const output = new Float32Array(outputLength)
+
+    for (let i = 0; i < outputLength; i++) {
+      const pos = i * ratio
+      const idx = Math.floor(pos)
+      const next = Math.min(idx + 1, buffer.length - 1)
+      const weight = pos - idx
+      output[i] = buffer[idx] + (buffer[next] - buffer[idx]) * weight
+    }
+
+    return output
+  }
+
   /**
    * ArrayBuffer 转 Base64（cheating-daddy 方式）
    */
@@ -539,10 +597,17 @@ class RendererAudioCapture {
   private sendOptimizedAudioToMain(base64Data: string) {
     try {
       if ((window as any).bready?.ipcRenderer?.invoke) {
+        const sampleRate = this.config?.options?.sampleRate || 24000;
         // 使用 cheating-daddy 的数据格式，但通过我们的 IPC 发送
         (window as any).bready.ipcRenderer.invoke('send-audio-content-optimized', {
           data: base64Data,
-          mimeType: 'audio/pcm;rate=24000'
+          mimeType: `audio/pcm;rate=${sampleRate}`
+        }).then((result: any) => {
+          // 首次成功日志
+          if (result?.success && !this.hasLoggedFirstSuccess) {
+            this.hasLoggedFirstSuccess = true
+            console.log('✅ [渲染进程] 首次成功发送音频到主进程')
+          }
         }).catch((error: any) => {
           console.error('发送优化音频数据失败:', error)
         })
@@ -637,6 +702,9 @@ class RendererAudioCapture {
 
     this.isCapturing = false
     this.config = null
+    this.hasLoggedSampleRate = false
+    this.hasLoggedFirstSend = false
+    this.hasLoggedFirstSuccess = false
 
     if (debugAudio) {
       console.log('✅ 渲染进程音频捕获已停止')
@@ -654,6 +722,32 @@ class RendererAudioCapture {
       currentDevice: this.currentDeviceLabel || 'Unknown',
       currentDeviceId: this.currentMicrophoneDeviceId
     }
+  }
+
+  /**
+   * 设置用户选择的麦克风设备
+   */
+  async setMicrophoneDevice(deviceId: string): Promise<boolean> {
+    if (!deviceId) {
+      return false
+    }
+
+    this.preferredMicrophoneDeviceId = deviceId
+
+    const device = await this.findMicrophoneDeviceById(deviceId)
+    if (this.isDoubaoMode() && device?.label) {
+      this.preferredMicrophoneDeviceLabel = device.label
+    }
+
+    if (!this.isCapturing || this.config?.mode !== 'microphone') {
+      return true
+    }
+
+    if (!device) {
+      return false
+    }
+
+    return await this.switchToDevice(device)
   }
 
   /**
@@ -746,6 +840,28 @@ class RendererAudioCapture {
         return null
       }
 
+      if (this.preferredMicrophoneDeviceId) {
+        const preferred = audioInputs.find(device => device.deviceId === this.preferredMicrophoneDeviceId)
+        if (preferred) {
+          if (debugAudio) {
+            console.log('🎯 使用用户选择的麦克风:', preferred.label, `(${preferred.deviceId})`)
+          }
+          return preferred
+        }
+        if (this.isDoubaoMode() && this.preferredMicrophoneDeviceLabel) {
+          const preferredLabel = this.preferredMicrophoneDeviceLabel.toLowerCase()
+          const byLabel = audioInputs.find(device => device.label.toLowerCase() === preferredLabel)
+            || audioInputs.find(device => device.label.toLowerCase().includes(preferredLabel))
+          if (byLabel) {
+            this.preferredMicrophoneDeviceId = byLabel.deviceId
+            if (debugAudio) {
+              console.log('🎯 设备ID变更，按名称匹配到设备:', byLabel.label, `(${byLabel.deviceId})`)
+            }
+            return byLabel
+          }
+        }
+      }
+
       if (debugAudio) {
         console.log('🎤 可用音频设备列表:')
         audioInputs.forEach((device, index) => {
@@ -795,7 +911,7 @@ class RendererAudioCapture {
 
       if (iphoneDevice) {
         if (debugAudio) {
-          console.log('✅ 找到 iPhone 麦克风:', iphoneDevice.label)
+          console.log('✅ 使用 iPhone 麦克风:', iphoneDevice.label)
         }
         return iphoneDevice
       }
@@ -810,6 +926,16 @@ class RendererAudioCapture {
       console.error('❌ 枚举音频设备失败:', error)
       return null
     }
+  }
+
+  private async findMicrophoneDeviceById(deviceId: string): Promise<MediaDeviceInfo | null> {
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices) {
+      return null
+    }
+
+    const devices = await navigator.mediaDevices.enumerateDevices()
+    const audioInputs = devices.filter(device => device.kind === 'audioinput')
+    return audioInputs.find(device => device.deviceId === deviceId) || null
   }
 
   /**
@@ -829,15 +955,18 @@ class RendererAudioCapture {
       const previousDeviceId = this.currentMicrophoneDeviceId
       const previousDeviceLabel = this.currentDeviceLabel
 
+      const targetSampleRate = this.config?.options?.sampleRate || 24000
+      const targetChannels = this.config?.options?.channels || 1
+      const audioConstraints: MediaTrackConstraints = {
+        deviceId: { exact: device.deviceId },
+        sampleRate: this.isDoubaoMode() ? { ideal: targetSampleRate } : targetSampleRate,
+        channelCount: this.isDoubaoMode() ? { ideal: targetChannels } : targetChannels,
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true
+      }
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          deviceId: { exact: device.deviceId },
-          sampleRate: this.config?.options?.sampleRate || 24000,
-          channelCount: this.config?.options?.channels || 1,
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        },
+        audio: audioConstraints,
         video: false
       })
 
@@ -848,6 +977,11 @@ class RendererAudioCapture {
       const nextDeviceLabel = audioTracks.length > 0
         ? (audioTracks[0].label || device.label)
         : device.label
+
+      if (nextDeviceId && nextDeviceId !== device.deviceId) {
+        stream.getTracks().forEach(track => track.stop())
+        return false
+      }
 
       this.teardownAudioProcessing({ stopTracks: false })
 
@@ -886,10 +1020,6 @@ class RendererAudioCapture {
   }
 
   private notifyDeviceChanged(deviceId: string | null, deviceLabel: string) {
-    if (!deviceLabel) {
-      return
-    }
-
     if ((window as any).bready?.ipcRenderer?.send) {
       (window as any).bready.ipcRenderer.send('audio-device-changed', {
         deviceId: deviceId || '',

@@ -8,6 +8,17 @@ import { EventEmitter } from 'events'
 import type { AudioCaptureOptions, AudioMode, AudioStatus } from '../../shared/ipc'
 
 const debugAudio = process.env.DEBUG_AUDIO === '1'
+const GEMINI_SAMPLE_RATE = 24000
+const DOUBAO_SAMPLE_RATE = 16000
+
+function resolveAiProvider(): 'gemini' | 'doubao' {
+  const provider = (process.env.AI_PROVIDER || 'gemini').toLowerCase()
+  return provider === 'doubao' ? 'doubao' : 'gemini'
+}
+
+function getCaptureSampleRate(): number {
+  return resolveAiProvider() === 'doubao' ? DOUBAO_SAMPLE_RATE : GEMINI_SAMPLE_RATE
+}
 
 export type { AudioCaptureOptions } from '../../shared/ipc'
 
@@ -19,7 +30,7 @@ export class ElectronNativeAudioCapture extends EventEmitter {
   constructor(options: Partial<AudioCaptureOptions> = {}) {
     super()
     this.options = {
-      sampleRate: 24000,
+      sampleRate: getCaptureSampleRate(),
       channels: 1,
       bitDepth: 16,
       mode: 'system',
@@ -55,6 +66,8 @@ export class ElectronNativeAudioCapture extends EventEmitter {
       if (!hasPermission) {
         throw new Error('缺少必要的音频捕获权限')
       }
+
+      this.options.sampleRate = getCaptureSampleRate()
 
       // 通知渲染进程开始音频捕获
       if (this.mainWindow && !this.mainWindow.isDestroyed()) {

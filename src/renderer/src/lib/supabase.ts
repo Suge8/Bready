@@ -117,6 +117,11 @@ export interface InterviewUsageRecord {
   created_at: string
 }
 
+export interface PagedResult<T> {
+  records: T[]
+  hasMore: boolean
+}
+
 export interface Preparation {
   id: string
   name: string
@@ -264,6 +269,58 @@ export const authService = {
     }
   },
 
+  // 修改密码
+  async changePassword(oldPassword: string, newPassword: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const token = localStorage.getItem('auth_token')
+      if (!token) {
+        return { success: false, error: '未登录' }
+      }
+      return await invokeIpc('auth:change-password', { token, oldPassword, newPassword })
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  },
+
+  // 发送手机验证码
+  async sendPhoneCode(phone: string): Promise<{ success: boolean; error?: string; cooldownSeconds?: number }> {
+    try {
+      const token = localStorage.getItem('auth_token')
+      if (!token) {
+        return { success: false, error: '未登录' }
+      }
+      return await invokeIpc('auth:send-phone-code', { token, phone })
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  },
+
+  // 绑定手机
+  async bindPhone(phone: string, code: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const token = localStorage.getItem('auth_token')
+      if (!token) {
+        return { success: false, error: '未登录' }
+      }
+      return await invokeIpc('auth:bind-phone', { token, phone, code })
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  },
+
+  // 绑定邮箱
+  async bindEmail(email: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const token = localStorage.getItem('auth_token')
+      if (!token) {
+        return { success: false, error: '未登录' }
+      }
+      return await invokeIpc('auth:bind-email', { token, email })
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  },
+
   // 监听认证状态变化
   onAuthStateChange(callback: (event: string, session: any) => void) {
     console.log('authService: Setting up auth state change listener')
@@ -404,6 +461,24 @@ export const membershipService = {
       console.error('Error fetching user purchases:', error)
       throw error
     }
+  },
+
+  async getUserPurchasesPage(userId: string, page: number, pageSize: number): Promise<PagedResult<PurchaseRecord>> {
+    try {
+      const offset = Math.max(0, page) * pageSize
+      const result = await invokeIpc('membership:get-user-purchases', {
+        userId,
+        limit: pageSize,
+        offset
+      })
+      return {
+        records: result.records || [],
+        hasMore: result.hasMore === true
+      }
+    } catch (error) {
+      console.error('Error fetching user purchases page:', error)
+      throw error
+    }
   }
 }
 
@@ -445,6 +520,24 @@ export const usageRecordService = {
       return records || []
     } catch (error) {
       console.error('Error fetching usage records:', error)
+      throw error
+    }
+  },
+
+  async getUserUsageRecordsPage(userId: string, page: number, pageSize: number): Promise<PagedResult<InterviewUsageRecord>> {
+    try {
+      const offset = Math.max(0, page) * pageSize
+      const result = await invokeIpc('usage:get-user-records', {
+        userId,
+        limit: pageSize,
+        offset
+      })
+      return {
+        records: result.records || [],
+        hasMore: result.hasMore === true
+      }
+    } catch (error) {
+      console.error('Error fetching usage records page:', error)
       throw error
     }
   }

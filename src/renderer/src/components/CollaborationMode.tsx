@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { Send, RefreshCw, Mic, Volume2, X, AlertCircle, CheckCircle, XCircle, Loader2, Wifi, WifiOff, Copy, Check } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -42,7 +42,7 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
   } | null>(null)
   const [showPermissionsModal, setShowPermissionsModal] = useState(false)
   const [copySuccess, setCopySuccess] = useState(false)
-  const [currentMicrophoneDevice, setCurrentMicrophoneDevice] = useState<string>('')
+  const [currentMicrophoneDeviceId, setCurrentMicrophoneDeviceId] = useState<string>('')
 
   // 复制文本到剪贴板
   const copyToClipboard = async (text: string) => {
@@ -67,7 +67,7 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const rootRef = useRef<HTMLDivElement>(null)
-  const currentMicrophoneDeviceRef = useRef('')
+  const currentMicrophoneDeviceIdRef = useRef('')
 
 
   // 权限状态
@@ -186,6 +186,45 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
     }
   }
 
+  const handleMicrophoneDeviceChange = useCallback(async (deviceId: string, label: string) => {
+    console.log('🎤 用户手动切换麦克风设备:', label, deviceId)
+
+    // 同步更新 state 和 ref
+    const previousDeviceId = currentMicrophoneDeviceIdRef.current
+    setCurrentMicrophoneDeviceId(deviceId)
+    currentMicrophoneDeviceIdRef.current = deviceId
+
+    let switchSuccess = true
+    try {
+      const capture = (window as any).rendererAudioCapture
+      if (capture?.setMicrophoneDevice) {
+        switchSuccess = await capture.setMicrophoneDevice(deviceId)
+      }
+    } catch (error) {
+      console.error('切换麦克风设备失败:', error)
+      switchSuccess = false
+    }
+
+    if (!switchSuccess) {
+      if (previousDeviceId) {
+        setCurrentMicrophoneDeviceId(previousDeviceId)
+        currentMicrophoneDeviceIdRef.current = previousDeviceId
+      }
+      setToast({
+        message: '切换麦克风设备失败',
+        type: 'error'
+      })
+      return
+    }
+
+    if (window.bready && isConnected && currentAudioMode === 'microphone') {
+      setToast({
+        message: t('collaboration.toasts.deviceSwitched', { device: label }),
+        type: 'success'
+      })
+    }
+  }, [currentAudioMode, isConnected, t])
+
   // 权限检查
   const checkPermissions = async () => {
     try {
@@ -223,11 +262,11 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
         return
       }
 
-      console.log('✅ 所有权限已授予，初始化 Gemini API')
+      console.log('✅ 所有权限已授予，初始化 AI API')
       setStatus(t('collaboration.status.connecting'))
 
-      // 初始化 Gemini API
-      await initializeGemini()
+      // 初始化 AI API
+      await initializeAI()
 
     } catch (error) {
       console.error('权限检查失败:', error)
@@ -261,8 +300,8 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
     setStatus(t('collaboration.status.audioFailed'))
   }
 
-  // 初始化 Gemini API
-  const initializeGemini = async () => {
+  // 初始化 AI API
+  const initializeAI = async () => {
     try {
       let apiKey = ''
       sessionReadyRef.current = false
@@ -299,17 +338,17 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
       let language = localStorage.getItem('bready-selected-language') || 'cmn-CN'
       const purpose = localStorage.getItem('bready-selected-purpose') || 'interview'
 
-      console.log('📤 前端准备调用 initializeGemini，参数:', {
+      console.log('📤 前端准备调用 initializeAI，参数:', {
         customPromptLength: customPrompt.length,
         language,
         purpose
       })
 
       setStatus(t('collaboration.status.connecting'))
-      console.log('🤖 初始化 Gemini API，API 密钥长度:', apiKey.length)
+      console.log('🤖 初始化 AI API，API 密钥长度:', apiKey.length)
 
-      // 初始化 Gemini 连接
-      const success = await window.bready.initializeGemini(apiKey, customPrompt, purpose, language)
+      // 初始化 AI 连接
+      const success = await window.bready.initializeAI(apiKey, customPrompt, purpose, language)
 
       if (success) {
         setIsConnected(true)
@@ -640,18 +679,23 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
     })
 
     // 监听音频设备变更事件
-    const removeAudioDeviceChangedListener = window.bready.onAudioDeviceChanged?.((data: { deviceLabel: string }) => {
-      console.log('🎤 设备已切换:', data.deviceLabel)
-      const nextLabel = data.deviceLabel || ''
-      if (!nextLabel) {
+    const removeAudioDeviceChangedListener = window.bready.onAudioDeviceChanged?.((data: { deviceId?: string; deviceLabel?: string }) => {
+      console.log('🎤 设备已切换:', data.deviceLabel, data.deviceId)
+      const nextId = data.deviceId || ''
+      const nextLabel = data.deviceLabel || nextId // 如果 label 不可用，至少用 deviceId
+
+      // 只要有 deviceId 就更新，不强制要求 label
+      if (!nextId) {
         return
       }
 
-      const previousLabel = currentMicrophoneDeviceRef.current
-      currentMicrophoneDeviceRef.current = nextLabel
-      setCurrentMicrophoneDevice(nextLabel)
+      const previousId = currentMicrophoneDeviceIdRef.current
 
-      if (previousLabel && previousLabel !== nextLabel) {
+      currentMicrophoneDeviceIdRef.current = nextId
+      setCurrentMicrophoneDeviceId(nextId)
+
+      // 只有当设备真正改变时才显示 Toast
+      if (previousId && previousId !== nextId && nextLabel) {
         setToast({
           message: t('collaboration.toasts.deviceSwitched', { device: nextLabel }),
           type: 'info'
@@ -715,7 +759,8 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
         onAudioModeChange={handleAudioModeChange}
         onOpenPermissions={() => setShowPermissionsModal(true)}
         onExit={() => setShowExitConfirm(true)}
-        currentMicrophoneDevice={currentMicrophoneDevice}
+        currentMicrophoneDeviceId={currentMicrophoneDeviceId}
+        onMicrophoneDeviceChange={handleMicrophoneDeviceChange}
       />
 
       {/* 主要内容区域 - 左右分栏布局 */}

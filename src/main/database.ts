@@ -1,4 +1,4 @@
-import { Pool } from 'pg'
+import { Pool, PoolClient } from 'pg'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 
@@ -206,6 +206,18 @@ export interface UserSession {
 
 // 认证服务
 export class AuthService {
+  private static phoneColumnReady = false
+
+  private static async ensurePhoneColumn(client: PoolClient): Promise<void> {
+    if (this.phoneColumnReady) return
+    try {
+      await client.query('ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS phone VARCHAR(32)')
+    } catch (error) {
+      throw new Error('手机号字段缺失，请先执行数据库迁移或授予 DDL 权限')
+    }
+    this.phoneColumnReady = true
+  }
+
   // 密码哈希
   static async hashPassword(password: string): Promise<string> {
     return bcrypt.hash(password, 10)
@@ -350,6 +362,91 @@ export class AuthService {
     const client = await pool.connect()
     try {
       await client.query('DELETE FROM user_sessions WHERE token = $1', [token])
+    } finally {
+      client.release()
+    }
+  }
+
+  // 修改密码
+  static async changePassword(userId: string, oldPassword: string, newPassword: string): Promise<void> {
+    const client = await pool.connect()
+    try {
+      await client.query('BEGIN')
+
+      const result = await client.query('SELECT password_hash FROM user_profiles WHERE id = $1', [userId])
+      if (result.rows.length === 0) {
+        throw new Error('用户不存在')
+      }
+
+      const passwordHash = result.rows[0].password_hash
+      const isValid = await this.verifyPassword(oldPassword, passwordHash)
+      if (!isValid) {
+        throw new Error('当前密码不正确')
+      }
+
+      const newHash = await this.hashPassword(newPassword)
+      await client.query(
+        'UPDATE user_profiles SET password_hash = $2, updated_at = NOW() WHERE id = $1',
+        [userId, newHash]
+      )
+
+      await client.query('DELETE FROM user_sessions WHERE user_id = $1', [userId])
+
+      await client.query('COMMIT')
+    } catch (error) {
+      await client.query('ROLLBACK')
+      throw error
+    } finally {
+      client.release()
+    }
+  }
+
+  // 绑定邮箱
+  static async updateEmail(userId: string, email: string): Promise<void> {
+    const client = await pool.connect()
+    try {
+      await client.query('BEGIN')
+
+      const existing = await client.query('SELECT id FROM user_profiles WHERE email = $1', [email])
+      if (existing.rows.length > 0 && existing.rows[0].id !== userId) {
+        throw new Error('邮箱已被占用')
+      }
+
+      await client.query(
+        'UPDATE user_profiles SET email = $2, updated_at = NOW() WHERE id = $1',
+        [userId, email]
+      )
+
+      await client.query('COMMIT')
+    } catch (error) {
+      await client.query('ROLLBACK')
+      throw error
+    } finally {
+      client.release()
+    }
+  }
+
+  // 绑定手机号
+  static async updatePhone(userId: string, phone: string): Promise<void> {
+    const client = await pool.connect()
+    try {
+      await client.query('BEGIN')
+      await this.ensurePhoneColumn(client)
+
+      const existing = await client.query('SELECT id FROM user_profiles WHERE phone = $1', [phone])
+      if (existing.rows.length > 0 && existing.rows[0].id !== userId) {
+        throw new Error('手机号已被占用')
+      }
+
+      await client.query(
+        'UPDATE user_profiles SET phone = $2, updated_at = NOW() WHERE id = $1',
+        [userId, phone]
+      )
+
+      await client.query('COMMIT')
+    } catch (error) {
+      await client.query('ROLLBACK')
+      throw error
     } finally {
       client.release()
     }
