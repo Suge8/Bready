@@ -3,18 +3,22 @@
  * 提供高性能的基础UI组件
  */
 
-import React, { 
-  memo, 
-  useCallback, 
+import React, {
+  memo,
+  useCallback,
   useMemo,
   useState,
   useEffect,
   useRef,
   ReactNode,
   HTMLAttributes,
-  ButtonHTMLAttributes
+  ButtonHTMLAttributes,
 } from 'react'
-import { useVirtualScroll, useDebounce, usePerformanceMonitor } from '../../hooks/usePerformanceOptimization'
+import {
+  useVirtualScroll,
+  useDebounce,
+  usePerformanceMonitor,
+} from '../../hooks/usePerformanceOptimization'
 
 // 基础按钮组件优化
 interface OptimizedButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -24,58 +28,64 @@ interface OptimizedButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   icon?: ReactNode
 }
 
-export const OptimizedButton = memo<OptimizedButtonProps>(({
-  children,
-  loading = false,
-  variant = 'primary',
-  size = 'md',
-  icon,
-  className = '',
-  onClick,
-  disabled,
-  ...props
-}) => {
-  usePerformanceMonitor('OptimizedButton')
-  
-  const handleClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
-    if (loading || disabled) return
-    onClick?.(e)
-  }, [onClick, loading, disabled])
+export const OptimizedButton = memo<OptimizedButtonProps>(
+  ({
+    children,
+    loading = false,
+    variant = 'primary',
+    size = 'md',
+    icon,
+    className = '',
+    onClick,
+    disabled,
+    ...props
+  }) => {
+    usePerformanceMonitor('OptimizedButton')
 
-  const buttonClasses = useMemo(() => {
-    const baseClasses = 'inline-flex items-center justify-center font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed'
-    
-    const variants = {
-      primary: 'bg-black text-white hover:bg-gray-800 focus:ring-gray-500',
-      secondary: 'bg-gray-100 text-gray-900 hover:bg-gray-200 focus:ring-gray-500',
-      ghost: 'bg-transparent text-gray-700 hover:bg-gray-100 focus:ring-gray-500'
-    }
-    
-    const sizes = {
-      sm: 'px-3 py-1.5 text-sm rounded-md gap-1.5',
-      md: 'px-4 py-2 text-sm rounded-lg gap-2',
-      lg: 'px-6 py-3 text-base rounded-lg gap-2'
-    }
-    
-    return [baseClasses, variants[variant], sizes[size], className].join(' ')
-  }, [variant, size, className])
+    const handleClick = useCallback(
+      (e: React.MouseEvent<HTMLButtonElement>) => {
+        if (loading || disabled) return
+        onClick?.(e)
+      },
+      [onClick, loading, disabled],
+    )
 
-  return (
-    <button
-      className={buttonClasses}
-      onClick={handleClick}
-      disabled={disabled || loading}
-      {...props}
-    >
-      {loading ? (
-        <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-      ) : icon ? (
-        <span className="flex-shrink-0">{icon}</span>
-      ) : null}
-      {children}
-    </button>
-  )
-})
+    const buttonClasses = useMemo(() => {
+      const baseClasses =
+        'inline-flex items-center justify-center font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed'
+
+      const variants = {
+        primary: 'bg-black text-white hover:bg-gray-800 focus:ring-gray-500',
+        secondary: 'bg-gray-100 text-gray-900 hover:bg-gray-200 focus:ring-gray-500',
+        ghost: 'bg-transparent text-gray-700 hover:bg-gray-100 focus:ring-gray-500',
+      }
+
+      const sizes = {
+        sm: 'px-3 py-1.5 text-sm rounded-md gap-1.5',
+        md: 'px-4 py-2 text-sm rounded-lg gap-2',
+        lg: 'px-6 py-3 text-base rounded-lg gap-2',
+      }
+
+      return [baseClasses, variants[variant], sizes[size], className].join(' ')
+    }, [variant, size, className])
+
+    return (
+      <button
+        className={buttonClasses}
+        onClick={handleClick}
+        disabled={disabled || loading}
+        {...props}
+      >
+        {loading ? (
+          <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+        ) : icon ? (
+          <span className="flex-shrink-0">{icon}</span>
+        ) : null}
+        {children}
+      </button>
+    )
+  },
+)
 
 OptimizedButton.displayName = 'OptimizedButton'
 
@@ -99,35 +109,38 @@ export function VirtualList<T>({
   keyExtractor,
   onEndReached,
   endReachedThreshold = 0.1,
-  className = ''
+  className = '',
 }: VirtualListProps<T>) {
   usePerformanceMonitor('VirtualList')
-  
+
   const {
     startIndex,
     items: visibleItems,
     totalHeight,
     offsetY,
-    handleScroll
+    handleScroll,
   } = useVirtualScroll(items, itemHeight, height)
 
   const containerRef = useRef<HTMLDivElement>(null)
   const [hasReachedEnd, setHasReachedEnd] = useState(false)
 
-  const onScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-    handleScroll(e)
-    
-    // 检查是否到达底部
-    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget
-    const threshold = scrollHeight * endReachedThreshold
-    
-    if (scrollTop + clientHeight >= scrollHeight - threshold && !hasReachedEnd) {
-      setHasReachedEnd(true)
-      onEndReached?.()
-    } else if (scrollTop + clientHeight < scrollHeight - threshold && hasReachedEnd) {
-      setHasReachedEnd(false)
-    }
-  }, [handleScroll, onEndReached, endReachedThreshold, hasReachedEnd])
+  const onScroll = useCallback(
+    (e: React.UIEvent<HTMLDivElement>) => {
+      handleScroll(e)
+
+      // 检查是否到达底部
+      const { scrollTop, scrollHeight, clientHeight } = e.currentTarget
+      const threshold = scrollHeight * endReachedThreshold
+
+      if (scrollTop + clientHeight >= scrollHeight - threshold && !hasReachedEnd) {
+        setHasReachedEnd(true)
+        onEndReached?.()
+      } else if (scrollTop + clientHeight < scrollHeight - threshold && hasReachedEnd) {
+        setHasReachedEnd(false)
+      }
+    },
+    [handleScroll, onEndReached, endReachedThreshold, hasReachedEnd],
+  )
 
   return (
     <div
@@ -141,10 +154,7 @@ export function VirtualList<T>({
           {visibleItems.map((item, virtualIndex) => {
             const actualIndex = startIndex + virtualIndex
             return (
-              <div
-                key={keyExtractor(item, actualIndex)}
-                style={{ height: itemHeight }}
-              >
+              <div key={keyExtractor(item, actualIndex)} style={{ height: itemHeight }}>
                 {renderItem(item, actualIndex)}
               </div>
             )
@@ -164,44 +174,39 @@ interface DebouncedInputProps extends HTMLAttributes<HTMLInputElement> {
   className?: string
 }
 
-export const DebouncedInput = memo<DebouncedInputProps>(({
-  value,
-  onDebouncedChange,
-  delay = 300,
-  placeholder,
-  className = '',
-  ...props
-}) => {
-  usePerformanceMonitor('DebouncedInput')
-  
-  const [localValue, setLocalValue] = useState(value)
-  const debouncedValue = useDebounce(localValue, delay)
+export const DebouncedInput = memo<DebouncedInputProps>(
+  ({ value, onDebouncedChange, delay = 300, placeholder, className = '', ...props }) => {
+    usePerformanceMonitor('DebouncedInput')
 
-  useEffect(() => {
-    setLocalValue(value)
-  }, [value])
+    const [localValue, setLocalValue] = useState(value)
+    const debouncedValue = useDebounce(localValue, delay)
 
-  useEffect(() => {
-    if (debouncedValue !== value) {
-      onDebouncedChange(debouncedValue)
-    }
-  }, [debouncedValue, value, onDebouncedChange])
+    useEffect(() => {
+      setLocalValue(value)
+    }, [value])
 
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setLocalValue(e.target.value)
-  }, [])
+    useEffect(() => {
+      if (debouncedValue !== value) {
+        onDebouncedChange(debouncedValue)
+      }
+    }, [debouncedValue, value, onDebouncedChange])
 
-  return (
-    <input
-      type="text"
-      value={localValue}
-      onChange={handleChange}
-      placeholder={placeholder}
-      className={`px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${className}`}
-      {...props}
-    />
-  )
-})
+    const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+      setLocalValue(e.target.value)
+    }, [])
+
+    return (
+      <input
+        type="text"
+        value={localValue}
+        onChange={handleChange}
+        placeholder={placeholder}
+        className={`px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${className}`}
+        {...props}
+      />
+    )
+  },
+)
 
 DebouncedInput.displayName = 'DebouncedInput'
 
@@ -215,79 +220,81 @@ interface LazyImageProps extends HTMLAttributes<HTMLImageElement> {
   onError?: () => void
 }
 
-export const LazyImage = memo<LazyImageProps>(({
-  src,
-  alt,
-  placeholder = 'data:image/svg+xml,%3Csvg width="400" height="300" xmlns="http://www.w3.org/2000/svg"%3E%3Crect width="100%25" height="100%25" fill="%23f3f4f6"/%3E%3C/svg%3E',
-  className = '',
-  onLoad,
-  onError,
-  ...props
-}) => {
-  usePerformanceMonitor('LazyImage')
-  
-  const [imageSrc, setImageSrc] = useState(placeholder)
-  const [isLoading, setIsLoading] = useState(true)
-  const [hasError, setHasError] = useState(false)
-  const imgRef = useRef<HTMLImageElement>(null)
+export const LazyImage = memo<LazyImageProps>(
+  ({
+    src,
+    alt,
+    placeholder = 'data:image/svg+xml,%3Csvg width="400" height="300" xmlns="http://www.w3.org/2000/svg"%3E%3Crect width="100%25" height="100%25" fill="%23f3f4f6"/%3E%3C/svg%3E',
+    className = '',
+    onLoad,
+    onError,
+    ...props
+  }) => {
+    usePerformanceMonitor('LazyImage')
 
-  useEffect(() => {
-    const img = imgRef.current
-    if (!img) return
+    const [imageSrc, setImageSrc] = useState(placeholder)
+    const [isLoading, setIsLoading] = useState(true)
+    const [hasError, setHasError] = useState(false)
+    const imgRef = useRef<HTMLImageElement>(null)
 
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          const image = new Image()
-          
-          image.onload = () => {
-            setImageSrc(src)
-            setIsLoading(false)
-            onLoad?.()
+    useEffect(() => {
+      const img = imgRef.current
+      if (!img) return
+
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) {
+            const image = new Image()
+
+            image.onload = () => {
+              setImageSrc(src)
+              setIsLoading(false)
+              onLoad?.()
+            }
+
+            image.onerror = () => {
+              setHasError(true)
+              setIsLoading(false)
+              onError?.()
+            }
+
+            image.src = src
+            observer.disconnect()
           }
-          
-          image.onerror = () => {
-            setHasError(true)
-            setIsLoading(false)
-            onError?.()
-          }
-          
-          image.src = src
-          observer.disconnect()
-        }
-      },
-      { threshold: 0.1 }
+        },
+        { threshold: 0.1 },
+      )
+
+      observer.observe(img)
+
+      return () => observer.disconnect()
+    }, [src, onLoad, onError])
+
+    return (
+      <div className={`relative ${className}`}>
+        <img
+          ref={imgRef}
+          src={imageSrc}
+          alt={alt}
+          className={`w-full h-full object-cover transition-opacity duration-300 ${
+            isLoading ? 'opacity-50' : 'opacity-100'
+          }`}
+          {...props}
+        />
+        {isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+            <div className="w-6 h-6 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+          </div>
+        )}
+        {hasError && (
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-100 text-gray-500">
+            图片加载失败
+          </div>
+        )}
+      </div>
     )
-
-    observer.observe(img)
-
-    return () => observer.disconnect()
-  }, [src, onLoad, onError])
-
-  return (
-    <div className={`relative ${className}`}>
-      <img
-        ref={imgRef}
-        src={imageSrc}
-        alt={alt}
-        className={`w-full h-full object-cover transition-opacity duration-300 ${
-          isLoading ? 'opacity-50' : 'opacity-100'
-        }`}
-        {...props}
-      />
-      {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-          <div className="w-6 h-6 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
-        </div>
-      )}
-      {hasError && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-100 text-gray-500">
-          图片加载失败
-        </div>
-      )}
-    </div>
-  )
-})
+  },
+)
 
 LazyImage.displayName = 'LazyImage'
 
@@ -298,17 +305,19 @@ interface WithPerformanceMonitoringProps {
 
 export function withPerformanceMonitoring<P extends object>(
   Component: React.ComponentType<P>,
-  defaultName?: string
+  defaultName?: string,
 ) {
   const WrappedComponent = (props: P & WithPerformanceMonitoringProps) => {
     const { componentName, ...restProps } = props
-    usePerformanceMonitor(componentName || defaultName || Component.displayName || 'UnknownComponent')
-    
+    usePerformanceMonitor(
+      componentName || defaultName || Component.displayName || 'UnknownComponent',
+    )
+
     return <Component {...(restProps as P)} />
   }
-  
+
   WrappedComponent.displayName = `withPerformanceMonitoring(${Component.displayName || Component.name})`
-  
+
   return memo(WrappedComponent)
 }
 
@@ -320,44 +329,41 @@ interface OptimizedContainerProps {
   maxHeight?: number
 }
 
-export const OptimizedContainer = memo<OptimizedContainerProps>(({
-  children,
-  className = '',
-  enableVirtualization = false,
-  maxHeight = 500
-}) => {
-  usePerformanceMonitor('OptimizedContainer')
-  
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [shouldRender, setShouldRender] = useState(true)
+export const OptimizedContainer = memo<OptimizedContainerProps>(
+  ({ children, className = '', enableVirtualization = false, maxHeight = 500 }) => {
+    usePerformanceMonitor('OptimizedContainer')
 
-  useEffect(() => {
-    if (!enableVirtualization) return
+    const containerRef = useRef<HTMLDivElement>(null)
+    const [shouldRender, setShouldRender] = useState(true)
 
-    const container = containerRef.current
-    if (!container) return
+    useEffect(() => {
+      if (!enableVirtualization) return
 
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        setShouldRender(entry.isIntersecting)
-      },
-      { threshold: 0 }
+      const container = containerRef.current
+      if (!container) return
+
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          setShouldRender(entry.isIntersecting)
+        },
+        { threshold: 0 },
+      )
+
+      observer.observe(container)
+
+      return () => observer.disconnect()
+    }, [enableVirtualization])
+
+    return (
+      <div
+        ref={containerRef}
+        className={className}
+        style={enableVirtualization ? { minHeight: '1px' } : undefined}
+      >
+        {shouldRender ? children : <div style={{ height: maxHeight }} />}
+      </div>
     )
-
-    observer.observe(container)
-
-    return () => observer.disconnect()
-  }, [enableVirtualization])
-
-  return (
-    <div
-      ref={containerRef}
-      className={className}
-      style={enableVirtualization ? { minHeight: '1px' } : undefined}
-    >
-      {shouldRender ? children : <div style={{ height: maxHeight }} />}
-    </div>
-  )
-})
+  },
+)
 
 OptimizedContainer.displayName = 'OptimizedContainer'

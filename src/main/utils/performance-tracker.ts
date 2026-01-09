@@ -78,13 +78,13 @@ export class PerformanceTracker {
         heapUsed: memUsage.heapUsed,
         heapTotal: memUsage.heapTotal,
         external: memUsage.external,
-        rss: memUsage.rss
+        rss: memUsage.rss,
       },
       cpu: {
         user: cpuUsage.user,
-        system: cpuUsage.system
+        system: cpuUsage.system,
       },
-      timestamp: Date.now()
+      timestamp: Date.now(),
     }
 
     this.snapshots.push(snapshot)
@@ -111,12 +111,12 @@ export class PerformanceTracker {
     if (memoryGrowthPercent > 10) {
       logger.warn('内存快速增长', {
         growth: `${(memoryGrowth / 1024 / 1024).toFixed(2)}MB`,
-        percent: `${memoryGrowthPercent.toFixed(1)}%`
+        percent: `${memoryGrowthPercent.toFixed(1)}%`,
       })
 
       recordMetric('performance.memory.rapid_growth', {
         growthMB: memoryGrowth / 1024 / 1024,
-        percent: memoryGrowthPercent
+        percent: memoryGrowthPercent,
       })
     }
 
@@ -127,11 +127,11 @@ export class PerformanceTracker {
 
     if (cpuPercent > 80) {
       logger.warn('CPU 使用率过高', {
-        percent: `${cpuPercent.toFixed(1)}%`
+        percent: `${cpuPercent.toFixed(1)}%`,
       })
 
       recordMetric('performance.cpu.high_usage', {
-        percent: cpuPercent
+        percent: cpuPercent,
       })
     }
   }
@@ -202,7 +202,7 @@ export class PerformanceTracker {
       totalTime: times.reduce((sum, t) => sum + t, 0),
       minTime: Math.min(...times),
       maxTime: Math.max(...times),
-      avgTime: times.reduce((sum, t) => sum + t, 0) / times.length
+      avgTime: times.reduce((sum, t) => sum + t, 0) / times.length,
     }
   }
 
@@ -239,7 +239,7 @@ export class PerformanceTracker {
     }
 
     const slowOperations = this.getAllOperationStats()
-      .filter(op => op.avgTime > 100)
+      .filter((op) => op.avgTime > 100)
       .slice(0, 5)
 
     return {
@@ -247,15 +247,15 @@ export class PerformanceTracker {
         heapUsedMB: (current.memory.heapUsed / 1024 / 1024).toFixed(2),
         heapTotalMB: (current.memory.heapTotal / 1024 / 1024).toFixed(2),
         externalMB: (current.memory.external / 1024 / 1024).toFixed(2),
-        rssMB: (current.memory.rss / 1024 / 1024).toFixed(2)
+        rssMB: (current.memory.rss / 1024 / 1024).toFixed(2),
       },
-      slowOperations: slowOperations.map(op => ({
+      slowOperations: slowOperations.map((op) => ({
         name: op.name,
         avgTime: `${op.avgTime.toFixed(2)}ms`,
-        count: op.count
+        count: op.count,
       })),
       snapshotCount: this.snapshots.length,
-      operationCount: this.operations.size
+      operationCount: this.operations.size,
     }
   }
 
@@ -267,9 +267,9 @@ export class PerformanceTracker {
       snapshots: this.snapshots,
       operations: Array.from(this.operations.entries()).map(([name, times]) => ({
         name,
-        times
+        times,
       })),
-      summary: this.getSummary()
+      summary: this.getSummary(),
     }
   }
 
@@ -297,11 +297,7 @@ export function getPerformanceTracker(): PerformanceTracker {
  * 便捷的性能测量装饰器
  */
 export function measure(name: string) {
-  return function (
-    target: any,
-    propertyKey: string,
-    descriptor: PropertyDescriptor
-  ) {
+  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
     void target
     const originalMethod = descriptor.value
     const tracker = getPerformanceTracker()

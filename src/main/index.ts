@@ -6,7 +6,10 @@ import { initializeDatabase } from './database'
 import { setupAllHandlers } from './ipc-handlers'
 import { createWindow, setMainWindow, broadcastToAllWindows } from './window-manager'
 import { initializeAiService } from './ai-service'
-import { setMainWindow as setAudioManagerWindow, stopSystemAudioCapture as stopSystemAudioCaptureFromAudioManager } from './audio-manager'
+import {
+  setMainWindow as setAudioManagerWindow,
+  stopSystemAudioCapture as stopSystemAudioCaptureFromAudioManager,
+} from './audio-manager'
 import { registerCleanup, runCleanup } from './utils/cleanup'
 
 // 加载环境变量（静默模式）
@@ -79,9 +82,9 @@ app.whenReady().then(async () => {
     // 启动内存监控
     const { MemoryOptimizer } = await import('./performance/memory-optimizer')
     const memoryOptimizer = new MemoryOptimizer({
-      warning: 150,   // 150MB
-      critical: 200,  // 200MB
-      gcTrigger: 120  // 120MB
+      warning: 150, // 150MB
+      critical: 200, // 200MB
+      gcTrigger: 120, // 120MB
     })
     const shouldLogMemory = process.env.DEBUG_MEMORY === '1'
 
@@ -123,7 +126,6 @@ app.whenReady().then(async () => {
     }
 
     registerCleanup(cleanupMemoryOptimizer)
-
   } catch (error) {
     console.error('❌ 优化启动失败，回退到标准启动:', error)
 

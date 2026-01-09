@@ -140,12 +140,20 @@ const languageNames: { [key: string]: string } = {
   'de-DE': 'German (Deutsch)',
 }
 
-function buildSystemPrompt(promptParts: PromptParts, customPrompt = '', googleSearchEnabled = true, language = 'cmn-CN'): string {
+function buildSystemPrompt(
+  promptParts: PromptParts,
+  customPrompt = '',
+  googleSearchEnabled = true,
+  language = 'cmn-CN',
+): string {
   const responseLanguage = languageNames[language] || languageNames['cmn-CN']
 
   // 替换语言占位符
   let intro = promptParts.intro.replace(/\{\{RESPONSE_LANGUAGE\}\}/g, responseLanguage)
-  let outputInstructions = promptParts.outputInstructions.replace(/\{\{RESPONSE_LANGUAGE\}\}/g, responseLanguage)
+  let outputInstructions = promptParts.outputInstructions.replace(
+    /\{\{RESPONSE_LANGUAGE\}\}/g,
+    responseLanguage,
+  )
 
   const sections = [intro, '\n\n', promptParts.formatRequirements]
 
@@ -164,19 +172,26 @@ function buildSystemPrompt(promptParts: PromptParts, customPrompt = '', googleSe
     '\n\n**FINAL REMINDER:**\n',
     `- Your response MUST be in ${responseLanguage}\n`,
     `- Do NOT use English unless ${responseLanguage} is English\n`,
-    language === 'cmn-CN' ? '- 必须使用简体中文，禁止使用繁体字\n- 使用中国大陆的表达习惯，不要使用港台用语\n' : '',
+    language === 'cmn-CN'
+      ? '- 必须使用简体中文，禁止使用繁体字\n- 使用中国大陆的表达习惯，不要使用港台用语\n'
+      : '',
     `- This is a CRITICAL requirement\n`,
     '\n\nSTRICT OUTPUT:\n',
     '- Do not include analysis, reasoning, or meta commentary.\n',
     '- No headings or preambles; output only the final response.\n',
     `- If the question is unrelated to the interview context, reply with one short sentence in ${responseLanguage}.\n`,
-    `- LANGUAGE: ${responseLanguage} ONLY\n`
+    `- LANGUAGE: ${responseLanguage} ONLY\n`,
   )
 
   return sections.join('')
 }
 
-export function getSystemPrompt(profile: string, customPrompt = '', googleSearchEnabled = true, language = 'cmn-CN'): string {
+export function getSystemPrompt(
+  profile: string,
+  customPrompt = '',
+  googleSearchEnabled = true,
+  language = 'cmn-CN',
+): string {
   const promptParts = profilePrompts[profile] || profilePrompts.interview
   return buildSystemPrompt(promptParts, customPrompt, googleSearchEnabled, language)
 }

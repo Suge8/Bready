@@ -18,7 +18,3 @@ Object.defineProperty(window, 'matchMedia', {
 afterEach(() => {
   vi.restoreAllMocks()
 })
-
-
-
-

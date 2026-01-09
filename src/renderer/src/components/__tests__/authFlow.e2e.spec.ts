@@ -15,5 +15,3 @@ describe('Auth smoke (mocked)', () => {
     expect(out.error).toBeNull()
   })
 })
-
-

@@ -3,31 +3,34 @@ import { getAiProvider, getAiService, initializeAiService } from '../ai-service'
 import type { AnalyzePreparationRequest, ExtractFileContentRequest } from '../../shared/ipc'
 
 // 初始化 AI 会话
-ipcMain.handle('initialize-ai', async (event, apiKey: string, customPrompt = '', profile = 'interview', language = 'cmn-CN') => {
-  const provider = getAiProvider()
-  console.log(`📥 收到 initialize-${provider} 请求，参数:`, {
-    apiKeyLength: apiKey?.length || 0,
-    customPromptLength: customPrompt?.length || 0,
-    profile,
-    language
-  })
-
-  const sender = event.sender
-  let service = getAiService()
-
-  if (!service) {
-    console.log('🆕 创建新的 AI 服务实例')
-    service = initializeAiService((eventName, data) => {
-      sender.send(eventName, data)
+ipcMain.handle(
+  'initialize-ai',
+  async (event, apiKey: string, customPrompt = '', profile = 'interview', language = 'cmn-CN') => {
+    const provider = getAiProvider()
+    console.log(`📥 收到 initialize-${provider} 请求，参数:`, {
+      apiKeyLength: apiKey?.length || 0,
+      customPromptLength: customPrompt?.length || 0,
+      profile,
+      language,
     })
-  } else {
-    console.log('♻️ 复用已有的 AI 服务实例')
-  }
 
-  const result = await service.initializeSession(apiKey, customPrompt, profile, language)
-  console.log(`📊 ${provider} 会话初始化结果:`, result)
-  return result
-})
+    const sender = event.sender
+    let service = getAiService()
+
+    if (!service) {
+      console.log('🆕 创建新的 AI 服务实例')
+      service = initializeAiService((eventName, data) => {
+        sender.send(eventName, data)
+      })
+    } else {
+      console.log('♻️ 复用已有的 AI 服务实例')
+    }
+
+    const result = await service.initializeSession(apiKey, customPrompt, profile, language)
+    console.log(`📊 ${provider} 会话初始化结果:`, result)
+    return result
+  },
+)
 
 // 重连 AI 会话
 ipcMain.handle('reconnect-ai', async () => {
@@ -77,13 +80,13 @@ ipcMain.handle('manual-reconnect', async () => {
 
 // 优化的音频内容发送处理器
 let audioContentCount = 0
-let micHasSpeech = false  // 麦克风模式：是否检测到语音
-let micLastNonSilentAt = 0  // 麦克风模式：最后非静音时间
+let micHasSpeech = false // 麦克风模式：是否检测到语音
+let micLastNonSilentAt = 0 // 麦克风模式：最后非静音时间
 
 // RMS 能量检测的滑动窗口
 const rmsHistory: number[] = []
-const RMS_WINDOW_SIZE = 10  // 保留最近 10 个 RMS 值（约 1 秒）
-const MIN_RMS_FOR_SPEECH = 100  // 最低 RMS 阈值，低于这个值肯定是静音
+const RMS_WINDOW_SIZE = 10 // 保留最近 10 个 RMS 值（约 1 秒）
+const MIN_RMS_FOR_SPEECH = 100 // 最低 RMS 阈值，低于这个值肯定是静音
 
 // 计算音频块的 RMS 值
 function calculateRMSFromBase64(base64Data: string): number {
@@ -94,7 +97,7 @@ function calculateRMSFromBase64(base64Data: string): number {
 
     const view = new Int16Array(buffer.buffer, buffer.byteOffset, sampleCount)
     let sumOfSquares = 0
-    const stride = 4  // 采样以提高性能
+    const stride = 4 // 采样以提高性能
 
     for (let i = 0; i < sampleCount; i += stride) {
       sumOfSquares += view[i] * view[i]
@@ -139,7 +142,10 @@ try {
 
       // 首次或每 50 次打印日志
       if (audioContentCount === 1 || audioContentCount % 50 === 0) {
-        console.log(`📥 [主进程] 收到渲染进程音频数据 #${audioContentCount}, 长度:`, data?.length || 0)
+        console.log(
+          `📥 [主进程] 收到渲染进程音频数据 #${audioContentCount}, 长度:`,
+          data?.length || 0,
+        )
       }
 
       if (!data || typeof data !== 'string') {
@@ -196,4 +202,4 @@ ipcMain.handle('extract-file-content', async (event, fileData: ExtractFileConten
   return await service.extractFileContent(fileData)
 })
 
-export { }
+export {}

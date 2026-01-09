@@ -56,7 +56,7 @@ export class IPCBatcher {
       'transcription-update',
       'transcription-complete',
       'ai-response-update',
-      'ai-response'
+      'ai-response',
     ]
     return noThrottleChannels.includes(channel)
   }
@@ -135,7 +135,7 @@ export class IPCBatcher {
         batches: this.batchCount,
         queued: this.queuedCount,
         sent: this.sentCount,
-        avgPerBatch: (this.sentCount / this.batchCount).toFixed(2)
+        avgPerBatch: (this.sentCount / this.batchCount).toFixed(2),
       })
     }
 
@@ -151,7 +151,7 @@ export class IPCBatcher {
       'session-ready',
       'session-closed',
       'audio-stream-interrupted',
-      'audio-stream-restored'
+      'audio-stream-restored',
     ]
     return highPriorityChannels.includes(channel)
   }
@@ -185,11 +185,14 @@ export class IPCBatcher {
    */
   getStats() {
     return {
-      queueSize: Array.from(this.queues.values()).reduce((sum, entry) => sum + entry.queue.length, 0),
+      queueSize: Array.from(this.queues.values()).reduce(
+        (sum, entry) => sum + entry.queue.length,
+        0,
+      ),
       queuedCount: this.queuedCount,
       sentCount: this.sentCount,
       batchCount: this.batchCount,
-      avgPerBatch: this.batchCount > 0 ? (this.sentCount / this.batchCount).toFixed(2) : 0
+      avgPerBatch: this.batchCount > 0 ? (this.sentCount / this.batchCount).toFixed(2) : 0,
     }
   }
 

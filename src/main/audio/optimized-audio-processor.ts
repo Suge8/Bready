@@ -30,14 +30,14 @@ export class OptimizedAudioProcessor extends EventEmitter {
   private isProcessing = false
   private audioQueue: Buffer[] = []
   private processingQueue = false
-  
+
   // 性能优化配置
   private readonly MAX_QUEUE_SIZE = 10
   private readonly BATCH_PROCESS_SIZE = 3
-  
+
   constructor(config: Partial<AudioConfig> = {}) {
     super()
-    
+
     this.config = {
       sampleRate: 24000,
       channels: 1,
@@ -45,15 +45,15 @@ export class OptimizedAudioProcessor extends EventEmitter {
       bufferSize: 4096,
       enableNoiseGate: true,
       noiseThreshold: 0.005,
-      ...config
+      ...config,
     }
-    
+
     this.metrics = {
       totalChunks: 0,
       validChunks: 0,
       silentChunks: 0,
       avgLatency: 0,
-      lastProcessTime: 0
+      lastProcessTime: 0,
     }
   }
 
@@ -68,24 +68,20 @@ export class OptimizedAudioProcessor extends EventEmitter {
 
     try {
       console.log('🚀 启动优化音频捕获...')
-      
+
       // 使用更高效的系统音频捕获
-      this.audioProcess = spawn('system_profiler', [
-        'SPAudioDataType',
-        '-json'
-      ], {
-        stdio: ['ignore', 'pipe', 'pipe']
+      this.audioProcess = spawn('system_profiler', ['SPAudioDataType', '-json'], {
+        stdio: ['ignore', 'pipe', 'pipe'],
       })
 
       // 设置音频数据处理
       this.setupAudioProcessing()
-      
+
       this.isProcessing = true
       this.emit('capture-started')
-      
+
       console.log('✅ 优化音频捕获启动成功')
       return true
-      
     } catch (error) {
       console.error('❌ 音频捕获启动失败:', error)
       this.isProcessing = false
@@ -145,7 +141,6 @@ export class OptimizedAudioProcessor extends EventEmitter {
 
       // 更新性能指标
       this.updateMetrics(startTime)
-
     } catch (error) {
       console.error('❌ 音频块处理失败:', error)
     }
@@ -175,24 +170,23 @@ export class OptimizedAudioProcessor extends EventEmitter {
     if (this.processingQueue || this.audioQueue.length === 0) return
 
     this.processingQueue = true
-    
+
     try {
       const batchSize = Math.min(this.BATCH_PROCESS_SIZE, this.audioQueue.length)
       const batch = this.audioQueue.splice(0, batchSize)
-      
+
       // 合并音频块
       const combinedBuffer = Buffer.concat(batch)
-      
+
       // 发送到AI处理
       this.emit('audio-data', combinedBuffer)
-      
+
       console.log(`🎵 处理音频批次: ${batchSize}块, ${combinedBuffer.length}字节`)
-      
     } catch (error) {
       console.error('❌ 批量处理失败:', error)
     } finally {
       this.processingQueue = false
-      
+
       // 如果还有数据，继续处理
       if (this.audioQueue.length >= this.BATCH_PROCESS_SIZE) {
         setImmediate(() => this.processBatch())
@@ -206,10 +200,10 @@ export class OptimizedAudioProcessor extends EventEmitter {
   private updateMetrics(startTime: number) {
     const processingTime = Date.now() - startTime
     this.metrics.lastProcessTime = processingTime
-    
+
     // 计算平均延迟
-    this.metrics.avgLatency = (this.metrics.avgLatency * 0.9) + (processingTime * 0.1)
-    
+    this.metrics.avgLatency = this.metrics.avgLatency * 0.9 + processingTime * 0.1
+
     // 定期报告性能
     if (this.metrics.totalChunks % 100 === 0) {
       this.reportPerformance()
@@ -220,10 +214,12 @@ export class OptimizedAudioProcessor extends EventEmitter {
    * 性能报告
    */
   private reportPerformance() {
-    const validRate = (this.metrics.validChunks / this.metrics.totalChunks * 100).toFixed(1)
-    const silentRate = (this.metrics.silentChunks / this.metrics.totalChunks * 100).toFixed(1)
-    
-    console.log(`📊 音频性能: 总量=${this.metrics.totalChunks}, 有效=${validRate}%, 静音=${silentRate}%, 延迟=${this.metrics.avgLatency.toFixed(1)}ms`)
+    const validRate = ((this.metrics.validChunks / this.metrics.totalChunks) * 100).toFixed(1)
+    const silentRate = ((this.metrics.silentChunks / this.metrics.totalChunks) * 100).toFixed(1)
+
+    console.log(
+      `📊 音频性能: 总量=${this.metrics.totalChunks}, 有效=${validRate}%, 静音=${silentRate}%, 延迟=${this.metrics.avgLatency.toFixed(1)}ms`,
+    )
   }
 
   /**
@@ -231,16 +227,16 @@ export class OptimizedAudioProcessor extends EventEmitter {
    */
   stopCapture() {
     console.log('🛑 停止音频捕获...')
-    
+
     if (this.audioProcess) {
       this.audioProcess.kill('SIGTERM')
       this.audioProcess = null
     }
-    
+
     this.isProcessing = false
     this.audioQueue.length = 0
     this.processingQueue = false
-    
+
     this.emit('capture-stopped')
     console.log('✅ 音频捕获已停止')
   }
@@ -261,7 +257,7 @@ export class OptimizedAudioProcessor extends EventEmitter {
       validChunks: 0,
       silentChunks: 0,
       avgLatency: 0,
-      lastProcessTime: 0
+      lastProcessTime: 0,
     }
   }
 

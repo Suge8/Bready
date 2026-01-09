@@ -13,7 +13,7 @@ export function recordMetric(type: string, data?: Record<string, unknown>): void
   metricsBuffer[metricsIndex] = {
     type,
     timestamp: Date.now(),
-    data
+    data,
   }
   metricsIndex = (metricsIndex + 1) % metricsBuffer.length
   metricsSize = Math.min(metricsSize + 1, metricsBuffer.length)

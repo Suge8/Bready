@@ -67,7 +67,10 @@ function sendAudioToAI(base64Data: string, mimeType?: string): void {
       }
       const rms = Math.sqrt(sumOfSquares / (Math.min(sampleCount, 1000) / 4))
 
-      log('info', `📤 audio-manager #${audioSendCount}, provider: ${getAiProvider()}, RMS: ${Math.round(rms)}`)
+      log(
+        'info',
+        `📤 audio-manager #${audioSendCount}, provider: ${getAiProvider()}, RMS: ${Math.round(rms)}`,
+      )
     } catch (error) {
       log('info', `📤 audio-manager #${audioSendCount}, provider: ${getAiProvider()}`)
     }
@@ -152,7 +155,7 @@ async function killExistingSystemAudioDump(): Promise<void> {
 
     // 杀死任何现有的 SystemAudioDump 进程
     const killProc = spawn('pkill', ['-f', 'SystemAudioDump'], {
-      stdio: 'ignore'
+      stdio: 'ignore',
     })
 
     killProc.on('close', (code) => {
@@ -232,7 +235,9 @@ async function startAudioCapture(): Promise<boolean> {
     return success
   } catch (error) {
     log('error', '❌ 启动音频捕获失败:', error)
-    recordMetric('audio.capture.start.failure', { message: error instanceof Error ? error.message : String(error) })
+    recordMetric('audio.capture.start.failure', {
+      message: error instanceof Error ? error.message : String(error),
+    })
     return false
   }
 }
@@ -251,7 +256,9 @@ function stopAudioCapture(): boolean {
     return true
   } catch (error) {
     log('error', '❌ 停止音频捕获失败:', error)
-    recordMetric('audio.capture.stop.failure', { message: error instanceof Error ? error.message : String(error) })
+    recordMetric('audio.capture.stop.failure', {
+      message: error instanceof Error ? error.message : String(error),
+    })
     return false
   }
 }
@@ -263,8 +270,12 @@ async function switchAudioMode(mode: AudioMode): Promise<boolean> {
 
     // 切换前清理豆包服务的转录状态
     const service = getAiService()
-    if (service && getAiProvider() === 'doubao' && typeof (service as any).clearTranscriptionState === 'function') {
-      ; (service as any).clearTranscriptionState()
+    if (
+      service &&
+      getAiProvider() === 'doubao' &&
+      typeof (service as any).clearTranscriptionState === 'function'
+    ) {
+      ;(service as any).clearTranscriptionState()
     }
 
     // 只切换音频捕获模式，保持 WebSocket 连接不变
@@ -327,9 +338,9 @@ async function startSystemAudioDump(): Promise<{ success: boolean; error?: strin
       env: {
         ...process.env,
         PROCESS_NAME: 'AudioService',
-        APP_NAME: 'System Audio Service'
+        APP_NAME: 'System Audio Service',
       },
-      detached: false
+      detached: false,
     }
 
     // 启动 SystemAudioDump 进程
@@ -364,8 +375,10 @@ async function startSystemAudioDump(): Promise<{ success: boolean; error?: strin
         // 保留 0-3 字节的尾部对齐，避免 16-bit 采样读越界
         const combined = audioRemainder.length ? Buffer.concat([audioRemainder, data]) : data
         const alignedLength = combined.length - (combined.length % 4)
-        const alignedBuffer = alignedLength > 0 ? combined.subarray(0, alignedLength) : Buffer.alloc(0)
-        audioRemainder = alignedLength < combined.length ? combined.subarray(alignedLength) : Buffer.alloc(0)
+        const alignedBuffer =
+          alignedLength > 0 ? combined.subarray(0, alignedLength) : Buffer.alloc(0)
+        audioRemainder =
+          alignedLength < combined.length ? combined.subarray(alignedLength) : Buffer.alloc(0)
 
         if (alignedBuffer.length === 0) return
 
@@ -373,7 +386,9 @@ async function startSystemAudioDump(): Promise<{ success: boolean; error?: strin
         const resampledChunk = resamplePcm16(monoChunk, SYSTEM_INPUT_SAMPLE_RATE, targetSampleRate)
         if (resampledChunk.length === 0) return
 
-        pendingPcm = pendingPcm.length ? Buffer.concat([pendingPcm, resampledChunk]) : resampledChunk
+        pendingPcm = pendingPcm.length
+          ? Buffer.concat([pendingPcm, resampledChunk])
+          : resampledChunk
 
         while (pendingPcm.length >= bytesPerChunk) {
           const chunk = pendingPcm.subarray(0, bytesPerChunk)
@@ -397,9 +412,9 @@ async function startSystemAudioDump(): Promise<{ success: boolean; error?: strin
 
         const errorMsg = data.toString()
         if (
-          errorMsg.includes('系统已停止流播放')
-          || errorMsg.includes('Stream stopped with error')
-          || errorMsg.includes('SCStreamErrorDomain')
+          errorMsg.includes('系统已停止流播放') ||
+          errorMsg.includes('Stream stopped with error') ||
+          errorMsg.includes('SCStreamErrorDomain')
         ) {
           if (debugAudio) {
             log('warn', '🚨 macOS 停止了系统音频流')
@@ -462,12 +477,11 @@ async function startSystemAudioDump(): Promise<{ success: boolean; error?: strin
       systemAudioProc = null
     })
 
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    await new Promise((resolve) => setTimeout(resolve, 1000))
 
     resetAudioRestartCounter()
 
     return { success: true, pid: systemAudioProc?.pid || 0 }
-
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
     if (debugAudio) {
@@ -495,7 +509,9 @@ async function stopSystemAudioDump(): Promise<{ success: boolean; error?: string
     return { success: true }
   } catch (error) {
     log('error', '停止 SystemAudioDump 失败:', error)
-    recordMetric('audio.system_dump.stop.failure', { message: error instanceof Error ? error.message : String(error) })
+    recordMetric('audio.system_dump.stop.failure', {
+      message: error instanceof Error ? error.message : String(error),
+    })
     return { success: false, error: error instanceof Error ? error.message : String(error) }
   }
 }
@@ -539,7 +555,7 @@ async function restartSystemAudioDumpWithBackoff() {
     recordMetric('audio.system_dump.restart.attempt', { attempt: audioRestartCount })
 
     await stopSystemAudioDump()
-    await new Promise(resolve => setTimeout(resolve, 3000))
+    await new Promise((resolve) => setTimeout(resolve, 3000))
 
     const result = await startSystemAudioDump()
 
@@ -559,14 +575,19 @@ async function restartSystemAudioDumpWithBackoff() {
       if (audioRestartCount >= MAX_RESTART_ATTEMPTS) {
         sendToRenderer('session-error', '音频流多次重启失败，请检查系统权限或手动重连')
       } else {
-        sendToRenderer('session-error', `音频流重启失败 (${audioRestartCount}/${MAX_RESTART_ATTEMPTS})，将自动重试`)
+        sendToRenderer(
+          'session-error',
+          `音频流重启失败 (${audioRestartCount}/${MAX_RESTART_ATTEMPTS})，将自动重试`,
+        )
       }
     }
   } catch (error) {
     if (debugAudio) {
       log('error', '❌ 音频捕获重启出错:', error)
     }
-    recordMetric('audio.system_dump.restart.error', { message: error instanceof Error ? error.message : String(error) })
+    recordMetric('audio.system_dump.restart.error', {
+      message: error instanceof Error ? error.message : String(error),
+    })
     sendToRenderer('session-error', '音频流重启出错，请手动重连')
   } finally {
     isAudioRestarting = false
@@ -602,5 +623,5 @@ export {
   getAudioStatus,
   startSystemAudioDump,
   stopSystemAudioDump,
-  killExistingSystemAudioDump
+  killExistingSystemAudioDump,
 }

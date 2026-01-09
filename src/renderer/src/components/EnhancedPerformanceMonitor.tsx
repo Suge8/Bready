@@ -23,45 +23,47 @@ interface PerformanceStatus {
 const EnhancedPerformanceMonitor: React.FC = () => {
   const [isVisible, setIsVisible] = useState(false)
   const [metrics, setMetrics] = useState<PerformanceMetrics | null>(null)
-  const [status, setStatus] = useState<PerformanceStatus>({ 
-    overall: 'good', 
+  const [status, setStatus] = useState<PerformanceStatus>({
+    overall: 'good',
     score: 85,
-    issues: []
+    issues: [],
   })
   const [isMonitoring, setIsMonitoring] = useState(false)
   const [activeTab, setActiveTab] = useState<'overview' | 'details'>('overview')
 
   const collectMetrics = useCallback(async () => {
     const memoryInfo = (performance as any).memory || {}
-    
+
     const newMetrics: PerformanceMetrics = {
       memory: {
-        used: memoryInfo.usedJSHeapSize ? memoryInfo.usedJSHeapSize / 1024 / 1024 : Math.random() * 150 + 50,
+        used: memoryInfo.usedJSHeapSize
+          ? memoryInfo.usedJSHeapSize / 1024 / 1024
+          : Math.random() * 150 + 50,
         total: 512,
-        percentage: Math.random() * 40 + 20
+        percentage: Math.random() * 40 + 20,
       },
       cpu: {
         usage: Math.random() * 30 + 10,
-        processes: Math.floor(Math.random() * 10 + 15)
+        processes: Math.floor(Math.random() * 10 + 15),
       },
       network: {
         latency: Math.random() * 100 + 50,
-        status: Math.random() > 0.8 ? 'slow' : 'connected'
+        status: Math.random() > 0.8 ? 'slow' : 'connected',
       },
       audio: {
         avgLatency: Math.random() * 20 + 5,
-        dropRate: Math.random() * 5
+        dropRate: Math.random() * 5,
       },
       database: {
         connections: Math.floor(Math.random() * 8 + 2),
-        queryTime: Math.random() * 50 + 10
+        queryTime: Math.random() * 50 + 10,
       },
       rendering: {
         fps: Math.floor(Math.random() * 20 + 40),
-        renderTime: Math.random() * 16 + 2
-      }
+        renderTime: Math.random() * 16 + 2,
+      },
     }
-    
+
     setMetrics(newMetrics)
     updateStatus(newMetrics)
   }, [])
@@ -97,7 +99,7 @@ const EnhancedPerformanceMonitor: React.FC = () => {
   }, [])
 
   const toggleMonitoring = useCallback(() => {
-    setIsMonitoring(prev => !prev)
+    setIsMonitoring((prev) => !prev)
     if (!isMonitoring) {
       collectMetrics()
       const interval = setInterval(collectMetrics, 5000)
@@ -109,7 +111,7 @@ const EnhancedPerformanceMonitor: React.FC = () => {
     const handleKeyPress = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.shiftKey && e.key === 'P') {
         e.preventDefault()
-        setIsVisible(prev => !prev)
+        setIsVisible((prev) => !prev)
       }
     }
     document.addEventListener('keydown', handleKeyPress)
@@ -118,10 +120,14 @@ const EnhancedPerformanceMonitor: React.FC = () => {
 
   const getStatusIcon = (status: PerformanceStatus['overall']) => {
     switch (status) {
-      case 'excellent': return <CheckCircle className="w-4 h-4 text-green-500" />
-      case 'good': return <CheckCircle className="w-4 h-4 text-blue-500" />
-      case 'warning': return <AlertTriangle className="w-4 h-4 text-yellow-500" />
-      case 'critical': return <AlertTriangle className="w-4 h-4 text-red-500" />
+      case 'excellent':
+        return <CheckCircle className="w-4 h-4 text-green-500" />
+      case 'good':
+        return <CheckCircle className="w-4 h-4 text-blue-500" />
+      case 'warning':
+        return <AlertTriangle className="w-4 h-4 text-yellow-500" />
+      case 'critical':
+        return <AlertTriangle className="w-4 h-4 text-red-500" />
     }
   }
 
@@ -251,7 +257,7 @@ const EnhancedPerformanceMonitor: React.FC = () => {
                     <span>{metrics.memory.used.toFixed(1)} MB</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded h-2">
-                    <div 
+                    <div
                       className="bg-blue-500 h-2 rounded"
                       style={{ width: `${metrics.memory.percentage}%` }}
                     />
@@ -288,7 +294,13 @@ const EnhancedPerformanceMonitor: React.FC = () => {
                   </div>
                   <div className="flex justify-between">
                     <span>状态:</span>
-                    <span className={metrics.network.status === 'connected' ? 'text-green-600' : 'text-yellow-600'}>
+                    <span
+                      className={
+                        metrics.network.status === 'connected'
+                          ? 'text-green-600'
+                          : 'text-yellow-600'
+                      }
+                    >
                       {metrics.network.status}
                     </span>
                   </div>

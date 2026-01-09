@@ -59,18 +59,19 @@ export const PerformanceMonitor: React.FC = () => {
 
     // 监听崩溃报告
     const handleCrashReport = (report: CrashReport) => {
-      setCrashReports(prev => [...prev, report].slice(-10)) // 只保留最近10个报告
+      setCrashReports((prev) => [...prev, report].slice(-10)) // 只保留最近10个报告
     }
 
     // 设置事件监听器
-    const removeMetricsListener = window.bready.onPerformanceMetrics?.(handlePerformanceMetrics) || (() => {})
+    const removeMetricsListener =
+      window.bready.onPerformanceMetrics?.(handlePerformanceMetrics) || (() => {})
     const removeCrashListener = window.bready.onCrashReport?.(handleCrashReport) || (() => {})
 
     // 键盘快捷键：Ctrl+Shift+P 打开性能监控
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.shiftKey && e.key === 'P') {
         e.preventDefault()
-        setIsVisible(prev => !prev)
+        setIsVisible((prev) => !prev)
       }
     }
 
@@ -113,9 +114,12 @@ export const PerformanceMonitor: React.FC = () => {
 
   const getStatusColor = (status: 'good' | 'warning' | 'critical'): string => {
     switch (status) {
-      case 'good': return 'text-green-600 bg-green-50 border-green-200'
-      case 'warning': return 'text-yellow-600 bg-yellow-50 border-yellow-200'
-      case 'critical': return 'text-red-600 bg-red-50 border-red-200'
+      case 'good':
+        return 'text-green-600 bg-green-50 border-green-200'
+      case 'warning':
+        return 'text-yellow-600 bg-yellow-50 border-yellow-200'
+      case 'critical':
+        return 'text-red-600 bg-red-50 border-red-200'
     }
   }
 
@@ -135,7 +139,7 @@ export const PerformanceMonitor: React.FC = () => {
             {status === 'good' ? '正常' : status === 'warning' ? '警告' : '严重'}
           </div>
         </div>
-        <button 
+        <button
           onClick={() => setIsVisible(false)}
           className="text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded p-1"
         >
@@ -148,8 +152,8 @@ export const PerformanceMonitor: React.FC = () => {
         <button
           onClick={() => setActiveTab('metrics')}
           className={`flex-1 px-3 py-2 text-xs font-medium ${
-            activeTab === 'metrics' 
-              ? 'bg-blue-50 text-blue-600 border-b-2 border-blue-600' 
+            activeTab === 'metrics'
+              ? 'bg-blue-50 text-blue-600 border-b-2 border-blue-600'
               : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
           }`}
         >
@@ -158,8 +162,8 @@ export const PerformanceMonitor: React.FC = () => {
         <button
           onClick={() => setActiveTab('crashes')}
           className={`flex-1 px-3 py-2 text-xs font-medium ${
-            activeTab === 'crashes' 
-              ? 'bg-red-50 text-red-600 border-b-2 border-red-600' 
+            activeTab === 'crashes'
+              ? 'bg-red-50 text-red-600 border-b-2 border-red-600'
               : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
           }`}
         >
@@ -180,11 +184,15 @@ export const PerformanceMonitor: React.FC = () => {
               <div className="space-y-1 pl-5">
                 <div className="flex justify-between">
                   <span className="text-gray-600">进程堆内存:</span>
-                  <span className="font-medium">{formatBytes(metrics.memory.process.heapUsed)}</span>
+                  <span className="font-medium">
+                    {formatBytes(metrics.memory.process.heapUsed)}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">总堆内存:</span>
-                  <span className="font-medium">{formatBytes(metrics.memory.process.heapTotal)}</span>
+                  <span className="font-medium">
+                    {formatBytes(metrics.memory.process.heapTotal)}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">RSS:</span>
@@ -194,25 +202,30 @@ export const PerformanceMonitor: React.FC = () => {
                   <span className="text-gray-600">系统可用:</span>
                   <span className="font-medium">{formatBytes(metrics.memory.system.free)}</span>
                 </div>
-                
+
                 {/* 内存使用率进度条 */}
                 <div className="mt-2">
                   <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
+                    <div
                       className={`h-2 rounded-full ${
-                        (metrics.memory.process.heapUsed / metrics.memory.system.total) * 100 > 80 
-                          ? 'bg-red-500' 
-                          : (metrics.memory.process.heapUsed / metrics.memory.system.total) * 100 > 60 
-                            ? 'bg-yellow-500' 
+                        (metrics.memory.process.heapUsed / metrics.memory.system.total) * 100 > 80
+                          ? 'bg-red-500'
+                          : (metrics.memory.process.heapUsed / metrics.memory.system.total) * 100 >
+                              60
+                            ? 'bg-yellow-500'
                             : 'bg-green-500'
                       }`}
-                      style={{ 
-                        width: `${Math.min((metrics.memory.process.heapUsed / metrics.memory.system.total) * 100, 100)}%` 
+                      style={{
+                        width: `${Math.min((metrics.memory.process.heapUsed / metrics.memory.system.total) * 100, 100)}%`,
                       }}
                     />
                   </div>
                   <div className="text-xs text-gray-500 mt-1">
-                    {((metrics.memory.process.heapUsed / metrics.memory.system.total) * 100).toFixed(1)}% 系统内存使用率
+                    {(
+                      (metrics.memory.process.heapUsed / metrics.memory.system.total) *
+                      100
+                    ).toFixed(1)}
+                    % 系统内存使用率
                   </div>
                 </div>
               </div>
@@ -254,11 +267,15 @@ export const PerformanceMonitor: React.FC = () => {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">平均处理时间:</span>
-                    <span className="font-medium">{metrics.audio.averageProcessingTime.toFixed(2)}ms</span>
+                    <span className="font-medium">
+                      {metrics.audio.averageProcessingTime.toFixed(2)}ms
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">缓冲溢出:</span>
-                    <span className={`font-medium ${metrics.audio.bufferOverflows > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                    <span
+                      className={`font-medium ${metrics.audio.bufferOverflows > 0 ? 'text-red-600' : 'text-green-600'}`}
+                    >
                       {metrics.audio.bufferOverflows}
                     </span>
                   </div>
@@ -283,7 +300,9 @@ export const PerformanceMonitor: React.FC = () => {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">更新时间:</span>
-                  <span className="font-medium">{new Date(metrics.timestamp).toLocaleTimeString()}</span>
+                  <span className="font-medium">
+                    {new Date(metrics.timestamp).toLocaleTimeString()}
+                  </span>
                 </div>
               </div>
             </div>
@@ -295,29 +314,32 @@ export const PerformanceMonitor: React.FC = () => {
                 <p>暂无错误报告</p>
               </div>
             ) : (
-              crashReports.slice().reverse().map((report, index) => (
-                <div key={index} className="bg-red-50 border border-red-200 rounded-lg p-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-semibold text-red-700">{report.type}</span>
-                    <span className="text-xs text-red-600">
-                      {new Date(report.timestamp).toLocaleString()}
-                    </span>
+              crashReports
+                .slice()
+                .reverse()
+                .map((report, index) => (
+                  <div key={index} className="bg-red-50 border border-red-200 rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-semibold text-red-700">{report.type}</span>
+                      <span className="text-xs text-red-600">
+                        {new Date(report.timestamp).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="text-xs text-red-800 mb-2">
+                      <strong>{report.error.name}:</strong> {report.error.message}
+                    </div>
+                    {report.error.stack && (
+                      <details className="text-xs">
+                        <summary className="cursor-pointer text-red-600 hover:text-red-800">
+                          查看堆栈跟踪
+                        </summary>
+                        <pre className="mt-2 p-2 bg-red-100 rounded text-xs overflow-x-auto whitespace-pre-wrap">
+                          {report.error.stack}
+                        </pre>
+                      </details>
+                    )}
                   </div>
-                  <div className="text-xs text-red-800 mb-2">
-                    <strong>{report.error.name}:</strong> {report.error.message}
-                  </div>
-                  {report.error.stack && (
-                    <details className="text-xs">
-                      <summary className="cursor-pointer text-red-600 hover:text-red-800">
-                        查看堆栈跟踪
-                      </summary>
-                      <pre className="mt-2 p-2 bg-red-100 rounded text-xs overflow-x-auto whitespace-pre-wrap">
-                        {report.error.stack}
-                      </pre>
-                    </details>
-                  )}
-                </div>
-              ))
+                ))
             )}
           </div>
         )}
@@ -325,9 +347,7 @@ export const PerformanceMonitor: React.FC = () => {
 
       {/* 底部提示 */}
       <div className="px-3 py-2 bg-gray-50 rounded-b-lg border-t border-gray-200">
-        <p className="text-xs text-gray-500">
-          快捷键: Ctrl+Shift+P 切换显示
-        </p>
+        <p className="text-xs text-gray-500">快捷键: Ctrl+Shift+P 切换显示</p>
       </div>
     </div>
   )

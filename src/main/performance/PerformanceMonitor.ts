@@ -5,7 +5,7 @@ export enum LogLevel {
   DEBUG = 0,
   INFO = 1,
   WARN = 2,
-  ERROR = 3
+  ERROR = 3,
 }
 
 export interface PerformanceMetrics {
@@ -72,7 +72,7 @@ export class PerformanceMonitor {
         average: this.getAverageTime(label),
         min: Math.min(...times),
         max: Math.max(...times),
-        latest: times[times.length - 1] || 0
+        latest: times[times.length - 1] || 0,
       }
     }
     return result
@@ -110,18 +110,18 @@ export class PerformanceMonitor {
           system: {
             total: os.totalmem(),
             free: os.freemem(),
-            used: os.totalmem() - os.freemem()
+            used: os.totalmem() - os.freemem(),
           },
-          process: process.memoryUsage()
+          process: process.memoryUsage(),
         },
         cpu: {
           usage: process.cpuUsage(),
-          loadAverage: os.loadavg()
+          loadAverage: os.loadavg(),
         },
         app: {
           version: app.getVersion(),
-          uptime: process.uptime()
-        }
+          uptime: process.uptime(),
+        },
       }
 
       // 检查内存使用情况
@@ -129,7 +129,6 @@ export class PerformanceMonitor {
 
       // 发送到渲染进程
       this.sendMetricsToRenderer(metrics)
-
     } catch (error) {
       console.error('Error collecting system metrics:', error)
     }
@@ -143,7 +142,7 @@ export class PerformanceMonitor {
       if (this.debugMemory) {
         console.warn(`⚠️ High memory usage detected: ${heapUsedMB.toFixed(2)}MB`)
       }
-      
+
       // 触发垃圾回收（如果可用）
       if (global.gc) {
         global.gc()
@@ -156,7 +155,7 @@ export class PerformanceMonitor {
 
   private sendMetricsToRenderer(metrics: PerformanceMetrics): void {
     const windows = BrowserWindow.getAllWindows()
-    windows.forEach(window => {
+    windows.forEach((window) => {
       try {
         window.webContents.send('performance-metrics', metrics)
       } catch (error) {
@@ -179,15 +178,15 @@ export class PerformanceMonitor {
   getPerformanceReport(): string {
     const metrics = this.getMetrics()
     const memoryUsage = process.memoryUsage()
-    
+
     let report = '📊 Performance Report\n'
     report += '===================\n\n'
-    
+
     report += `Memory Usage:\n`
     report += `  Heap Used: ${(memoryUsage.heapUsed / 1024 / 1024).toFixed(2)} MB\n`
     report += `  Heap Total: ${(memoryUsage.heapTotal / 1024 / 1024).toFixed(2)} MB\n`
     report += `  RSS: ${(memoryUsage.rss / 1024 / 1024).toFixed(2)} MB\n\n`
-    
+
     report += `Timing Metrics:\n`
     for (const [label, data] of Object.entries(metrics)) {
       report += `  ${label}:\n`
@@ -196,7 +195,7 @@ export class PerformanceMonitor {
       report += `    Min: ${data.min.toFixed(2)}ms\n`
       report += `    Max: ${data.max.toFixed(2)}ms\n\n`
     }
-    
+
     return report
   }
 }
@@ -208,7 +207,7 @@ export class AudioPerformanceMonitor {
     totalProcessingTime: 0,
     bufferOverflows: 0,
     lastProcessTime: 0,
-    totalDataProcessed: 0
+    totalDataProcessed: 0,
   }
 
   recordAudioProcessing(processingTime: number, bufferSize: number): void {
@@ -221,15 +220,19 @@ export class AudioPerformanceMonitor {
     const threshold = 50 // 50ms阈值
     if (processingTime > threshold) {
       this.audioMetrics.bufferOverflows++
-      console.warn(`🎵 Audio processing slow: ${processingTime.toFixed(2)}ms for ${bufferSize} bytes`)
+      console.warn(
+        `🎵 Audio processing slow: ${processingTime.toFixed(2)}ms for ${bufferSize} bytes`,
+      )
     }
   }
 
   getAudioMetrics() {
     return {
       ...this.audioMetrics,
-      averageProcessingTime: this.audioMetrics.totalProcessingTime / this.audioMetrics.chunksProcessed || 0,
-      averageChunkSize: this.audioMetrics.totalDataProcessed / this.audioMetrics.chunksProcessed || 0
+      averageProcessingTime:
+        this.audioMetrics.totalProcessingTime / this.audioMetrics.chunksProcessed || 0,
+      averageChunkSize:
+        this.audioMetrics.totalDataProcessed / this.audioMetrics.chunksProcessed || 0,
     }
   }
 
@@ -239,7 +242,7 @@ export class AudioPerformanceMonitor {
       totalProcessingTime: 0,
       bufferOverflows: 0,
       lastProcessTime: 0,
-      totalDataProcessed: 0
+      totalDataProcessed: 0,
     }
     console.log('🎵 Audio metrics reset')
   }
@@ -281,12 +284,12 @@ export class Logger {
       message,
       data,
       pid: process.pid,
-      memory: `${memoryUsage.toFixed(2)}MB`
+      memory: `${memoryUsage.toFixed(2)}MB`,
     }
 
     // 格式化输出
     const formattedMessage = `[${timestamp}] ${levelName}: ${message}`
-    
+
     switch (level) {
       case LogLevel.ERROR:
         console.error(formattedMessage, data || '')
@@ -341,7 +344,7 @@ export class CrashReporter {
       this.logger.error('Uncaught Exception', {
         message: error.message,
         stack: error.stack,
-        name: error.name
+        name: error.name,
       })
       this.reportCrash('uncaughtException', error)
     })
@@ -350,7 +353,7 @@ export class CrashReporter {
     process.on('unhandledRejection', (reason, promise) => {
       this.logger.error('Unhandled Rejection', {
         reason: reason,
-        promise: promise.toString()
+        promise: promise.toString(),
       })
       this.reportCrash('unhandledRejection', reason)
     })
@@ -365,24 +368,24 @@ export class CrashReporter {
       error: {
         message: error?.message || 'Unknown error',
         stack: error?.stack || 'No stack trace',
-        name: error?.name || 'Unknown'
+        name: error?.name || 'Unknown',
       },
       system: {
         platform: process.platform,
         arch: process.arch,
         version: process.version,
         memory: process.memoryUsage(),
-        uptime: process.uptime()
+        uptime: process.uptime(),
       },
       app: {
         version: app.getVersion(),
-        uptime: process.uptime()
-      }
+        uptime: process.uptime(),
+      },
     }
 
     // 发送崩溃报告到渲染进程
     const windows = BrowserWindow.getAllWindows()
-    windows.forEach(window => {
+    windows.forEach((window) => {
       try {
         window.webContents.send('crash-report', crashReport)
       } catch (err) {

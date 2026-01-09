@@ -59,12 +59,8 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ onComplete, onCreatePreparati
               <div className="inline-flex items-center justify-center w-16 h-16 bg-black text-white dark:bg-white dark:text-black rounded-2xl mb-6 shadow-xl">
                 <Sparkles className="w-8 h-8" />
               </div>
-              <h1 className="text-4xl font-semibold mb-3 tracking-tight">
-                {t('welcome.title')}
-              </h1>
-              <p className="text-lg text-[var(--bready-text-muted)]">
-                {t('welcome.tagline')}
-              </p>
+              <h1 className="text-4xl font-semibold mb-3 tracking-tight">{t('welcome.title')}</h1>
+              <p className="text-lg text-[var(--bready-text-muted)]">{t('welcome.tagline')}</p>
             </div>
 
             {/* 产品介绍 */}
@@ -75,7 +71,9 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ onComplete, onCreatePreparati
                     <div className="w-12 h-12 bg-[var(--bready-surface-2)] rounded-xl flex items-center justify-center mx-auto mb-4">
                       <Zap className="w-6 h-6 text-[var(--bready-text)]" />
                     </div>
-                    <h3 className="font-semibold text-[var(--bready-text)] mb-2 text-base">{t('welcome.features.collaboration.title')}</h3>
+                    <h3 className="font-semibold text-[var(--bready-text)] mb-2 text-base">
+                      {t('welcome.features.collaboration.title')}
+                    </h3>
                     <ul className="space-y-2 text-sm text-[var(--bready-text-muted)]">
                       {collaborationItems.map((item) => (
                         <li key={item}>{item}</li>
@@ -86,7 +84,9 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ onComplete, onCreatePreparati
                     <div className="w-12 h-12 bg-[var(--bready-surface-2)] rounded-xl flex items-center justify-center mx-auto mb-4">
                       <Mic className="w-6 h-6 text-[var(--bready-text)]" />
                     </div>
-                    <h3 className="font-semibold text-[var(--bready-text)] mb-2 text-base">{t('welcome.features.audio.title')}</h3>
+                    <h3 className="font-semibold text-[var(--bready-text)] mb-2 text-base">
+                      {t('welcome.features.audio.title')}
+                    </h3>
                     <ul className="space-y-2 text-sm text-[var(--bready-text-muted)]">
                       {audioItems.map((item) => (
                         <li key={item}>{item}</li>
@@ -97,7 +97,9 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ onComplete, onCreatePreparati
                     <div className="w-12 h-12 bg-[var(--bready-surface-2)] rounded-xl flex items-center justify-center mx-auto mb-4">
                       <Shield className="w-6 h-6 text-[var(--bready-text)]" />
                     </div>
-                    <h3 className="font-semibold text-[var(--bready-text)] mb-2 text-base">{t('welcome.features.privacy.title')}</h3>
+                    <h3 className="font-semibold text-[var(--bready-text)] mb-2 text-base">
+                      {t('welcome.features.privacy.title')}
+                    </h3>
                     <ul className="space-y-2 text-sm text-[var(--bready-text-muted)]">
                       {privacyItems.map((item) => (
                         <li key={item}>{item}</li>

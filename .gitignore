@@ -43,8 +43,12 @@ Thumbs.db
 assets/SystemAudioDump
 
 # AI 开发工具
-.trae
+.trae/
+.agent/
+.claude/
+.conductor/
 .kiro/
+.shared/
 
 # 敏感文件
 *.pem

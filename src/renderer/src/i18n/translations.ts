@@ -1,11 +1,6 @@
 export type SupportedLanguage = 'cmn-CN' | 'en-US' | 'ja-JP' | 'fr-FR'
 
-export const SUPPORTED_LANGUAGES: SupportedLanguage[] = [
-  'cmn-CN',
-  'en-US',
-  'ja-JP',
-  'fr-FR'
-]
+export const SUPPORTED_LANGUAGES: SupportedLanguage[] = ['cmn-CN', 'en-US', 'ja-JP', 'fr-FR']
 
 export const translations: Record<SupportedLanguage, any> = {
   'cmn-CN': {
@@ -13,7 +8,7 @@ export const translations: Record<SupportedLanguage, any> = {
       name: '面宝',
       fullName: '面宝 Bready',
       tagline: '拿 Offer 从未如此简单',
-      subtagline: 'AI 面试协作，让你稳住节奏'
+      subtagline: 'AI 面试协作，让你稳住节奏',
     },
     common: {
       loading: '加载中...',
@@ -30,7 +25,7 @@ export const translations: Record<SupportedLanguage, any> = {
       later: '稍后再说',
       currentUser: '当前用户',
       none: '无',
-      minutes: '{{count}}分钟'
+      minutes: '{{count}}分钟',
     },
     form: {
       validation: {
@@ -38,13 +33,13 @@ export const translations: Record<SupportedLanguage, any> = {
         requiredHint: '请输入内容',
         tooLong: '内容不能超过{{max}}个字符',
         count: '当前{{count}}个字符',
-        counter: '{{count}}/{{max}} 字符'
+        counter: '{{count}}/{{max}} 字符',
       },
       autosave: {
         saving: '保存中...',
         savedAt: '草稿已自动保存于 {{time}}',
-        editing: '正在编辑...'
-      }
+        editing: '正在编辑...',
+      },
     },
     home: {
       headline: '拿 Offer 从未如此简单',
@@ -55,14 +50,10 @@ export const translations: Record<SupportedLanguage, any> = {
       emptyDescription: '创建一个准备项，上传你的简历或职位描述，让 AI 帮你分析并进行模拟面试。',
       createNow: '立即创建',
       viewAll: '查看全部 {{count}} 个',
-      analyzing: '分析中'
+      analyzing: '分析中',
     },
     slogans: {
-      main: [
-        '面试紧张？放轻松',
-        '面宝协作，胜券在握',
-        '面试？小意思'
-      ]
+      main: ['面试紧张？放轻松', '面宝协作，胜券在握', '面试？小意思'],
     },
     select: {
       title: '准备面试',
@@ -70,12 +61,12 @@ export const translations: Record<SupportedLanguage, any> = {
       purpose: '目的',
       empty: '还没有准备项',
       confirm: '确定',
-      quickStart: '不准备，直接开始'
+      quickStart: '不准备，直接开始',
     },
     purposes: {
       interview: '面试',
       sales: '销售',
-      meeting: '会议'
+      meeting: '会议',
     },
     createPrep: {
       title: '选择准备类型',
@@ -83,67 +74,67 @@ export const translations: Record<SupportedLanguage, any> = {
       types: {
         interview: {
           title: '面试',
-          description: '准备求职面试，分析岗位匹配度'
+          description: '准备求职面试，分析岗位匹配度',
         },
         sales: {
           title: '销售',
-          description: '准备客户拜访，制定销售策略'
+          description: '准备客户拜访，制定销售策略',
         },
         meeting: {
           title: '会议',
-          description: '准备重要会议，整理议程要点'
-        }
-      }
+          description: '准备重要会议，整理议程要点',
+        },
+      },
     },
     salesPrep: {
       titleCreate: '创建销售准备',
       titleEdit: '编辑销售准备',
       name: {
         title: '准备名称',
-        placeholder: '例如：XX公司销售拜访'
+        placeholder: '例如：XX公司销售拜访',
       },
       clientInfo: {
         title: '客户信息',
-        placeholder: '请输入客户公司名称、行业、规模、主要业务、决策人信息等...'
+        placeholder: '请输入客户公司名称、行业、规模、主要业务、决策人信息等...',
       },
       productInfo: {
         title: '产品/服务信息',
-        placeholder: '请输入要推销的产品或服务详情、核心卖点、价格策略等...'
+        placeholder: '请输入要推销的产品或服务详情、核心卖点、价格策略等...',
       },
       salesGoal: {
         title: '销售目标',
-        placeholder: '请输入本次拜访的销售目标、预期成果、关键里程碑等...'
-      }
+        placeholder: '请输入本次拜访的销售目标、预期成果、关键里程碑等...',
+      },
     },
     meetingPrep: {
       titleCreate: '创建会议准备',
       titleEdit: '编辑会议准备',
       name: {
         title: '准备名称',
-        placeholder: '例如：Q4季度总结会议'
+        placeholder: '例如：Q4季度总结会议',
       },
       meetingTopic: {
         title: '会议主题',
-        placeholder: '请输入会议的主题、背景、目的等...'
+        placeholder: '请输入会议的主题、背景、目的等...',
       },
       participants: {
         title: '参会人员',
-        placeholder: '请输入参会人员名单、职位、角色等...'
+        placeholder: '请输入参会人员名单、职位、角色等...',
       },
       agenda: {
         title: '会议议程',
-        placeholder: '请输入会议议程安排、时间分配等...'
+        placeholder: '请输入会议议程安排、时间分配等...',
       },
       keyPoints: {
         title: '关键要点',
-        placeholder: '请输入需要讨论的关键问题、决策事项、预期成果等...'
-      }
+        placeholder: '请输入需要讨论的关键问题、决策事项、预期成果等...',
+      },
     },
     languages: {
       'cmn-CN': '中文',
       'en-US': 'English',
       'ja-JP': '日本語',
-      'fr-FR': 'Français'
+      'fr-FR': 'Français',
     },
     welcome: {
       title: '面宝',
@@ -151,19 +142,19 @@ export const translations: Record<SupportedLanguage, any> = {
       features: {
         collaboration: {
           title: '智能协作',
-          items: ['简历分析', '实时提词']
+          items: ['简历分析', '实时提词'],
         },
         audio: {
           title: '音频技术',
-          items: ['低延迟响应', '无损音频处理']
+          items: ['低延迟响应', '无损音频处理'],
         },
         privacy: {
           title: '隐私安全',
-          items: ['反检测', '数据存于本地']
-        }
+          items: ['反检测', '数据存于本地'],
+        },
       },
       cta: '为我的面试做好准备',
-      skip: '稍后再说'
+      skip: '稍后再说',
     },
     collaboration: {
       title: '协作模式',
@@ -190,17 +181,17 @@ export const translations: Record<SupportedLanguage, any> = {
         switched: '已切换到 {{mode}}',
         switchFailed: '音频模式切换失败',
         browserPreview: '浏览器预览模式',
-        browserSwitched: '已切换到 {{mode}}（浏览器预览）'
+        browserSwitched: '已切换到 {{mode}}（浏览器预览）',
       },
       audioMode: {
         system: {
           label: '在线面试模式',
-          description: '捕获系统音频，适用于在线面试'
+          description: '捕获系统音频，适用于在线面试',
         },
         microphone: {
           label: '麦克风模式',
-          description: '使用麦克风录音，适用于直接对话'
-        }
+          description: '使用麦克风录音，适用于直接对话',
+        },
       },
       errors: {
         apiConnectionFailed: 'API连接失败',
@@ -219,34 +210,34 @@ export const translations: Record<SupportedLanguage, any> = {
         audioInterrupted: '音频流已中断，请点击重连按钮恢复连接',
         audioSwitchFailed: '切换到{{mode}}失败，请检查设备设置',
         audioSwitchError: '音频模式切换出错，请重试',
-        audioStartFailed: '无法启动音频捕获，请检查系统音频权限'
+        audioStartFailed: '无法启动音频捕获，请检查系统音频权限',
       },
       empty: {
         system: '面宝会回复面试官提问',
         microphone: '面宝会回复麦克风说话',
-        helper: '打字输入也可以哦'
+        helper: '打字输入也可以哦',
       },
       labels: {
         transcribing: '转录中...',
         input: '输入',
         thinking: '思考中...',
         responding: '回复中...',
-        bready: '面宝'
+        bready: '面宝',
       },
       input: {
         placeholder: '输入您的问题...',
-        helper: '按 Enter 发送 · Shift+Enter 换行'
+        helper: '按 Enter 发送 · Shift+Enter 换行',
       },
       sidebar: {
         title: '对话',
-        empty: '暂无对话'
+        empty: '暂无对话',
       },
       aiThinking: '面宝正在思考回答...',
       previewReply: '收到您的问题：“{{message}}”，我正在思考如何回答...（浏览器预览模式）',
       exit: {
         title: '退出协作模式？',
         description: '这将断开与AI的连接并返回主页。',
-        confirm: '退出'
+        confirm: '退出',
       },
       permissions: {
         title: '权限设置',
@@ -262,28 +253,28 @@ export const translations: Record<SupportedLanguage, any> = {
         networkDisconnected: '未连接',
         networkConnectedDesc: '与 Gemini API 保持连接',
         networkDisconnectedDesc: '尝试重新连接 AI 服务',
-        reconnect: '重新连接'
+        reconnect: '重新连接',
       },
       toasts: {
         connectionFailed: '连接 AI 服务失败，已返回主页',
-        deviceSwitched: '麦克风已切换至: {{device}}'
+        deviceSwitched: '麦克风已切换至: {{device}}',
       },
       actions: {
         copy: '复制内容',
-        reconnect: '重连'
-      }
+        reconnect: '重连',
+      },
     },
     admin: {
       title: '管理后台',
       tabs: {
         users: '用户管理',
-        usage: '使用记录'
+        usage: '使用记录',
       },
       stats: {
         totalUsers: '用户总数',
         activeMembers: '有效会员',
         remainingMinutes: '剩余时长',
-        expiringSoon: '即将到期'
+        expiringSoon: '即将到期',
       },
       search: '搜索用户姓名或邮箱',
       empty: '暂无用户数据',
@@ -302,8 +293,8 @@ export const translations: Record<SupportedLanguage, any> = {
       usageHint: '近 30 天趋势（占位）',
       actions: {
         previous: '上一页',
-        next: '下一页'
-      }
+        next: '下一页',
+      },
     },
     profile: {
       title: '个人中心',
@@ -326,13 +317,13 @@ export const translations: Record<SupportedLanguage, any> = {
       themeOptions: {
         light: '浅色',
         dark: '深色',
-        auto: '跟随系统'
+        auto: '跟随系统',
       },
       tabs: {
         profile: '个人信息',
         membership: '会员中心',
         history: '历史记录',
-        settings: '设置'
+        settings: '设置',
       },
       editor: {
         title: '编辑资料',
@@ -340,13 +331,13 @@ export const translations: Record<SupportedLanguage, any> = {
         nicknamePlaceholder: '请输入昵称',
         notSet: '未设置',
         email: '邮箱',
-        createdAt: '注册时间'
+        createdAt: '注册时间',
       },
       avatar: {
         title: '选择头像',
         label: '头像',
         change: '更换',
-        hint: '点击选择头像'
+        hint: '点击选择头像',
       },
       security: {
         title: '账户安全',
@@ -371,7 +362,7 @@ export const translations: Record<SupportedLanguage, any> = {
         emailPlaceholder: '请输入邮箱地址',
         invalidEmail: '请输入有效的邮箱地址',
         emailBound: '邮箱绑定成功',
-        emailBindFailed: '邮箱绑定失败'
+        emailBindFailed: '邮箱绑定失败',
       },
       history: {
         usage: '使用记录',
@@ -387,9 +378,9 @@ export const translations: Record<SupportedLanguage, any> = {
         status: {
           completed: '已完成',
           pending: '处理中',
-          cancelled: '已取消'
-        }
-      }
+          cancelled: '已取消',
+        },
+      },
     },
     login: {
       title: '面宝 Bready',
@@ -418,7 +409,7 @@ export const translations: Record<SupportedLanguage, any> = {
         email: '请输入邮箱地址',
         password: '请输入密码',
         phone: '请输入手机号',
-        code: '请输入6位验证码'
+        code: '请输入6位验证码',
       },
       errors: {
         loginFailed: '登录失败',
@@ -427,8 +418,8 @@ export const translations: Record<SupportedLanguage, any> = {
         sendCodeFailed: '发送验证码失败',
         verifyFailed: '验证码验证失败',
         testLoginFailed: '测试登录失败',
-        signupSuccess: '注册成功！正在为您登录...'
-      }
+        signupSuccess: '注册成功！正在为您登录...',
+      },
     },
     prep: {
       notFoundTitle: '准备项未找到',
@@ -437,7 +428,7 @@ export const translations: Record<SupportedLanguage, any> = {
       updatedAt: '更新 {{date}}',
       actions: {
         edit: '编辑',
-        startAnalysis: '开始分析'
+        startAnalysis: '开始分析',
       },
       sections: {
         match: '岗位匹配度',
@@ -445,7 +436,7 @@ export const translations: Record<SupportedLanguage, any> = {
         resume: '个人简历',
         strengths: '核心优势',
         weaknesses: '改进空间',
-        suggestions: '面试建议'
+        suggestions: '面试建议',
       },
       resumeMissing: '未上传简历',
       resumeAdd: '去添加',
@@ -466,18 +457,18 @@ export const translations: Record<SupportedLanguage, any> = {
         fileName: '面试准备_{{name}}_分析报告.md',
         exportSuccess: '报告导出成功',
         exportFailed: '报告导出失败',
-        completeInfo: '完善信息后获取 AI 报告'
+        completeInfo: '完善信息后获取 AI 报告',
       },
       shareTitle: '面试准备: {{name}}',
       shareText: '查看我的面试准备分析: {{name}}',
       shareCopied: '链接已复制到剪贴板',
-      shareFailed: '分享失败'
+      shareFailed: '分享失败',
     },
     prepList: {
       title: '我的准备项',
       count: '共 {{count}} 个准备项',
       empty: '暂无准备项',
-      analyzing: '分析中'
+      analyzing: '分析中',
     },
     prepEditor: {
       titleCreate: '创建面试准备',
@@ -487,13 +478,13 @@ export const translations: Record<SupportedLanguage, any> = {
       name: {
         title: '准备名称',
         description: '公司-岗位，如字节跳动-销售',
-        placeholder: '公司-岗位，如字节跳动-销售'
+        placeholder: '公司-岗位，如字节跳动-销售',
       },
       job: {
         title: '岗位信息 (JD)',
         description: '请粘贴完整的岗位描述，包括职责要求、技能要求等',
         label: '岗位描述',
-        placeholder: '请在此处粘贴岗位描述...'
+        placeholder: '请在此处粘贴岗位描述...',
       },
       resume: {
         title: '个人简历 (可选)',
@@ -502,11 +493,11 @@ export const translations: Record<SupportedLanguage, any> = {
           title: '点击上传简历文件',
           hint: '支持 .pdf, .doc, .docx, .txt',
           choose: '选择文件',
-          uploaded: '已上传: {{name}}'
+          uploaded: '已上传: {{name}}',
         },
         pasteLabel: '或直接粘贴简历内容',
         pastePlaceholder: '直接粘贴简历内容或其他相关信息...',
-        extracting: '正在提取文件内容...'
+        extracting: '正在提取文件内容...',
       },
       analysis: {
         title: 'AI 分析',
@@ -514,14 +505,14 @@ export const translations: Record<SupportedLanguage, any> = {
         matchScore: '匹配度评分',
         strengths: '优势',
         suggestions: '改进建议',
-        empty: '点击下方按钮进行 AI 分析'
+        empty: '点击下方按钮进行 AI 分析',
       },
       actions: {
         save: '保存',
         saving: '保存中...',
         analyze: 'AI分析',
         analyzing: '分析中...',
-        reanalyze: '重新分析'
+        reanalyze: '重新分析',
       },
       toasts: {
         uploadSuccess: '文件上传成功',
@@ -534,26 +525,26 @@ export const translations: Record<SupportedLanguage, any> = {
         saveFailed: '保存失败，请稍后重试',
         analyzeFailed: 'AI 分析失败: {{error}}',
         analyzeSuccess: 'AI 分析完成',
-        analyzeError: 'AI 分析过程中出现错误，请稍后重试'
+        analyzeError: 'AI 分析过程中出现错误，请稍后重试',
       },
       mockAnalysis: {
         strengths: [
           '技术栈匹配度高，React和TypeScript经验符合岗位要求',
           '3年工作经验满足岗位基本要求',
-          '具备移动端和PC端开发经验，技能面较广'
+          '具备移动端和PC端开发经验，技能面较广',
         ],
         weaknesses: [
           '缺少大型项目架构设计经验',
           '团队协作和项目管理经验描述不够详细',
-          '对新技术的学习和应用能力需要进一步体现'
+          '对新技术的学习和应用能力需要进一步体现',
         ],
         suggestions: [
           '准备具体的项目案例，重点描述技术难点和解决方案',
           '强调团队协作经验，如代码review、技术分享等',
           '展示对前端工程化工具的深度理解和实践经验',
-          '准备关于性能优化、用户体验提升的具体案例'
-        ]
-      }
+          '准备关于性能优化、用户体验提升的具体案例',
+        ],
+      },
     },
     errorBoundary: {
       title: '出现了一些问题',
@@ -566,8 +557,8 @@ export const translations: Record<SupportedLanguage, any> = {
       labels: {
         error: '错误',
         stack: '堆栈',
-        componentStack: '组件堆栈'
-      }
+        componentStack: '组件堆栈',
+      },
     },
     floating: {
       status: {
@@ -585,7 +576,7 @@ export const translations: Record<SupportedLanguage, any> = {
         disconnected: '已断开连接',
         error: '错误：{{error}}',
         reconnectError: '重连错误：{{error}}',
-        disconnectError: '断开连接错误：{{error}}'
+        disconnectError: '断开连接错误：{{error}}',
       },
       labels: {
         liveTranscription: '实时转录',
@@ -603,8 +594,8 @@ export const translations: Record<SupportedLanguage, any> = {
         clearHistory: '清除',
         clearHistoryTitle: '清除对话历史',
         opacity: '透明度',
-        reconnect: '重连'
-      }
+        reconnect: '重连',
+      },
     },
     monitoring: {
       title: '系统监控面板',
@@ -619,7 +610,7 @@ export const translations: Record<SupportedLanguage, any> = {
       noErrors: '暂无错误记录',
       actionsTotal: '用户行为 (总计: {{count}})',
       noActions: '暂无行为记录',
-      hint: '按 Ctrl+Shift+M 可随时打开/关闭监控面板'
+      hint: '按 Ctrl+Shift+M 可随时打开/关闭监控面板',
     },
     permissionsSetup: {
       title: 'Live Interview 权限设置',
@@ -628,45 +619,45 @@ export const translations: Record<SupportedLanguage, any> = {
       screen: {
         title: '屏幕录制权限',
         description: '用于捕获系统音频',
-        openSettings: '打开系统偏好设置'
+        openSettings: '打开系统偏好设置',
       },
       microphone: {
         title: '麦克风权限',
         description: '用于语音输入（可选）',
         request: '请求权限',
-        openSettings: '打开系统偏好设置'
+        openSettings: '打开系统偏好设置',
       },
       apiKey: {
         title: 'Gemini API 密钥',
         description: '用于 AI 功能',
-        hint: '请在 .env.local 文件中配置 VITE_GEMINI_API_KEY'
+        hint: '请在 .env.local 文件中配置 VITE_GEMINI_API_KEY',
       },
       audio: {
         title: '音频设备',
         description: '系统音频捕获功能',
         test: '测试音频捕获',
-        setup: '去设置'
+        setup: '去设置',
       },
       testFailed: '测试失败',
       status: {
         granted: '已授予',
         needsSetup: '需要设置',
-        denied: '被拒绝'
+        denied: '被拒绝',
       },
       error: {
-        unableCheck: '无法检查权限状态'
+        unableCheck: '无法检查权限状态',
       },
       actions: {
         skip: '跳过设置',
         recheck: '重新检查',
         start: '开始 Live Interview',
-        complete: '完成权限设置'
+        complete: '完成权限设置',
       },
       metrics: {
         capturedData: '捕获数据: {{bytes}} 字节',
         silence: '静音: {{percent}}%',
-        recommendation: '建议: {{text}}'
-      }
+        recommendation: '建议: {{text}}',
+      },
     },
     permissionsGuide: {
       title: '系统权限设置',
@@ -676,7 +667,7 @@ export const translations: Record<SupportedLanguage, any> = {
       mic: '麦克风权限',
       micDesc: '用于语音输入（可选）',
       later: '稍后设置',
-      note: '你可以随时在协作模式中重新设置权限'
+      note: '你可以随时在协作模式中重新设置权限',
     },
     alerts: {
       deletePreparation: '确定要删除这个准备项吗？此操作无法撤销。',
@@ -686,15 +677,15 @@ export const translations: Record<SupportedLanguage, any> = {
       updateRoleFailed: '更新用户角色失败',
       loadUsersFailed: '加载用户列表失败',
       purchaseFailed: '购买失败，请稍后重试',
-      signOutFailed: '退出登录失败'
-    }
+      signOutFailed: '退出登录失败',
+    },
   },
   'en-US': {
     app: {
       name: 'Bready',
       fullName: 'Bready',
       tagline: 'Landing Offers, Made Effortless',
-      subtagline: 'AI-assisted interviews, steady and confident'
+      subtagline: 'AI-assisted interviews, steady and confident',
     },
     common: {
       loading: 'Loading...',
@@ -711,7 +702,7 @@ export const translations: Record<SupportedLanguage, any> = {
       later: 'Maybe later',
       currentUser: 'Current user',
       none: 'None',
-      minutes: '{{count}} min'
+      minutes: '{{count}} min',
     },
     form: {
       validation: {
@@ -719,13 +710,13 @@ export const translations: Record<SupportedLanguage, any> = {
         requiredHint: 'Please enter a value',
         tooLong: 'Must be at most {{max}} characters',
         count: 'Current: {{count}} characters',
-        counter: '{{count}}/{{max}} characters'
+        counter: '{{count}}/{{max}} characters',
       },
       autosave: {
         saving: 'Saving...',
         savedAt: 'Draft saved at {{time}}',
-        editing: 'Editing...'
-      }
+        editing: 'Editing...',
+      },
     },
     home: {
       headline: 'Landing Offers, Made Effortless',
@@ -733,17 +724,18 @@ export const translations: Record<SupportedLanguage, any> = {
       start: 'Start',
       myPreparations: 'My Preparations',
       emptyTitle: 'Start your first interview prep',
-      emptyDescription: 'Create a prep item, add your resume or job description, and let AI analyze and simulate interviews.',
+      emptyDescription:
+        'Create a prep item, add your resume or job description, and let AI analyze and simulate interviews.',
       createNow: 'Create now',
       viewAll: 'View all {{count}}',
-      analyzing: 'Analyzing'
+      analyzing: 'Analyzing',
     },
     slogans: {
       main: [
         'Nervous about interviews? Relax.',
         'Bready beside you, confidence on.',
-        'Interviews? You got this.'
-      ]
+        'Interviews? You got this.',
+      ],
     },
     select: {
       title: 'Interview Setup',
@@ -751,12 +743,12 @@ export const translations: Record<SupportedLanguage, any> = {
       purpose: 'Purpose',
       empty: 'No preparations yet',
       confirm: 'Confirm',
-      quickStart: 'Skip and start now'
+      quickStart: 'Skip and start now',
     },
     purposes: {
       interview: 'Interview',
       sales: 'Sales',
-      meeting: 'Meeting'
+      meeting: 'Meeting',
     },
     createPrep: {
       title: 'Select Preparation Type',
@@ -764,67 +756,67 @@ export const translations: Record<SupportedLanguage, any> = {
       types: {
         interview: {
           title: 'Interview',
-          description: 'Prepare for job interviews, analyze role fit'
+          description: 'Prepare for job interviews, analyze role fit',
         },
         sales: {
           title: 'Sales',
-          description: 'Prepare for client visits, plan sales strategy'
+          description: 'Prepare for client visits, plan sales strategy',
         },
         meeting: {
           title: 'Meeting',
-          description: 'Prepare for important meetings, organize agenda'
-        }
-      }
+          description: 'Prepare for important meetings, organize agenda',
+        },
+      },
     },
     salesPrep: {
       titleCreate: 'Create Sales Preparation',
       titleEdit: 'Edit Sales Preparation',
       name: {
         title: 'Preparation Name',
-        placeholder: 'e.g., ABC Company Sales Visit'
+        placeholder: 'e.g., ABC Company Sales Visit',
       },
       clientInfo: {
         title: 'Client Information',
-        placeholder: 'Enter client company name, industry, size, main business, decision makers...'
+        placeholder: 'Enter client company name, industry, size, main business, decision makers...',
       },
       productInfo: {
         title: 'Product/Service Information',
-        placeholder: 'Enter product or service details, key selling points, pricing strategy...'
+        placeholder: 'Enter product or service details, key selling points, pricing strategy...',
       },
       salesGoal: {
         title: 'Sales Goal',
-        placeholder: 'Enter sales objectives, expected outcomes, key milestones...'
-      }
+        placeholder: 'Enter sales objectives, expected outcomes, key milestones...',
+      },
     },
     meetingPrep: {
       titleCreate: 'Create Meeting Preparation',
       titleEdit: 'Edit Meeting Preparation',
       name: {
         title: 'Preparation Name',
-        placeholder: 'e.g., Q4 Summary Meeting'
+        placeholder: 'e.g., Q4 Summary Meeting',
       },
       meetingTopic: {
         title: 'Meeting Topic',
-        placeholder: 'Enter meeting topic, background, objectives...'
+        placeholder: 'Enter meeting topic, background, objectives...',
       },
       participants: {
         title: 'Participants',
-        placeholder: 'Enter participant list, positions, roles...'
+        placeholder: 'Enter participant list, positions, roles...',
       },
       agenda: {
         title: 'Meeting Agenda',
-        placeholder: 'Enter agenda items, time allocation...'
+        placeholder: 'Enter agenda items, time allocation...',
       },
       keyPoints: {
         title: 'Key Points',
-        placeholder: 'Enter key issues to discuss, decisions to make, expected outcomes...'
-      }
+        placeholder: 'Enter key issues to discuss, decisions to make, expected outcomes...',
+      },
     },
     languages: {
       'cmn-CN': '中文',
       'en-US': 'English',
       'ja-JP': '日本語',
-      'fr-FR': 'Français'
+      'fr-FR': 'Français',
     },
     welcome: {
       title: 'Bready',
@@ -832,19 +824,19 @@ export const translations: Record<SupportedLanguage, any> = {
       features: {
         collaboration: {
           title: 'Smart Collaboration',
-          items: ['Resume analysis', 'Live prompts']
+          items: ['Resume analysis', 'Live prompts'],
         },
         audio: {
           title: 'Audio Tech',
-          items: ['Low-latency response', 'Lossless audio handling']
+          items: ['Low-latency response', 'Lossless audio handling'],
         },
         privacy: {
           title: 'Privacy & Safety',
-          items: ['Stealth mode', 'Local data only']
-        }
+          items: ['Stealth mode', 'Local data only'],
+        },
       },
       cta: 'Get my interview ready',
-      skip: 'Not now'
+      skip: 'Not now',
     },
     collaboration: {
       title: 'Collaboration Mode',
@@ -871,17 +863,17 @@ export const translations: Record<SupportedLanguage, any> = {
         switched: 'Switched to {{mode}}',
         switchFailed: 'Audio mode switch failed',
         browserPreview: 'Browser preview mode',
-        browserSwitched: 'Switched to {{mode}} (preview)'
+        browserSwitched: 'Switched to {{mode}} (preview)',
       },
       audioMode: {
         system: {
           label: 'System audio',
-          description: 'Capture system audio for online interviews'
+          description: 'Capture system audio for online interviews',
         },
         microphone: {
           label: 'Microphone',
-          description: 'Record via mic for live conversations'
-        }
+          description: 'Record via mic for live conversations',
+        },
       },
       errors: {
         apiConnectionFailed: 'API connection failed',
@@ -900,34 +892,34 @@ export const translations: Record<SupportedLanguage, any> = {
         audioInterrupted: 'Audio stream interrupted. Click reconnect to restore.',
         audioSwitchFailed: 'Failed to switch to {{mode}}. Check device settings.',
         audioSwitchError: 'Audio switch error, please retry',
-        audioStartFailed: 'Unable to start audio capture. Check system permissions.'
+        audioStartFailed: 'Unable to start audio capture. Check system permissions.',
       },
       empty: {
         system: 'Bready answers the interviewer',
         microphone: 'Bready answers from mic input',
-        helper: 'You can also type your input'
+        helper: 'You can also type your input',
       },
       labels: {
         transcribing: 'Transcribing...',
         input: 'Input',
         thinking: 'Thinking...',
         responding: 'Responding...',
-        bready: 'Bready'
+        bready: 'Bready',
       },
       input: {
         placeholder: 'Type your question...',
-        helper: 'Press Enter to send · Shift+Enter for newline'
+        helper: 'Press Enter to send · Shift+Enter for newline',
       },
       sidebar: {
         title: 'Conversation',
-        empty: 'No messages yet'
+        empty: 'No messages yet',
       },
       aiThinking: 'Bready is thinking...',
       previewReply: 'Got your question: \"{{message}}\". Thinking... (preview mode)',
       exit: {
         title: 'Exit collaboration mode?',
         description: 'This will disconnect AI and return home.',
-        confirm: 'Exit'
+        confirm: 'Exit',
       },
       permissions: {
         title: 'Permissions',
@@ -943,28 +935,28 @@ export const translations: Record<SupportedLanguage, any> = {
         networkDisconnected: 'Disconnected',
         networkConnectedDesc: 'Connected to Gemini API',
         networkDisconnectedDesc: 'Try reconnecting to AI service',
-        reconnect: 'Reconnect'
+        reconnect: 'Reconnect',
       },
       toasts: {
         connectionFailed: 'AI connection failed, returned home',
-        deviceSwitched: 'Microphone switched to: {{device}}'
+        deviceSwitched: 'Microphone switched to: {{device}}',
       },
       actions: {
         copy: 'Copy',
-        reconnect: 'Reconnect'
-      }
+        reconnect: 'Reconnect',
+      },
     },
     admin: {
       title: 'Admin Console',
       tabs: {
         users: 'Users',
-        usage: 'Usage'
+        usage: 'Usage',
       },
       stats: {
         totalUsers: 'Total users',
         activeMembers: 'Active members',
         remainingMinutes: 'Minutes left',
-        expiringSoon: 'Expiring soon'
+        expiringSoon: 'Expiring soon',
       },
       search: 'Search name or email',
       empty: 'No users yet',
@@ -983,8 +975,8 @@ export const translations: Record<SupportedLanguage, any> = {
       usageHint: '30-day trend (placeholder)',
       actions: {
         previous: 'Previous',
-        next: 'Next'
-      }
+        next: 'Next',
+      },
     },
     profile: {
       title: 'Profile',
@@ -1007,13 +999,13 @@ export const translations: Record<SupportedLanguage, any> = {
       themeOptions: {
         light: 'Light',
         dark: 'Dark',
-        auto: 'System'
+        auto: 'System',
       },
       tabs: {
         profile: 'Profile',
         membership: 'Membership',
         history: 'History',
-        settings: 'Settings'
+        settings: 'Settings',
       },
       editor: {
         title: 'Edit Profile',
@@ -1021,13 +1013,13 @@ export const translations: Record<SupportedLanguage, any> = {
         nicknamePlaceholder: 'Enter nickname',
         notSet: 'Not set',
         email: 'Email',
-        createdAt: 'Registered'
+        createdAt: 'Registered',
       },
       avatar: {
         title: 'Select Avatar',
         label: 'Avatar',
         change: 'Change',
-        hint: 'Click to select'
+        hint: 'Click to select',
       },
       security: {
         title: 'Account Security',
@@ -1052,7 +1044,7 @@ export const translations: Record<SupportedLanguage, any> = {
         emailPlaceholder: 'Enter email address',
         invalidEmail: 'Please enter a valid email',
         emailBound: 'Email linked successfully',
-        emailBindFailed: 'Failed to link email'
+        emailBindFailed: 'Failed to link email',
       },
       history: {
         usage: 'Usage History',
@@ -1068,9 +1060,9 @@ export const translations: Record<SupportedLanguage, any> = {
         status: {
           completed: 'Completed',
           pending: 'Pending',
-          cancelled: 'Cancelled'
-        }
-      }
+          cancelled: 'Cancelled',
+        },
+      },
     },
     login: {
       title: 'Bready',
@@ -1099,7 +1091,7 @@ export const translations: Record<SupportedLanguage, any> = {
         email: 'Enter your email',
         password: 'Enter your password',
         phone: 'Enter your phone',
-        code: 'Enter 6-digit code'
+        code: 'Enter 6-digit code',
       },
       errors: {
         loginFailed: 'Login failed',
@@ -1108,8 +1100,8 @@ export const translations: Record<SupportedLanguage, any> = {
         sendCodeFailed: 'Failed to send code',
         verifyFailed: 'Verification failed',
         testLoginFailed: 'Test login failed',
-        signupSuccess: 'Signup successful! Logging you in...'
-      }
+        signupSuccess: 'Signup successful! Logging you in...',
+      },
     },
     prep: {
       notFoundTitle: 'Preparation not found',
@@ -1118,7 +1110,7 @@ export const translations: Record<SupportedLanguage, any> = {
       updatedAt: 'Updated {{date}}',
       actions: {
         edit: 'Edit',
-        startAnalysis: 'Start analysis'
+        startAnalysis: 'Start analysis',
       },
       sections: {
         match: 'Role match',
@@ -1126,7 +1118,7 @@ export const translations: Record<SupportedLanguage, any> = {
         resume: 'Resume',
         strengths: 'Strengths',
         weaknesses: 'Areas to improve',
-        suggestions: 'Interview tips'
+        suggestions: 'Interview tips',
       },
       resumeMissing: 'No resume uploaded',
       resumeAdd: 'Add one',
@@ -1147,18 +1139,18 @@ export const translations: Record<SupportedLanguage, any> = {
         fileName: 'Interview_Prep_{{name}}_Report.md',
         exportSuccess: 'Report exported successfully',
         exportFailed: 'Report export failed',
-        completeInfo: 'Complete details to generate the AI report'
+        completeInfo: 'Complete details to generate the AI report',
       },
       shareTitle: 'Interview prep: {{name}}',
       shareText: 'View my interview prep analysis: {{name}}',
       shareCopied: 'Link copied to clipboard',
-      shareFailed: 'Share failed'
+      shareFailed: 'Share failed',
     },
     prepList: {
       title: 'All preparations',
       count: 'Total {{count}} preparations',
       empty: 'No preparations yet',
-      analyzing: 'Analyzing'
+      analyzing: 'Analyzing',
     },
     prepEditor: {
       titleCreate: 'Create Interview Prep',
@@ -1168,13 +1160,13 @@ export const translations: Record<SupportedLanguage, any> = {
       name: {
         title: 'Preparation name',
         description: 'Company - Role, e.g., ByteDance - Sales',
-        placeholder: 'Company - Role, e.g., ByteDance - Sales'
+        placeholder: 'Company - Role, e.g., ByteDance - Sales',
       },
       job: {
         title: 'Job details (JD)',
         description: 'Paste the full job description, responsibilities, and requirements',
         label: 'Job description',
-        placeholder: 'Paste the job description here...'
+        placeholder: 'Paste the job description here...',
       },
       resume: {
         title: 'Resume (optional)',
@@ -1183,11 +1175,11 @@ export const translations: Record<SupportedLanguage, any> = {
           title: 'Click to upload resume file',
           hint: 'Supports .pdf, .doc, .docx, .txt, images',
           choose: 'Choose file',
-          uploaded: 'Uploaded: {{name}}'
+          uploaded: 'Uploaded: {{name}}',
         },
         pasteLabel: 'Or paste resume content',
         pastePlaceholder: 'Paste resume content or related info...',
-        extracting: 'Extracting file content...'
+        extracting: 'Extracting file content...',
       },
       analysis: {
         title: 'AI Analysis',
@@ -1195,14 +1187,14 @@ export const translations: Record<SupportedLanguage, any> = {
         matchScore: 'Match score',
         strengths: 'Strengths',
         suggestions: 'Improvements',
-        empty: 'Click the button below to run AI analysis'
+        empty: 'Click the button below to run AI analysis',
       },
       actions: {
         save: 'Save',
         saving: 'Saving...',
         analyze: 'Analyze with AI',
         analyzing: 'Analyzing...',
-        reanalyze: 'Re-analyze'
+        reanalyze: 'Re-analyze',
       },
       toasts: {
         uploadSuccess: 'File uploaded successfully',
@@ -1215,26 +1207,26 @@ export const translations: Record<SupportedLanguage, any> = {
         saveFailed: 'Save failed. Please try again.',
         analyzeFailed: 'AI analysis failed: {{error}}',
         analyzeSuccess: 'AI analysis complete',
-        analyzeError: 'AI analysis failed. Please try again later.'
+        analyzeError: 'AI analysis failed. Please try again later.',
       },
       mockAnalysis: {
         strengths: [
           'Strong tech stack match with React and TypeScript',
           '3 years of experience meets role requirements',
-          'Experience across mobile and web development'
+          'Experience across mobile and web development',
         ],
         weaknesses: [
           'Limited large-scale architecture experience',
           'Team collaboration details are light',
-          'Need stronger evidence of learning new tech'
+          'Need stronger evidence of learning new tech',
         ],
         suggestions: [
           'Prepare concrete project stories and technical tradeoffs',
           'Highlight collaboration: code reviews and sharing',
           'Show depth in frontend tooling and workflows',
-          'Bring examples of performance and UX improvements'
-        ]
-      }
+          'Bring examples of performance and UX improvements',
+        ],
+      },
     },
     errorBoundary: {
       title: 'Something went wrong',
@@ -1247,8 +1239,8 @@ export const translations: Record<SupportedLanguage, any> = {
       labels: {
         error: 'Error',
         stack: 'Stack',
-        componentStack: 'Component stack'
-      }
+        componentStack: 'Component stack',
+      },
     },
     floating: {
       status: {
@@ -1266,7 +1258,7 @@ export const translations: Record<SupportedLanguage, any> = {
         disconnected: 'Disconnected',
         error: 'Error: {{error}}',
         reconnectError: 'Reconnect error: {{error}}',
-        disconnectError: 'Disconnect error: {{error}}'
+        disconnectError: 'Disconnect error: {{error}}',
       },
       labels: {
         liveTranscription: 'Live transcription',
@@ -1284,8 +1276,8 @@ export const translations: Record<SupportedLanguage, any> = {
         clearHistory: 'Clear',
         clearHistoryTitle: 'Clear conversation history',
         opacity: 'Opacity',
-        reconnect: 'Reconnect'
-      }
+        reconnect: 'Reconnect',
+      },
     },
     monitoring: {
       title: 'System Monitoring',
@@ -1300,7 +1292,7 @@ export const translations: Record<SupportedLanguage, any> = {
       noErrors: 'No errors recorded',
       actionsTotal: 'User actions (total: {{count}})',
       noActions: 'No actions recorded',
-      hint: 'Press Ctrl+Shift+M to toggle the monitoring panel'
+      hint: 'Press Ctrl+Shift+M to toggle the monitoring panel',
     },
     permissionsSetup: {
       title: 'Live Interview permissions',
@@ -1309,45 +1301,45 @@ export const translations: Record<SupportedLanguage, any> = {
       screen: {
         title: 'Screen recording',
         description: 'Capture system audio',
-        openSettings: 'Open system settings'
+        openSettings: 'Open system settings',
       },
       microphone: {
         title: 'Microphone',
         description: 'Voice input (optional)',
         request: 'Request permission',
-        openSettings: 'Open system settings'
+        openSettings: 'Open system settings',
       },
       apiKey: {
         title: 'Gemini API key',
         description: 'For AI features',
-        hint: 'Set VITE_GEMINI_API_KEY in .env.local'
+        hint: 'Set VITE_GEMINI_API_KEY in .env.local',
       },
       audio: {
         title: 'Audio device',
         description: 'System audio capture',
         test: 'Test audio capture',
-        setup: 'Open settings'
+        setup: 'Open settings',
       },
       testFailed: 'Test failed',
       status: {
         granted: 'Granted',
         needsSetup: 'Needs setup',
-        denied: 'Denied'
+        denied: 'Denied',
       },
       error: {
-        unableCheck: 'Unable to check permission status'
+        unableCheck: 'Unable to check permission status',
       },
       actions: {
         skip: 'Skip setup',
         recheck: 'Recheck',
         start: 'Start Live Interview',
-        complete: 'Complete setup'
+        complete: 'Complete setup',
       },
       metrics: {
         capturedData: 'Captured data: {{bytes}} bytes',
         silence: 'Silence: {{percent}}%',
-        recommendation: 'Tip: {{text}}'
-      }
+        recommendation: 'Tip: {{text}}',
+      },
     },
     permissionsGuide: {
       title: 'System permissions',
@@ -1357,7 +1349,7 @@ export const translations: Record<SupportedLanguage, any> = {
       mic: 'Microphone',
       micDesc: 'Voice input (optional)',
       later: 'Maybe later',
-      note: 'You can revisit permissions in collaboration mode'
+      note: 'You can revisit permissions in collaboration mode',
     },
     alerts: {
       deletePreparation: 'Delete this preparation? This cannot be undone.',
@@ -1367,15 +1359,15 @@ export const translations: Record<SupportedLanguage, any> = {
       updateRoleFailed: 'Failed to update user role',
       loadUsersFailed: 'Failed to load user list',
       purchaseFailed: 'Purchase failed. Please try again.',
-      signOutFailed: 'Sign out failed'
-    }
+      signOutFailed: 'Sign out failed',
+    },
   },
   'ja-JP': {
     app: {
       name: 'Bready',
       fullName: 'Bready',
       tagline: '内定獲得をもっと簡単に',
-      subtagline: 'AIで面接をもっと落ち着いて'
+      subtagline: 'AIで面接をもっと落ち着いて',
     },
     common: {
       loading: '読み込み中...',
@@ -1392,7 +1384,7 @@ export const translations: Record<SupportedLanguage, any> = {
       later: 'あとで',
       currentUser: '現在のユーザー',
       none: 'なし',
-      minutes: '{{count}}分'
+      minutes: '{{count}}分',
     },
     form: {
       validation: {
@@ -1400,13 +1392,13 @@ export const translations: Record<SupportedLanguage, any> = {
         requiredHint: '入力してください',
         tooLong: '{{max}}文字以内で入力してください',
         count: '現在 {{count}} 文字',
-        counter: '{{count}}/{{max}} 文字'
+        counter: '{{count}}/{{max}} 文字',
       },
       autosave: {
         saving: '保存中...',
         savedAt: '下書きを {{time}} に保存しました',
-        editing: '編集中...'
-      }
+        editing: '編集中...',
+      },
     },
     home: {
       headline: '内定獲得をもっと簡単に',
@@ -1417,14 +1409,10 @@ export const translations: Record<SupportedLanguage, any> = {
       emptyDescription: '準備項目を作成し、履歴書や職務内容を追加してください。',
       createNow: '今すぐ作成',
       viewAll: 'すべて表示 {{count}}',
-      analyzing: '分析中'
+      analyzing: '分析中',
     },
     slogans: {
-      main: [
-        '面接が不安？落ち着いて。',
-        'Breadyと一緒に自信を。',
-        '面接？大丈夫。'
-      ]
+      main: ['面接が不安？落ち着いて。', 'Breadyと一緒に自信を。', '面接？大丈夫。'],
     },
     select: {
       title: '面接準備',
@@ -1432,12 +1420,12 @@ export const translations: Record<SupportedLanguage, any> = {
       purpose: '目的',
       empty: '準備がありません',
       confirm: '確定',
-      quickStart: '準備なしで開始'
+      quickStart: '準備なしで開始',
     },
     purposes: {
       interview: '面接',
       sales: '営業',
-      meeting: '会議'
+      meeting: '会議',
     },
     createPrep: {
       title: '準備タイプを選択',
@@ -1445,67 +1433,67 @@ export const translations: Record<SupportedLanguage, any> = {
       types: {
         interview: {
           title: '面接',
-          description: '就職面接の準備、職務適合度の分析'
+          description: '就職面接の準備、職務適合度の分析',
         },
         sales: {
           title: '営業',
-          description: '顧客訪問の準備、営業戦略の策定'
+          description: '顧客訪問の準備、営業戦略の策定',
         },
         meeting: {
           title: '会議',
-          description: '重要な会議の準備、議題の整理'
-        }
-      }
+          description: '重要な会議の準備、議題の整理',
+        },
+      },
     },
     salesPrep: {
       titleCreate: '営業準備を作成',
       titleEdit: '営業準備を編集',
       name: {
         title: '準備名',
-        placeholder: '例：XX社営業訪問'
+        placeholder: '例：XX社営業訪問',
       },
       clientInfo: {
         title: '顧客情報',
-        placeholder: '顧客の会社名、業界、規模、主要事業、意思決定者情報などを入力...'
+        placeholder: '顧客の会社名、業界、規模、主要事業、意思決定者情報などを入力...',
       },
       productInfo: {
         title: '製品/サービス情報',
-        placeholder: '販売する製品やサービスの詳細、主要なセールスポイント、価格戦略などを入力...'
+        placeholder: '販売する製品やサービスの詳細、主要なセールスポイント、価格戦略などを入力...',
       },
       salesGoal: {
         title: '営業目標',
-        placeholder: '今回の訪問の営業目標、期待される成果、主要なマイルストーンなどを入力...'
-      }
+        placeholder: '今回の訪問の営業目標、期待される成果、主要なマイルストーンなどを入力...',
+      },
     },
     meetingPrep: {
       titleCreate: '会議準備を作成',
       titleEdit: '会議準備を編集',
       name: {
         title: '準備名',
-        placeholder: '例：Q4四半期総括会議'
+        placeholder: '例：Q4四半期総括会議',
       },
       meetingTopic: {
         title: '会議テーマ',
-        placeholder: '会議のテーマ、背景、目的などを入力...'
+        placeholder: '会議のテーマ、背景、目的などを入力...',
       },
       participants: {
         title: '参加者',
-        placeholder: '参加者リスト、役職、役割などを入力...'
+        placeholder: '参加者リスト、役職、役割などを入力...',
       },
       agenda: {
         title: '会議議題',
-        placeholder: '議題の配置、時間配分などを入力...'
+        placeholder: '議題の配置、時間配分などを入力...',
       },
       keyPoints: {
         title: '重要ポイント',
-        placeholder: '議論すべき重要な問題、決定事項、期待される成果などを入力...'
-      }
+        placeholder: '議論すべき重要な問題、決定事項、期待される成果などを入力...',
+      },
     },
     languages: {
       'cmn-CN': '中文',
       'en-US': 'English',
       'ja-JP': '日本語',
-      'fr-FR': 'Français'
+      'fr-FR': 'Français',
     },
     welcome: {
       title: 'Bready',
@@ -1513,19 +1501,19 @@ export const translations: Record<SupportedLanguage, any> = {
       features: {
         collaboration: {
           title: 'スマート協働',
-          items: ['履歴書分析', 'リアルタイム提示']
+          items: ['履歴書分析', 'リアルタイム提示'],
         },
         audio: {
           title: '音声技術',
-          items: ['低遅延', '高品質音声']
+          items: ['低遅延', '高品質音声'],
         },
         privacy: {
           title: 'プライバシー',
-          items: ['ステルス', 'ローカル保存']
-        }
+          items: ['ステルス', 'ローカル保存'],
+        },
       },
       cta: '面接準備を始める',
-      skip: 'あとで'
+      skip: 'あとで',
     },
     collaboration: {
       title: '協作モード',
@@ -1552,17 +1540,17 @@ export const translations: Record<SupportedLanguage, any> = {
         switched: '{{mode}}に切替済み',
         switchFailed: '音声切替に失敗',
         browserPreview: 'ブラウザプレビュー',
-        browserSwitched: '{{mode}}に切替（プレビュー）'
+        browserSwitched: '{{mode}}に切替（プレビュー）',
       },
       audioMode: {
         system: {
           label: 'システム音声',
-          description: 'オンライン面接用のシステム音声'
+          description: 'オンライン面接用のシステム音声',
         },
         microphone: {
           label: 'マイク',
-          description: 'マイク入力で会話'
-        }
+          description: 'マイク入力で会話',
+        },
       },
       errors: {
         apiConnectionFailed: 'API接続失敗',
@@ -1581,34 +1569,34 @@ export const translations: Record<SupportedLanguage, any> = {
         audioInterrupted: '音声が中断されました',
         audioSwitchFailed: '{{mode}}への切替に失敗しました',
         audioSwitchError: '音声切替エラー',
-        audioStartFailed: '音声キャプチャを開始できません'
+        audioStartFailed: '音声キャプチャを開始できません',
       },
       empty: {
         system: '面接官の質問に答えます',
         microphone: 'マイク入力に答えます',
-        helper: 'テキスト入力も可能です'
+        helper: 'テキスト入力も可能です',
       },
       labels: {
         transcribing: '文字起こし中...',
         input: '入力',
         thinking: '考え中...',
         responding: '返信中...',
-        bready: 'Bready'
+        bready: 'Bready',
       },
       input: {
         placeholder: '質問を入力...',
-        helper: 'Enterで送信・Shift+Enterで改行'
+        helper: 'Enterで送信・Shift+Enterで改行',
       },
       sidebar: {
         title: '会話',
-        empty: '会話がありません'
+        empty: '会話がありません',
       },
       aiThinking: 'Breadyが考え中...',
       previewReply: '質問受信：「{{message}}」（プレビュー）',
       exit: {
         title: '協作モードを終了しますか？',
         description: 'AI接続を切断してホームに戻ります。',
-        confirm: '退出'
+        confirm: '退出',
       },
       permissions: {
         title: '権限設定',
@@ -1624,27 +1612,27 @@ export const translations: Record<SupportedLanguage, any> = {
         networkDisconnected: '未接続',
         networkConnectedDesc: 'Gemini APIに接続中',
         networkDisconnectedDesc: '再接続してください',
-        reconnect: '再接続'
+        reconnect: '再接続',
       },
       toasts: {
-        connectionFailed: 'AI接続に失敗しました'
+        connectionFailed: 'AI接続に失敗しました',
       },
       actions: {
         copy: 'コピー',
-        reconnect: '再接続'
-      }
+        reconnect: '再接続',
+      },
     },
     admin: {
       title: '管理コンソール',
       tabs: {
         users: 'ユーザー',
-        usage: '使用状況'
+        usage: '使用状況',
       },
       stats: {
         totalUsers: 'ユーザー数',
         activeMembers: '有効会員',
         remainingMinutes: '残り時間',
-        expiringSoon: '期限切れ間近'
+        expiringSoon: '期限切れ間近',
       },
       search: '名前やメールで検索',
       empty: 'ユーザーがいません',
@@ -1663,8 +1651,8 @@ export const translations: Record<SupportedLanguage, any> = {
       usageHint: '30日トレンド（仮）',
       actions: {
         previous: '前へ',
-        next: '次へ'
-      }
+        next: '次へ',
+      },
     },
     profile: {
       title: 'プロフィール',
@@ -1685,7 +1673,7 @@ export const translations: Record<SupportedLanguage, any> = {
       themeOptions: {
         light: 'ライト',
         dark: 'ダーク',
-        auto: 'システム'
+        auto: 'システム',
       },
       security: {
         title: 'アカウントセキュリティ',
@@ -1710,8 +1698,8 @@ export const translations: Record<SupportedLanguage, any> = {
         emailPlaceholder: 'メールアドレスを入力',
         invalidEmail: '有効なメールアドレスを入力してください',
         emailBound: 'メールを連携しました',
-        emailBindFailed: 'メールの連携に失敗しました'
-      }
+        emailBindFailed: 'メールの連携に失敗しました',
+      },
     },
     login: {
       title: 'Bready',
@@ -1740,7 +1728,7 @@ export const translations: Record<SupportedLanguage, any> = {
         email: 'メールを入力',
         password: 'パスワードを入力',
         phone: '電話番号を入力',
-        code: '6桁コードを入力'
+        code: '6桁コードを入力',
       },
       errors: {
         loginFailed: 'ログイン失敗',
@@ -1749,8 +1737,8 @@ export const translations: Record<SupportedLanguage, any> = {
         sendCodeFailed: 'コード送信失敗',
         verifyFailed: '確認失敗',
         testLoginFailed: 'テストログイン失敗',
-        signupSuccess: '登録成功、ログイン中...'
-      }
+        signupSuccess: '登録成功、ログイン中...',
+      },
     },
     prep: {
       notFoundTitle: '準備が見つかりません',
@@ -1759,7 +1747,7 @@ export const translations: Record<SupportedLanguage, any> = {
       updatedAt: '更新 {{date}}',
       actions: {
         edit: '編集',
-        startAnalysis: '分析を開始'
+        startAnalysis: '分析を開始',
       },
       sections: {
         match: '職務一致度',
@@ -1767,7 +1755,7 @@ export const translations: Record<SupportedLanguage, any> = {
         resume: '履歴書',
         strengths: '強み',
         weaknesses: '改善点',
-        suggestions: '面接アドバイス'
+        suggestions: '面接アドバイス',
       },
       resumeMissing: '履歴書未アップロード',
       resumeAdd: '追加する',
@@ -1788,18 +1776,18 @@ export const translations: Record<SupportedLanguage, any> = {
         fileName: 'Interview_Prep_{{name}}_Report.md',
         exportSuccess: 'レポートをエクスポートしました',
         exportFailed: 'レポートのエクスポートに失敗しました',
-        completeInfo: '情報を入力してAIレポートを取得'
+        completeInfo: '情報を入力してAIレポートを取得',
       },
       shareTitle: '面接準備: {{name}}',
       shareText: '面接準備の分析を共有: {{name}}',
       shareCopied: 'リンクをコピーしました',
-      shareFailed: '共有に失敗しました'
+      shareFailed: '共有に失敗しました',
     },
     prepList: {
       title: '準備一覧',
       count: '合計 {{count}} 件',
       empty: '準備がありません',
-      analyzing: '分析中'
+      analyzing: '分析中',
     },
     prepEditor: {
       titleCreate: '面接準備を作成',
@@ -1809,13 +1797,13 @@ export const translations: Record<SupportedLanguage, any> = {
       name: {
         title: '準備名称',
         description: '会社-職種（例: ByteDance-営業）',
-        placeholder: '会社-職種（例: ByteDance-営業）'
+        placeholder: '会社-職種（例: ByteDance-営業）',
       },
       job: {
         title: '職務内容 (JD)',
         description: '職務内容を貼り付けてください',
         label: '職務内容',
-        placeholder: '職務内容を貼り付けてください...'
+        placeholder: '職務内容を貼り付けてください...',
       },
       resume: {
         title: '履歴書 (任意)',
@@ -1824,10 +1812,10 @@ export const translations: Record<SupportedLanguage, any> = {
           title: '履歴書ファイルをアップロード',
           hint: '対応 .pdf, .doc, .docx, .txt',
           choose: 'ファイル選択',
-          uploaded: 'アップロード済み: {{name}}'
+          uploaded: 'アップロード済み: {{name}}',
         },
         pasteLabel: 'または履歴書を貼り付け',
-        pastePlaceholder: '履歴書内容を貼り付け...'
+        pastePlaceholder: '履歴書内容を貼り付け...',
       },
       analysis: {
         title: 'AI 分析',
@@ -1835,14 +1823,14 @@ export const translations: Record<SupportedLanguage, any> = {
         matchScore: '一致度スコア',
         strengths: '強み',
         suggestions: '改善提案',
-        empty: '下のボタンで AI 分析を実行'
+        empty: '下のボタンで AI 分析を実行',
       },
       actions: {
         save: '保存',
         saving: '保存中...',
         analyze: 'AI分析',
         analyzing: '分析中...',
-        reanalyze: '再分析'
+        reanalyze: '再分析',
       },
       toasts: {
         uploadSuccess: 'ファイルをアップロードしました',
@@ -1853,26 +1841,26 @@ export const translations: Record<SupportedLanguage, any> = {
         saveFailed: '保存に失敗しました。再試行してください。',
         analyzeFailed: 'AI 分析失敗: {{error}}',
         analyzeSuccess: 'AI 分析完了',
-        analyzeError: 'AI 分析中にエラーが発生しました'
+        analyzeError: 'AI 分析中にエラーが発生しました',
       },
       mockAnalysis: {
         strengths: [
           'React と TypeScript の経験が要件と一致',
           '3 年の経験が基本要件を満たす',
-          'モバイルと Web の開発経験がある'
+          'モバイルと Web の開発経験がある',
         ],
         weaknesses: [
           '大規模アーキテクチャ経験が不足',
           '協業・管理の説明が少ない',
-          '新技術の学習・適用の裏付けが必要'
+          '新技術の学習・適用の裏付けが必要',
         ],
         suggestions: [
           '技術的な意思決定の事例を準備する',
           'コードレビューや共有など協業経験を強調',
           'フロントエンドツールの深い理解を示す',
-          '性能改善・UX向上の具体例を用意する'
-        ]
-      }
+          '性能改善・UX向上の具体例を用意する',
+        ],
+      },
     },
     errorBoundary: {
       title: '問題が発生しました',
@@ -1885,8 +1873,8 @@ export const translations: Record<SupportedLanguage, any> = {
       labels: {
         error: 'エラー',
         stack: 'スタック',
-        componentStack: 'コンポーネントスタック'
-      }
+        componentStack: 'コンポーネントスタック',
+      },
     },
     floating: {
       status: {
@@ -1904,7 +1892,7 @@ export const translations: Record<SupportedLanguage, any> = {
         disconnected: '切断されました',
         error: 'エラー：{{error}}',
         reconnectError: '再接続エラー：{{error}}',
-        disconnectError: '切断エラー：{{error}}'
+        disconnectError: '切断エラー：{{error}}',
       },
       labels: {
         liveTranscription: 'リアルタイム文字起こし',
@@ -1922,8 +1910,8 @@ export const translations: Record<SupportedLanguage, any> = {
         clearHistory: 'クリア',
         clearHistoryTitle: '会話履歴をクリア',
         opacity: '不透明度',
-        reconnect: '再接続'
-      }
+        reconnect: '再接続',
+      },
     },
     monitoring: {
       title: 'システム監視',
@@ -1938,7 +1926,7 @@ export const translations: Record<SupportedLanguage, any> = {
       noErrors: 'エラー記録はありません',
       actionsTotal: 'ユーザー行動 (合計: {{count}})',
       noActions: '記録はありません',
-      hint: 'Ctrl+Shift+M で監視パネルを切替'
+      hint: 'Ctrl+Shift+M で監視パネルを切替',
     },
     permissionsSetup: {
       title: 'Live Interview 権限設定',
@@ -1947,45 +1935,45 @@ export const translations: Record<SupportedLanguage, any> = {
       screen: {
         title: '画面収録権限',
         description: 'システム音声を取得',
-        openSettings: 'システム設定を開く'
+        openSettings: 'システム設定を開く',
       },
       microphone: {
         title: 'マイク権限',
         description: '音声入力（任意）',
         request: '権限を要求',
-        openSettings: 'システム設定を開く'
+        openSettings: 'システム設定を開く',
       },
       apiKey: {
         title: 'Gemini API キー',
         description: 'AI 機能に必要',
-        hint: '.env.local に VITE_GEMINI_API_KEY を設定'
+        hint: '.env.local に VITE_GEMINI_API_KEY を設定',
       },
       audio: {
         title: '音声デバイス',
         description: 'システム音声キャプチャ',
         test: '音声キャプチャをテスト',
-        setup: '設定へ'
+        setup: '設定へ',
       },
       testFailed: 'テストに失敗しました',
       status: {
         granted: '許可済み',
         needsSetup: '設定が必要',
-        denied: '拒否されました'
+        denied: '拒否されました',
       },
       error: {
-        unableCheck: '権限状態を確認できません'
+        unableCheck: '権限状態を確認できません',
       },
       actions: {
         skip: 'スキップ',
         recheck: '再チェック',
         start: 'Live Interview を開始',
-        complete: '権限設定を完了'
+        complete: '権限設定を完了',
       },
       metrics: {
         capturedData: 'キャプチャデータ: {{bytes}} バイト',
         silence: '無音: {{percent}}%',
-        recommendation: '提案: {{text}}'
-      }
+        recommendation: '提案: {{text}}',
+      },
     },
     permissionsGuide: {
       title: 'システム権限',
@@ -1995,7 +1983,7 @@ export const translations: Record<SupportedLanguage, any> = {
       mic: 'マイク',
       micDesc: '音声入力',
       later: 'あとで',
-      note: '協作モードで再設定できます'
+      note: '協作モードで再設定できます',
     },
     alerts: {
       deletePreparation: '準備を削除しますか？',
@@ -2005,15 +1993,15 @@ export const translations: Record<SupportedLanguage, any> = {
       updateRoleFailed: '役割更新に失敗しました',
       loadUsersFailed: 'ユーザー一覧の取得に失敗しました',
       purchaseFailed: '購入に失敗しました',
-      signOutFailed: 'ログアウトに失敗しました'
-    }
+      signOutFailed: 'ログアウトに失敗しました',
+    },
   },
   'fr-FR': {
     app: {
       name: 'Bready',
       fullName: 'Bready',
       tagline: "Décrochez l'offre plus simplement",
-      subtagline: "Entretien assisté par l'IA, en confiance"
+      subtagline: "Entretien assisté par l'IA, en confiance",
     },
     common: {
       loading: 'Chargement...',
@@ -2030,7 +2018,7 @@ export const translations: Record<SupportedLanguage, any> = {
       later: 'Plus tard',
       currentUser: 'Utilisateur actuel',
       none: 'Aucun',
-      minutes: '{{count}} min'
+      minutes: '{{count}} min',
     },
     form: {
       validation: {
@@ -2038,31 +2026,28 @@ export const translations: Record<SupportedLanguage, any> = {
         requiredHint: 'Veuillez saisir une valeur',
         tooLong: 'Maximum {{max}} caractères',
         count: '{{count}} caractères',
-        counter: '{{count}}/{{max}} caractères'
+        counter: '{{count}}/{{max}} caractères',
       },
       autosave: {
         saving: 'Enregistrement...',
         savedAt: 'Brouillon enregistré à {{time}}',
-        editing: 'Édition...'
-      }
+        editing: 'Édition...',
+      },
     },
     home: {
       headline: "Décrochez l'offre plus simplement",
-      subhead: "Collaboration IA, gardez le rythme",
+      subhead: 'Collaboration IA, gardez le rythme',
       start: 'Démarrer',
       myPreparations: 'Mes préparations',
       emptyTitle: 'Commencez votre première préparation',
-      emptyDescription: "Créez une préparation, ajoutez CV ou description de poste, et laissez l'IA analyser.",
+      emptyDescription:
+        "Créez une préparation, ajoutez CV ou description de poste, et laissez l'IA analyser.",
       createNow: 'Créer',
       viewAll: 'Voir tout {{count}}',
-      analyzing: 'Analyse'
+      analyzing: 'Analyse',
     },
     slogans: {
-      main: [
-        'Stressé ? Respirez.',
-        'Bready à vos côtés.',
-        'Entretien ? Facile.'
-      ]
+      main: ['Stressé ? Respirez.', 'Bready à vos côtés.', 'Entretien ? Facile.'],
     },
     select: {
       title: 'Préparation entretien',
@@ -2070,12 +2055,12 @@ export const translations: Record<SupportedLanguage, any> = {
       purpose: 'Objectif',
       empty: 'Aucune préparation',
       confirm: 'Confirmer',
-      quickStart: 'Commencer sans préparation'
+      quickStart: 'Commencer sans préparation',
     },
     purposes: {
       interview: 'Entretien',
       sales: 'Vente',
-      meeting: 'Réunion'
+      meeting: 'Réunion',
     },
     createPrep: {
       title: 'Sélectionner le type de préparation',
@@ -2083,67 +2068,70 @@ export const translations: Record<SupportedLanguage, any> = {
       types: {
         interview: {
           title: 'Entretien',
-          description: "Préparez vos entretiens d'embauche, analysez l'adéquation au poste"
+          description: "Préparez vos entretiens d'embauche, analysez l'adéquation au poste",
         },
         sales: {
           title: 'Vente',
-          description: 'Préparez vos visites clients, planifiez votre stratégie commerciale'
+          description: 'Préparez vos visites clients, planifiez votre stratégie commerciale',
         },
         meeting: {
           title: 'Réunion',
-          description: "Préparez vos réunions importantes, organisez l'ordre du jour"
-        }
-      }
+          description: "Préparez vos réunions importantes, organisez l'ordre du jour",
+        },
+      },
     },
     salesPrep: {
       titleCreate: 'Créer une préparation de vente',
       titleEdit: 'Modifier la préparation de vente',
       name: {
         title: 'Nom de la préparation',
-        placeholder: 'Ex: Visite commerciale chez XX'
+        placeholder: 'Ex: Visite commerciale chez XX',
       },
       clientInfo: {
         title: 'Informations client',
-        placeholder: "Entrez le nom de l'entreprise, secteur, taille, activité principale, décideurs..."
+        placeholder:
+          "Entrez le nom de l'entreprise, secteur, taille, activité principale, décideurs...",
       },
       productInfo: {
         title: 'Informations produit/service',
-        placeholder: 'Entrez les détails du produit ou service, arguments clés, stratégie de prix...'
+        placeholder:
+          'Entrez les détails du produit ou service, arguments clés, stratégie de prix...',
       },
       salesGoal: {
         title: 'Objectif commercial',
-        placeholder: 'Entrez les objectifs de vente, résultats attendus, jalons clés...'
-      }
+        placeholder: 'Entrez les objectifs de vente, résultats attendus, jalons clés...',
+      },
     },
     meetingPrep: {
       titleCreate: 'Créer une préparation de réunion',
       titleEdit: 'Modifier la préparation de réunion',
       name: {
         title: 'Nom de la préparation',
-        placeholder: 'Ex: Réunion bilan Q4'
+        placeholder: 'Ex: Réunion bilan Q4',
       },
       meetingTopic: {
         title: 'Sujet de la réunion',
-        placeholder: 'Entrez le sujet, contexte, objectifs de la réunion...'
+        placeholder: 'Entrez le sujet, contexte, objectifs de la réunion...',
       },
       participants: {
         title: 'Participants',
-        placeholder: 'Entrez la liste des participants, postes, rôles...'
+        placeholder: 'Entrez la liste des participants, postes, rôles...',
       },
       agenda: {
         title: 'Ordre du jour',
-        placeholder: "Entrez les points de l'ordre du jour, allocation du temps..."
+        placeholder: "Entrez les points de l'ordre du jour, allocation du temps...",
       },
       keyPoints: {
         title: 'Points clés',
-        placeholder: 'Entrez les questions clés à discuter, décisions à prendre, résultats attendus...'
-      }
+        placeholder:
+          'Entrez les questions clés à discuter, décisions à prendre, résultats attendus...',
+      },
     },
     languages: {
       'cmn-CN': '中文',
       'en-US': 'English',
       'ja-JP': '日本語',
-      'fr-FR': 'Français'
+      'fr-FR': 'Français',
     },
     welcome: {
       title: 'Bready',
@@ -2151,19 +2139,19 @@ export const translations: Record<SupportedLanguage, any> = {
       features: {
         collaboration: {
           title: 'Collaboration intelligente',
-          items: ['Analyse du CV', 'Prompts en direct']
+          items: ['Analyse du CV', 'Prompts en direct'],
         },
         audio: {
           title: 'Technologie audio',
-          items: ['Faible latence', 'Audio sans perte']
+          items: ['Faible latence', 'Audio sans perte'],
         },
         privacy: {
           title: 'Confidentialité',
-          items: ['Mode furtif', 'Données locales']
-        }
+          items: ['Mode furtif', 'Données locales'],
+        },
       },
       cta: 'Préparer mon entretien',
-      skip: 'Plus tard'
+      skip: 'Plus tard',
     },
     collaboration: {
       title: 'Mode collaboration',
@@ -2174,7 +2162,7 @@ export const translations: Record<SupportedLanguage, any> = {
         permissionsIncomplete: 'Autorisations incomplètes',
         permissionsFailed: 'Échec des autorisations',
         connecting: "Connexion à l'IA...",
-        apiKeyMissing: "Clé API manquante",
+        apiKeyMissing: 'Clé API manquante',
         audioStarting: "Démarrage de l'audio...",
         audioFailed: "Échec de l'audio",
         ready: 'Prêt',
@@ -2186,25 +2174,25 @@ export const translations: Record<SupportedLanguage, any> = {
         reconnectFailed: 'Reconnexion échouée',
         disconnected: 'Déconnecté',
         preparing: 'Préparation du mode collaboration...',
-        switchingAudio: "Changement du mode audio...",
+        switchingAudio: 'Changement du mode audio...',
         switched: 'Passé à {{mode}}',
-        switchFailed: "Échec du changement",
+        switchFailed: 'Échec du changement',
         browserPreview: 'Aperçu navigateur',
-        browserSwitched: 'Passé à {{mode}} (aperçu)'
+        browserSwitched: 'Passé à {{mode}} (aperçu)',
       },
       audioMode: {
         system: {
           label: 'Audio système',
-          description: "Capturer l'audio système pour les entretiens en ligne"
+          description: "Capturer l'audio système pour les entretiens en ligne",
         },
         microphone: {
           label: 'Micro',
-          description: 'Enregistrer via micro pour les échanges en direct'
-        }
+          description: 'Enregistrer via micro pour les échanges en direct',
+        },
       },
       errors: {
-        apiConnectionFailed: "Connexion API échouée",
-        apiKeyMissing: "Clé API introuvable. Vérifiez VITE_GEMINI_API_KEY.",
+        apiConnectionFailed: 'Connexion API échouée',
+        apiKeyMissing: 'Clé API introuvable. Vérifiez VITE_GEMINI_API_KEY.',
         audioDeviceError: 'Erreur périphérique audio',
         permissionsNotSet: 'Autorisations manquantes',
         networkError: 'Erreur réseau',
@@ -2212,41 +2200,41 @@ export const translations: Record<SupportedLanguage, any> = {
         permissionsHint: 'Terminez les autorisations dans les paramètres',
         connectFailed: "Impossible de se connecter à l'IA",
         reconnectFailed: 'Reconnexion échouée',
-        notConnected: "IA non connectée pour le moment",
+        notConnected: 'IA non connectée pour le moment',
         sendFailed: "Échec de l'envoi : {{error}}",
         tryAgain: 'Réessayez plus tard',
         sendError: "Erreur lors de l'envoi",
-        audioInterrupted: "Flux audio interrompu, reconnectez-vous",
+        audioInterrupted: 'Flux audio interrompu, reconnectez-vous',
         audioSwitchFailed: 'Échec du passage à {{mode}}',
         audioSwitchError: 'Erreur de changement audio',
-        audioStartFailed: "Impossible de démarrer l'audio"
+        audioStartFailed: "Impossible de démarrer l'audio",
       },
       empty: {
         system: "Bready répond à l'intervieweur",
         microphone: 'Bready répond au micro',
-        helper: 'Vous pouvez aussi taper'
+        helper: 'Vous pouvez aussi taper',
       },
       labels: {
         transcribing: 'Transcription...',
         input: 'Entrée',
         thinking: 'Réflexion...',
         responding: 'Réponse...',
-        bready: 'Bready'
+        bready: 'Bready',
       },
       input: {
         placeholder: 'Tapez votre question...',
-        helper: 'Entrée pour envoyer · Shift+Entrée pour retour'
+        helper: 'Entrée pour envoyer · Shift+Entrée pour retour',
       },
       sidebar: {
         title: 'Conversation',
-        empty: 'Aucun message'
+        empty: 'Aucun message',
       },
       aiThinking: 'Bready réfléchit...',
       previewReply: 'Question reçue : « {{message}} » (aperçu)',
       exit: {
         title: 'Quitter le mode collaboration ?',
         description: "Déconnecte l'IA et retourne à l'accueil.",
-        confirm: 'Quitter'
+        confirm: 'Quitter',
       },
       permissions: {
         title: 'Autorisations',
@@ -2262,27 +2250,27 @@ export const translations: Record<SupportedLanguage, any> = {
         networkDisconnected: 'Déconnecté',
         networkConnectedDesc: 'Connecté à Gemini API',
         networkDisconnectedDesc: 'Essayez de reconnecter le service IA',
-        reconnect: 'Reconnecter'
+        reconnect: 'Reconnecter',
       },
       toasts: {
-        connectionFailed: "Connexion IA échouée, retour à l'accueil"
+        connectionFailed: "Connexion IA échouée, retour à l'accueil",
       },
       actions: {
         copy: 'Copier',
-        reconnect: 'Reconnecter'
-      }
+        reconnect: 'Reconnecter',
+      },
     },
     admin: {
       title: 'Console admin',
       tabs: {
         users: 'Utilisateurs',
-        usage: 'Usage'
+        usage: 'Usage',
       },
       stats: {
         totalUsers: 'Utilisateurs',
         activeMembers: 'Membres actifs',
         remainingMinutes: 'Minutes restantes',
-        expiringSoon: 'Expire bientôt'
+        expiringSoon: 'Expire bientôt',
       },
       search: 'Rechercher nom ou email',
       empty: 'Aucun utilisateur',
@@ -2301,8 +2289,8 @@ export const translations: Record<SupportedLanguage, any> = {
       usageHint: 'Tendance 30 jours (placeholder)',
       actions: {
         previous: 'Précédent',
-        next: 'Suivant'
-      }
+        next: 'Suivant',
+      },
     },
     profile: {
       title: 'Profil',
@@ -2323,7 +2311,7 @@ export const translations: Record<SupportedLanguage, any> = {
       themeOptions: {
         light: 'Clair',
         dark: 'Sombre',
-        auto: 'Système'
+        auto: 'Système',
       },
       security: {
         title: 'Sécurité du compte',
@@ -2348,8 +2336,8 @@ export const translations: Record<SupportedLanguage, any> = {
         emailPlaceholder: 'Entrez votre email',
         invalidEmail: 'Veuillez entrer un email valide',
         emailBound: 'Email lié',
-        emailBindFailed: 'Échec de liaison de l’email'
-      }
+        emailBindFailed: 'Échec de liaison de l’email',
+      },
     },
     login: {
       title: 'Bready',
@@ -2370,7 +2358,7 @@ export const translations: Record<SupportedLanguage, any> = {
       switchEmail: 'Email',
       switchPhone: 'Téléphone',
       hasAccount: 'Déjà un compte ?',
-      noAccount: "Pas de compte ?",
+      noAccount: 'Pas de compte ?',
       loginNow: 'Se connecter',
       signupNow: "S'inscrire",
       placeholders: {
@@ -2378,7 +2366,7 @@ export const translations: Record<SupportedLanguage, any> = {
         email: 'Entrez votre email',
         password: 'Entrez votre mot de passe',
         phone: 'Entrez votre téléphone',
-        code: 'Entrez le code à 6 chiffres'
+        code: 'Entrez le code à 6 chiffres',
       },
       errors: {
         loginFailed: 'Échec de connexion',
@@ -2387,17 +2375,17 @@ export const translations: Record<SupportedLanguage, any> = {
         sendCodeFailed: "Échec d'envoi du code",
         verifyFailed: 'Échec de vérification',
         testLoginFailed: 'Échec de test',
-        signupSuccess: 'Inscription réussie, connexion...'
-      }
+        signupSuccess: 'Inscription réussie, connexion...',
+      },
     },
     prep: {
       notFoundTitle: 'Préparation introuvable',
-      notFoundDescription: "La préparation demandée est introuvable.",
+      notFoundDescription: 'La préparation demandée est introuvable.',
       backHome: "Retour à l'accueil",
       updatedAt: 'Mis à jour {{date}}',
       actions: {
         edit: 'Modifier',
-        startAnalysis: "Lancer l'analyse"
+        startAnalysis: "Lancer l'analyse",
       },
       sections: {
         match: 'Correspondance du poste',
@@ -2405,7 +2393,7 @@ export const translations: Record<SupportedLanguage, any> = {
         resume: 'CV',
         strengths: 'Forces',
         weaknesses: "Axes d'amélioration",
-        suggestions: "Conseils d'entretien"
+        suggestions: "Conseils d'entretien",
       },
       resumeMissing: 'CV non importé',
       resumeAdd: 'Ajouter',
@@ -2426,34 +2414,34 @@ export const translations: Record<SupportedLanguage, any> = {
         fileName: 'Interview_Prep_{{name}}_Report.md',
         exportSuccess: 'Rapport exporté',
         exportFailed: "Échec de l'export du rapport",
-        completeInfo: 'Complétez les informations pour le rapport IA'
+        completeInfo: 'Complétez les informations pour le rapport IA',
       },
       shareTitle: 'Préparation entretien : {{name}}',
       shareText: 'Voir mon analyse : {{name}}',
       shareCopied: 'Lien copié',
-      shareFailed: 'Échec du partage'
+      shareFailed: 'Échec du partage',
     },
     prepList: {
       title: 'Toutes les préparations',
       count: '{{count}} préparations au total',
       empty: 'Aucune préparation',
-      analyzing: 'Analyse'
+      analyzing: 'Analyse',
     },
     prepEditor: {
       titleCreate: 'Créer une préparation',
       titleEdit: 'Modifier la préparation',
-      subtitleCreate: "Préparez votre entretien",
+      subtitleCreate: 'Préparez votre entretien',
       subtitleEdit: 'Mettez à jour votre préparation',
       name: {
         title: 'Nom de préparation',
         description: 'Entreprise - Poste, ex. ByteDance - Vente',
-        placeholder: 'Entreprise - Poste, ex. ByteDance - Vente'
+        placeholder: 'Entreprise - Poste, ex. ByteDance - Vente',
       },
       job: {
         title: 'Description du poste (JD)',
         description: 'Collez la description complète du poste',
         label: 'Description du poste',
-        placeholder: 'Collez la description ici...'
+        placeholder: 'Collez la description ici...',
       },
       resume: {
         title: 'CV (optionnel)',
@@ -2462,10 +2450,10 @@ export const translations: Record<SupportedLanguage, any> = {
           title: 'Cliquer pour téléverser le CV',
           hint: 'Formats .pdf, .doc, .docx, .txt',
           choose: 'Choisir un fichier',
-          uploaded: 'Téléversé : {{name}}'
+          uploaded: 'Téléversé : {{name}}',
         },
         pasteLabel: 'Ou collez le CV',
-        pastePlaceholder: 'Collez le CV ou infos liées...'
+        pastePlaceholder: 'Collez le CV ou infos liées...',
       },
       analysis: {
         title: 'Analyse IA',
@@ -2473,14 +2461,14 @@ export const translations: Record<SupportedLanguage, any> = {
         matchScore: 'Score de correspondance',
         strengths: 'Forces',
         suggestions: "Axes d'amélioration",
-        empty: "Cliquez sur le bouton pour lancer l'analyse"
+        empty: "Cliquez sur le bouton pour lancer l'analyse",
       },
       actions: {
         save: 'Enregistrer',
         saving: 'Enregistrement...',
         analyze: 'Analyser avec IA',
         analyzing: 'Analyse...',
-        reanalyze: "Relancer l'analyse"
+        reanalyze: "Relancer l'analyse",
       },
       toasts: {
         uploadSuccess: 'Fichier téléversé',
@@ -2491,26 +2479,26 @@ export const translations: Record<SupportedLanguage, any> = {
         saveFailed: "Échec de l'enregistrement. Réessayez.",
         analyzeFailed: 'Analyse IA échouée : {{error}}',
         analyzeSuccess: 'Analyse IA terminée',
-        analyzeError: "Erreur pendant l'analyse IA"
+        analyzeError: "Erreur pendant l'analyse IA",
       },
       mockAnalysis: {
         strengths: [
           'Bon alignement avec React et TypeScript',
           "3 ans d'expérience répondent aux exigences",
-          'Expérience mobile et web'
+          'Expérience mobile et web',
         ],
         weaknesses: [
           "Peu d'expérience en architecture à grande échelle",
           'Détails de collaboration insuffisants',
-          "Montrer davantage l'apprentissage de nouvelles technologies"
+          "Montrer davantage l'apprentissage de nouvelles technologies",
         ],
         suggestions: [
           'Préparez des exemples concrets de projets',
           'Mettez en avant la collaboration (reviews, partage)',
           'Montrez la maîtrise des outils frontend',
-          "Apportez des exemples d'optimisation perf/UX"
-        ]
-      }
+          "Apportez des exemples d'optimisation perf/UX",
+        ],
+      },
     },
     errorBoundary: {
       title: 'Une erreur est survenue',
@@ -2523,8 +2511,8 @@ export const translations: Record<SupportedLanguage, any> = {
       labels: {
         error: 'Erreur',
         stack: 'Pile',
-        componentStack: 'Pile du composant'
-      }
+        componentStack: 'Pile du composant',
+      },
     },
     floating: {
       status: {
@@ -2542,7 +2530,7 @@ export const translations: Record<SupportedLanguage, any> = {
         disconnected: 'Déconnecté',
         error: 'Erreur : {{error}}',
         reconnectError: 'Erreur de reconnexion : {{error}}',
-        disconnectError: 'Erreur de déconnexion : {{error}}'
+        disconnectError: 'Erreur de déconnexion : {{error}}',
       },
       labels: {
         liveTranscription: 'Transcription en direct',
@@ -2560,8 +2548,8 @@ export const translations: Record<SupportedLanguage, any> = {
         clearHistory: 'Effacer',
         clearHistoryTitle: "Effacer l'historique",
         opacity: 'Opacité',
-        reconnect: 'Reconnecter'
-      }
+        reconnect: 'Reconnecter',
+      },
     },
     monitoring: {
       title: 'Surveillance système',
@@ -2576,7 +2564,7 @@ export const translations: Record<SupportedLanguage, any> = {
       noErrors: 'Aucune erreur',
       actionsTotal: 'Actions utilisateur (total : {{count}})',
       noActions: 'Aucune action',
-      hint: 'Ctrl+Shift+M pour afficher/masquer le panneau'
+      hint: 'Ctrl+Shift+M pour afficher/masquer le panneau',
     },
     permissionsSetup: {
       title: 'Autorisations Live Interview',
@@ -2585,45 +2573,45 @@ export const translations: Record<SupportedLanguage, any> = {
       screen: {
         title: 'Enregistrement écran',
         description: "Capturer l'audio système",
-        openSettings: 'Ouvrir les réglages système'
+        openSettings: 'Ouvrir les réglages système',
       },
       microphone: {
         title: 'Microphone',
         description: 'Entrée vocale (optionnel)',
         request: "Demander l'autorisation",
-        openSettings: 'Ouvrir les réglages système'
+        openSettings: 'Ouvrir les réglages système',
       },
       apiKey: {
         title: 'Clé API Gemini',
         description: 'Pour les fonctionnalités IA',
-        hint: 'Définissez VITE_GEMINI_API_KEY dans .env.local'
+        hint: 'Définissez VITE_GEMINI_API_KEY dans .env.local',
       },
       audio: {
         title: 'Périphérique audio',
         description: 'Capture audio système',
         test: 'Tester la capture audio',
-        setup: 'Ouvrir les réglages'
+        setup: 'Ouvrir les réglages',
       },
       testFailed: 'Test échoué',
       status: {
         granted: 'Autorisé',
         needsSetup: 'À configurer',
-        denied: 'Refusé'
+        denied: 'Refusé',
       },
       error: {
-        unableCheck: 'Impossible de vérifier les autorisations'
+        unableCheck: 'Impossible de vérifier les autorisations',
       },
       actions: {
         skip: 'Ignorer',
         recheck: 'Revérifier',
         start: 'Démarrer Live Interview',
-        complete: 'Terminer la configuration'
+        complete: 'Terminer la configuration',
       },
       metrics: {
         capturedData: 'Données capturées : {{bytes}} octets',
         silence: 'Silence : {{percent}}%',
-        recommendation: 'Conseil : {{text}}'
-      }
+        recommendation: 'Conseil : {{text}}',
+      },
     },
     permissionsGuide: {
       title: 'Autorisations système',
@@ -2633,7 +2621,7 @@ export const translations: Record<SupportedLanguage, any> = {
       mic: 'Microphone',
       micDesc: 'Entrée vocale',
       later: 'Plus tard',
-      note: 'Reconfigurable en mode collaboration'
+      note: 'Reconfigurable en mode collaboration',
     },
     alerts: {
       deletePreparation: 'Supprimer cette préparation ? Cette action est définitive.',
@@ -2643,7 +2631,7 @@ export const translations: Record<SupportedLanguage, any> = {
       updateRoleFailed: 'Échec de mise à jour du rôle',
       loadUsersFailed: 'Chargement des utilisateurs échoué',
       purchaseFailed: "Échec de l'achat",
-      signOutFailed: 'Déconnexion échouée'
-    }
-  }
+      signOutFailed: 'Déconnexion échouée',
+    },
+  },
 }

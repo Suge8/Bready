@@ -17,10 +17,13 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   useEffect(() => {
     // 根据当前主题设置应用样式
     const updateTheme = (currentTheme: 'light' | 'dark' | 'auto') => {
-      const resolvedTheme = currentTheme === 'auto' 
-        ? window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-        : currentTheme
-      
+      const resolvedTheme =
+        currentTheme === 'auto'
+          ? window.matchMedia('(prefers-color-scheme: dark)').matches
+            ? 'dark'
+            : 'light'
+          : currentTheme
+
       document.documentElement.classList.remove('light', 'dark')
       document.documentElement.classList.add(resolvedTheme)
     }
@@ -42,12 +45,15 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const handleSetTheme = (newTheme: 'light' | 'dark' | 'auto') => {
     setTheme(newTheme)
     localStorage.setItem('bready-theme', newTheme)
-    
+
     // 立即应用主题
-    const currentTheme = newTheme === 'auto' 
-      ? window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-      : newTheme
-    
+    const currentTheme =
+      newTheme === 'auto'
+        ? window.matchMedia('(prefers-color-scheme: dark)').matches
+          ? 'dark'
+          : 'light'
+        : newTheme
+
     document.documentElement.classList.remove('light', 'dark')
     document.documentElement.classList.add(currentTheme)
   }

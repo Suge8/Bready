@@ -3,7 +3,7 @@ import { performance } from 'perf_hooks'
 import { createLogger } from '../utils/logging'
 
 const toErrorMetadata = (error: unknown): Record<string, any> => ({
-  error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error)
+  error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error),
 })
 
 /**
@@ -30,13 +30,13 @@ export class MonitoringSystem extends EventEmitter {
 
     this.isRunning = true
     this.logger.info('🚀 监控系统已启动')
-    
+
     // 记录启动时间
     this.recordMetric('app.startup.time', performance.now())
-    
+
     // 开始定期收集系统指标
     this.startSystemMonitoring()
-    
+
     this.emit('started')
   }
 
@@ -59,12 +59,12 @@ export class MonitoringSystem extends EventEmitter {
       name,
       value,
       unit,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     }
 
     this.metrics.set(name, metric)
     this.emit('metric', metric)
-    
+
     this.logger.debug(`📊 性能指标: ${name} = ${value}${unit}`)
   }
 
@@ -73,20 +73,20 @@ export class MonitoringSystem extends EventEmitter {
    */
   captureError(error: Error | string, context: any = {}): string {
     const errorId = `error_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    
+
     const errorInfo = {
       id: errorId,
       message: typeof error === 'string' ? error : error.message,
       stack: typeof error === 'object' ? error.stack : undefined,
       context,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     }
 
     this.errors.push(errorInfo)
     this.emit('error', errorInfo)
-    
+
     this.logger.error(`🚨 错误记录 [${errorId}]: ${errorInfo.message}`)
-    
+
     return errorId
   }
 
@@ -97,12 +97,12 @@ export class MonitoringSystem extends EventEmitter {
     const actionInfo = {
       action,
       data,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     }
 
     this.userActions.push(actionInfo)
     this.emit('userAction', actionInfo)
-    
+
     this.logger.debug(`👤 用户行为: ${action}`)
   }
 
@@ -119,16 +119,16 @@ export class MonitoringSystem extends EventEmitter {
       isRunning: this.isRunning,
       metrics: {
         total: this.metrics.size,
-        latest: Array.from(this.metrics.values()).slice(-10)
+        latest: Array.from(this.metrics.values()).slice(-10),
       },
       errors: {
         total: this.errors.length,
-        recent: this.errors.slice(-5)
+        recent: this.errors.slice(-5),
       },
       userActions: {
         total: this.userActions.length,
-        recent: this.userActions.slice(-10)
-      }
+        recent: this.userActions.slice(-10),
+      },
     }
   }
 
@@ -166,7 +166,6 @@ export class MonitoringSystem extends EventEmitter {
         const cpuUsage = process.cpuUsage()
         this.recordMetric('process.cpu.user', cpuUsage.user, 'microseconds')
         this.recordMetric('process.cpu.system', cpuUsage.system, 'microseconds')
-
       } catch (error) {
         this.logger.error('收集系统指标失败:', toErrorMetadata(error))
       }

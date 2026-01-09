@@ -1,5 +1,17 @@
 import React, { useState, useEffect } from 'react'
-import { ArrowLeft, Users, Clock, ChevronDown, Check, ChevronLeft, ChevronRight, Search, UserCheck, Timer, TrendingUp } from 'lucide-react'
+import {
+  ArrowLeft,
+  Users,
+  Clock,
+  ChevronDown,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Search,
+  UserCheck,
+  Timer,
+  TrendingUp,
+} from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { userProfileService, type UserProfile, type UserLevel } from '../lib/supabase'
 import UserLevelBadge from './UserLevelBadge'
@@ -23,7 +35,9 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
   const [loading, setLoading] = useState(false)
   const [showRoleDropdown, setShowRoleDropdown] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
-  const isDarkMode = theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+  const isDarkMode =
+    theme === 'dark' ||
+    (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)
 
   // 分页状态
   const [currentPage, setCurrentPage] = useState(1)
@@ -78,24 +92,27 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
       month: '2-digit',
       day: '2-digit',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     })
   }
 
   const formatNumber = (value: number) => value.toLocaleString(locale)
 
-
-
   const userLevels: UserLevel[] = ['小白', '螺丝钉', '大牛', '管理', '超级']
   const canManageUser = (targetUser: UserProfile) => {
     if (profile?.user_level === '超级') return true
-    if (profile?.user_level === '管理' && targetUser.user_level !== '超级' && targetUser.user_level !== '管理') return true
+    if (
+      profile?.user_level === '管理' &&
+      targetUser.user_level !== '超级' &&
+      targetUser.user_level !== '管理'
+    )
+      return true
     return false
   }
 
   const tabs = [
     { id: 'users' as TabType, label: t('admin.tabs.users'), icon: Users },
-    { id: 'usage' as TabType, label: t('admin.tabs.usage'), icon: Clock }
+    { id: 'usage' as TabType, label: t('admin.tabs.usage'), icon: Clock },
   ]
 
   const filteredUsers = users.filter((userItem) => {
@@ -110,8 +127,14 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
     if (!userItem.membership_expires_at) return false
     return new Date(userItem.membership_expires_at) >= new Date()
   }).length
-  const remainingMinutes = users.reduce((sum, userItem) => sum + (userItem.remaining_interview_minutes || 0), 0)
-  const totalPurchasedMinutes = users.reduce((sum, userItem) => sum + (userItem.total_purchased_minutes || 0), 0)
+  const remainingMinutes = users.reduce(
+    (sum, userItem) => sum + (userItem.remaining_interview_minutes || 0),
+    0,
+  )
+  const totalPurchasedMinutes = users.reduce(
+    (sum, userItem) => sum + (userItem.total_purchased_minutes || 0),
+    0,
+  )
   const averageRemaining = totalUsers ? Math.round(remainingMinutes / totalUsers) : 0
   const expiringSoon = users.filter((userItem) => {
     if (!userItem.membership_expires_at) return false
@@ -153,24 +176,29 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
               >
                 <ArrowLeft className="w-4 h-4" />
               </button>
-              <h2 className="text-xl font-semibold text-[var(--bready-text)]">{t('admin.title')}</h2>
+              <h2 className="text-xl font-semibold text-[var(--bready-text)]">
+                {t('admin.title')}
+              </h2>
             </div>
             <div className="flex items-center gap-2 text-xs text-[var(--bready-text-muted)]">
               <Users className="w-4 h-4" />
-              <span>{t('admin.stats.totalUsers')} {formatNumber(totalUsers)}</span>
+              <span>
+                {t('admin.stats.totalUsers')} {formatNumber(totalUsers)}
+              </span>
             </div>
           </div>
           <div className="mt-4 flex items-center gap-2">
-            {tabs.map(tab => {
+            {tabs.map((tab) => {
               const Icon = tab.icon
               return (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all cursor-pointer ${activeTab === tab.id
-                    ? 'bg-[var(--bready-accent)] text-[var(--bready-accent-contrast)]'
-                    : 'text-[var(--bready-text-muted)] hover:text-[var(--bready-text)] hover:bg-black/5 dark:hover:bg-white/10'
-                    }`}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all cursor-pointer ${
+                    activeTab === tab.id
+                      ? 'bg-[var(--bready-accent)] text-[var(--bready-accent-contrast)]'
+                      : 'text-[var(--bready-text-muted)] hover:text-[var(--bready-text)] hover:bg-black/5 dark:hover:bg-white/10'
+                  }`}
                 >
                   <Icon className="w-4 h-4" />
                   <span>{tab.label}</span>
@@ -190,14 +218,18 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
                       <Users className="w-4 h-4" />
                       <span>{t('admin.stats.totalUsers')}</span>
                     </div>
-                    <div className="mt-2 text-xl font-semibold text-[var(--bready-text)]">{formatNumber(totalUsers)}</div>
+                    <div className="mt-2 text-xl font-semibold text-[var(--bready-text)]">
+                      {formatNumber(totalUsers)}
+                    </div>
                   </div>
                   <div className="rounded-xl border border-[var(--bready-border)] bg-[var(--bready-surface-2)] p-3">
                     <div className="flex items-center gap-2 text-xs text-[var(--bready-text-muted)]">
                       <UserCheck className="w-4 h-4" />
                       <span>{t('admin.stats.activeMembers')}</span>
                     </div>
-                    <div className="mt-2 text-xl font-semibold text-[var(--bready-text)]">{formatNumber(activeMembers)}</div>
+                    <div className="mt-2 text-xl font-semibold text-[var(--bready-text)]">
+                      {formatNumber(activeMembers)}
+                    </div>
                   </div>
                   <div className="rounded-xl border border-[var(--bready-border)] bg-[var(--bready-surface-2)] p-3">
                     <div className="flex items-center gap-2 text-xs text-[var(--bready-text-muted)]">
@@ -213,7 +245,9 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
                       <Clock className="w-4 h-4" />
                       <span>{t('admin.stats.expiringSoon')}</span>
                     </div>
-                    <div className="mt-2 text-xl font-semibold text-[var(--bready-text)]">{formatNumber(expiringSoon)}</div>
+                    <div className="mt-2 text-xl font-semibold text-[var(--bready-text)]">
+                      {formatNumber(expiringSoon)}
+                    </div>
                   </div>
                 </div>
 
@@ -236,37 +270,63 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
               <div className="flex-1 overflow-y-auto px-6 pb-4">
                 <div className="space-y-3 admin-data-content">
                   {loading ? (
-                    <div className="text-center py-8 text-[var(--bready-text-muted)]">{t('admin.loading')}</div>
+                    <div className="text-center py-8 text-[var(--bready-text-muted)]">
+                      {t('admin.loading')}
+                    </div>
                   ) : filteredUsers.length === 0 ? (
-                    <div className="text-center py-8 text-[var(--bready-text-muted)]">{t('admin.empty')}</div>
+                    <div className="text-center py-8 text-[var(--bready-text-muted)]">
+                      {t('admin.empty')}
+                    </div>
                   ) : (
-                    currentUsers.map(userItem => (
-                      <div key={userItem.id} className="rounded-xl border border-[var(--bready-border)] bg-[var(--bready-surface)]/80 p-4 transition-all hover:shadow-lg">
+                    currentUsers.map((userItem) => (
+                      <div
+                        key={userItem.id}
+                        className="rounded-xl border border-[var(--bready-border)] bg-[var(--bready-surface)]/80 p-4 transition-all hover:shadow-lg"
+                      >
                         <div className="flex items-start justify-between gap-4">
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2 mb-2">
                               <h3 className="font-medium text-[var(--bready-text)] text-sm truncate">
                                 {userItem.full_name || userItem.username || t('common.none')}
                               </h3>
-                              <UserLevelBadge level={userItem.user_level} size="sm" showIcon={true} isDarkMode={isDarkMode} />
+                              <UserLevelBadge
+                                level={userItem.user_level}
+                                size="sm"
+                                showIcon={true}
+                                isDarkMode={isDarkMode}
+                              />
                               {userItem.id === user?.id && (
                                 <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-100 text-emerald-700 flex-shrink-0">
                                   {t('admin.currentUser')}
                                 </span>
                               )}
                             </div>
-                            <div className="text-xs text-[var(--bready-text-muted)] truncate">{userItem.email}</div>
+                            <div className="text-xs text-[var(--bready-text-muted)] truncate">
+                              {userItem.email}
+                            </div>
                             <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-[var(--bready-text-muted)]">
                               <span>
                                 {t('admin.registered')}: {formatDate(userItem.created_at)}
                               </span>
                               <span>
-                                {t('admin.remaining')}: <span className={userItem.remaining_interview_minutes > 0 ? 'text-emerald-600 font-medium' : 'text-red-500 font-medium'}>
-                                  {t('common.minutes', { count: userItem.remaining_interview_minutes || 0 })}
+                                {t('admin.remaining')}:{' '}
+                                <span
+                                  className={
+                                    userItem.remaining_interview_minutes > 0
+                                      ? 'text-emerald-600 font-medium'
+                                      : 'text-red-500 font-medium'
+                                  }
+                                >
+                                  {t('common.minutes', {
+                                    count: userItem.remaining_interview_minutes || 0,
+                                  })}
                                 </span>
                               </span>
                               <span>
-                                {t('admin.membership')}: {userItem.membership_expires_at ? formatDate(userItem.membership_expires_at) : t('common.none')}
+                                {t('admin.membership')}:{' '}
+                                {userItem.membership_expires_at
+                                  ? formatDate(userItem.membership_expires_at)
+                                  : t('common.none')}
                               </span>
                             </div>
                           </div>
@@ -275,7 +335,11 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
                             <div className="flex items-center space-x-2 ml-3 flex-shrink-0">
                               <div className="relative">
                                 <button
-                                  onClick={() => setShowRoleDropdown(showRoleDropdown === userItem.id ? null : userItem.id)}
+                                  onClick={() =>
+                                    setShowRoleDropdown(
+                                      showRoleDropdown === userItem.id ? null : userItem.id,
+                                    )
+                                  }
                                   className="flex items-center space-x-1 px-3 py-1.5 bg-[var(--bready-surface-2)] border border-[var(--bready-border)] rounded-full text-xs hover:shadow-sm transition-colors cursor-pointer"
                                 >
                                   <span>{t('admin.changeRole')}</span>
@@ -284,8 +348,11 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
 
                                 {showRoleDropdown === userItem.id && (
                                   <div className="absolute top-full right-0 mt-1 bg-[var(--bready-surface)] border border-[var(--bready-border)] rounded-lg shadow-lg z-10 min-w-20">
-                                    {userLevels.map(level => {
-                                      if (profile?.user_level === '管理' && (level === '超级' || level === '管理')) {
+                                    {userLevels.map((level) => {
+                                      if (
+                                        profile?.user_level === '管理' &&
+                                        (level === '超级' || level === '管理')
+                                      ) {
                                         return null
                                       }
 
@@ -293,12 +360,17 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
                                         <button
                                           key={level}
                                           onClick={() => handleUpdateUserLevel(userItem.id, level)}
-                                          className={`w-full text-left px-2 py-1.5 text-xs text-[var(--bready-text)] hover:bg-black/5 dark:hover:bg-white/10 transition-colors first:rounded-t-lg last:rounded-b-lg cursor-pointer ${userItem.user_level === level ? 'bg-black/10 dark:bg-white/15 font-medium' : ''
-                                            }`}
+                                          className={`w-full text-left px-2 py-1.5 text-xs text-[var(--bready-text)] hover:bg-black/5 dark:hover:bg-white/10 transition-colors first:rounded-t-lg last:rounded-b-lg cursor-pointer ${
+                                            userItem.user_level === level
+                                              ? 'bg-black/10 dark:bg-white/15 font-medium'
+                                              : ''
+                                          }`}
                                         >
                                           <div className="flex items-center justify-between">
                                             <span>{level}</span>
-                                            {userItem.user_level === level && <Check className="w-3 h-3" />}
+                                            {userItem.user_level === level && (
+                                              <Check className="w-3 h-3" />
+                                            )}
                                           </div>
                                         </button>
                                       )
@@ -368,13 +440,17 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
                     <Clock className="w-4 h-4" />
                     <span>{t('admin.stats.expiringSoon')}</span>
                   </div>
-                  <div className="mt-3 text-2xl font-semibold text-[var(--bready-text)]">{formatNumber(expiringSoon)}</div>
+                  <div className="mt-3 text-2xl font-semibold text-[var(--bready-text)]">
+                    {formatNumber(expiringSoon)}
+                  </div>
                 </div>
               </div>
 
               <div className="rounded-2xl border border-[var(--bready-border)] bg-[var(--bready-surface)] p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-medium text-[var(--bready-text)]">{t('admin.usageHint')}</h3>
+                  <h3 className="text-sm font-medium text-[var(--bready-text)]">
+                    {t('admin.usageHint')}
+                  </h3>
                 </div>
                 <div className="h-40 rounded-xl bg-[linear-gradient(90deg,rgba(0,0,0,0.05)_0%,rgba(0,0,0,0.02)_50%,rgba(0,0,0,0.05)_100%)] dark:bg-[linear-gradient(90deg,rgba(255,255,255,0.08)_0%,rgba(255,255,255,0.04)_50%,rgba(255,255,255,0.08)_100%)] animate-pulse" />
               </div>

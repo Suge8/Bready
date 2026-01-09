@@ -11,7 +11,9 @@ const FloatingWindow: React.FC = () => {
   const [inputText, setInputText] = useState('')
   const [status, setStatus] = useState(() => t('floating.status.idle'))
   const [isConnected, setIsConnected] = useState(false)
-  const [conversationHistory, setConversationHistory] = useState<Array<{type: 'user' | 'ai', content: string, timestamp: Date}>>([])
+  const [conversationHistory, setConversationHistory] = useState<
+    Array<{ type: 'user' | 'ai'; content: string; timestamp: Date }>
+  >([])
   const responseRef = useRef<HTMLDivElement>(null)
   const transcriptionRef = useRef<HTMLDivElement>(null)
 
@@ -95,7 +97,7 @@ const FloatingWindow: React.FC = () => {
       const removeTranscriptionListener = window.bready.onTranscriptionUpdate((text) => {
         const cleanText = cleanTranscription(text)
         if (cleanText.trim()) {
-          setTranscription(prev => {
+          setTranscription((prev) => {
             const newText = prev + ' ' + cleanText
             // 限制转录文本长度，保留最近的内容
             const words = newText.split(' ')
@@ -106,22 +108,28 @@ const FloatingWindow: React.FC = () => {
           })
 
           // 添加到对话历史
-          setConversationHistory(prev => {
+          setConversationHistory((prev) => {
             const lastEntry = prev[prev.length - 1]
             if (lastEntry && lastEntry.type === 'user') {
               // 更新最后一个用户条目
-              return [...prev.slice(0, -1), {
-                ...lastEntry,
-                content: lastEntry.content + ' ' + cleanText,
-                timestamp: new Date()
-              }]
+              return [
+                ...prev.slice(0, -1),
+                {
+                  ...lastEntry,
+                  content: lastEntry.content + ' ' + cleanText,
+                  timestamp: new Date(),
+                },
+              ]
             } else {
               // 创建新的用户条目
-              return [...prev, {
-                type: 'user' as const,
-                content: cleanText,
-                timestamp: new Date()
-              }]
+              return [
+                ...prev,
+                {
+                  type: 'user' as const,
+                  content: cleanText,
+                  timestamp: new Date(),
+                },
+              ]
             }
           })
         }
@@ -132,11 +140,14 @@ const FloatingWindow: React.FC = () => {
           setAiResponse(response)
 
           // 添加到对话历史
-          setConversationHistory(prev => [...prev, {
-            type: 'ai' as const,
-            content: response,
-            timestamp: new Date()
-          }])
+          setConversationHistory((prev) => [
+            ...prev,
+            {
+              type: 'ai' as const,
+              content: response,
+              timestamp: new Date(),
+            },
+          ])
         }
       })
 
@@ -228,19 +239,21 @@ const FloatingWindow: React.FC = () => {
   }
 
   return (
-    <div 
+    <div
       className="rounded-lg overflow-hidden shadow-vercel-lg border border-vercel-gray-200 flex flex-col"
-      style={{ 
-        opacity, 
+      style={{
+        opacity,
         backgroundColor: `rgba(255, 255, 255, ${opacity})`,
         height: '100vh',
-        width: '100vw'
+        width: '100vw',
       }}
     >
       {/* 顶部控制栏 */}
       <div className="bg-vercel-black text-white p-2 flex items-center justify-between">
         <div className="flex items-center space-x-2">
-          <div className={`w-2 h-2 rounded-full ${isListening ? 'bg-green-500' : 'bg-red-500'}`}></div>
+          <div
+            className={`w-2 h-2 rounded-full ${isListening ? 'bg-green-500' : 'bg-red-500'}`}
+          ></div>
           <span className="text-xs">{status}</span>
         </div>
         <div className="flex items-center space-x-1">
@@ -263,10 +276,7 @@ const FloatingWindow: React.FC = () => {
           <button className="p-1 hover:bg-vercel-gray-800 rounded">
             <Settings className="w-4 h-4" />
           </button>
-          <button
-            onClick={handleClose}
-            className="p-1 hover:bg-vercel-gray-800 rounded"
-          >
+          <button onClick={handleClose} className="p-1 hover:bg-vercel-gray-800 rounded">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -277,28 +287,32 @@ const FloatingWindow: React.FC = () => {
         {/* 实时转录区域 */}
         <div className="bg-vercel-gray-50 p-3 border-b border-vercel-gray-200">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-xs font-medium text-vercel-gray-500">{t('floating.labels.liveTranscription')}</h3>
-            <div className={`w-2 h-2 rounded-full ${isListening ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></div>
+            <h3 className="text-xs font-medium text-vercel-gray-500">
+              {t('floating.labels.liveTranscription')}
+            </h3>
+            <div
+              className={`w-2 h-2 rounded-full ${isListening ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}
+            ></div>
           </div>
           <div
             ref={transcriptionRef}
             className="text-sm text-vercel-gray-700 max-h-20 overflow-y-auto"
           >
-            {transcription || (isListening ? t('floating.labels.listening') : t('floating.labels.waitingAudio'))}
+            {transcription ||
+              (isListening ? t('floating.labels.listening') : t('floating.labels.waitingAudio'))}
           </div>
         </div>
 
         {/* 对话历史和AI回复区域 */}
-        <div
-          ref={responseRef}
-          className="flex-1 p-3 overflow-y-auto bg-white"
-        >
+        <div ref={responseRef} className="flex-1 p-3 overflow-y-auto bg-white">
           {conversationHistory.length === 0 ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center text-vercel-gray-400">
                 {isListening ? (
                   <div>
-                    <div className="loading-dots mb-2">{t('floating.labels.listeningHintTitle')}</div>
+                    <div className="loading-dots mb-2">
+                      {t('floating.labels.listeningHintTitle')}
+                    </div>
                     <p className="text-xs">{t('floating.labels.listeningHint')}</p>
                   </div>
                 ) : (
@@ -313,14 +327,21 @@ const FloatingWindow: React.FC = () => {
             <div className="space-y-3">
               {conversationHistory.map((entry, index) => (
                 <div key={index} className={`${entry.type === 'ai' ? 'ml-0' : 'mr-0'}`}>
-                  <div className={`text-xs text-vercel-gray-500 mb-1 ${entry.type === 'ai' ? 'text-left' : 'text-right'}`}>
-                    {entry.type === 'ai' ? t('floating.labels.aiAssistant') : t('floating.labels.you')} • {entry.timestamp.toLocaleTimeString(locale)}
+                  <div
+                    className={`text-xs text-vercel-gray-500 mb-1 ${entry.type === 'ai' ? 'text-left' : 'text-right'}`}
+                  >
+                    {entry.type === 'ai'
+                      ? t('floating.labels.aiAssistant')
+                      : t('floating.labels.you')}{' '}
+                    • {entry.timestamp.toLocaleTimeString(locale)}
                   </div>
-                  <div className={`p-2 rounded-lg text-sm ${
-                    entry.type === 'ai'
-                      ? 'bg-vercel-gray-100 text-vercel-black'
-                      : 'bg-vercel-blue-50 text-vercel-blue-900 ml-8'
-                  }`}>
+                  <div
+                    className={`p-2 rounded-lg text-sm ${
+                      entry.type === 'ai'
+                        ? 'bg-vercel-gray-100 text-vercel-black'
+                        : 'bg-vercel-blue-50 text-vercel-blue-900 ml-8'
+                    }`}
+                  >
                     {entry.type === 'ai' ? (
                       <div dangerouslySetInnerHTML={{ __html: entry.content }} />
                     ) : (
@@ -346,7 +367,7 @@ const FloatingWindow: React.FC = () => {
         </div>
 
         {/* 输入区域 */}
-        <form 
+        <form
           onSubmit={handleInputSubmit}
           className="border-t border-vercel-gray-200 p-2 flex items-center"
         >
@@ -372,7 +393,9 @@ const FloatingWindow: React.FC = () => {
           <div className="flex items-center space-x-3">
             <div className="flex items-center space-x-1">
               <Volume2 className="w-4 h-4 text-vercel-gray-600" />
-              <span className="text-xs text-vercel-gray-600">{t('floating.labels.systemAudio')}</span>
+              <span className="text-xs text-vercel-gray-600">
+                {t('floating.labels.systemAudio')}
+              </span>
             </div>
 
             {conversationHistory.length > 0 && (

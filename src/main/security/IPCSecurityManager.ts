@@ -3,7 +3,7 @@ import { ipcMain, IpcMainInvokeEvent } from 'electron'
 import { createLogger } from '../utils/logging'
 
 const toErrorMetadata = (error: unknown): Record<string, any> => ({
-  error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error)
+  error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error),
 })
 
 /**
@@ -26,16 +26,16 @@ export class IPCSecurityManager {
   private messageCache: Set<string> = new Set()
   private readonly MESSAGE_TIMEOUT = 30000 // 30秒消息超时
   private readonly MAX_CACHE_SIZE = 1000 // 最大缓存消息数
-  
+
   // 需要安全验证的IPC通道
   private readonly SECURE_CHANNELS = new Set([
     'auth:sign-in',
-    'auth:sign-up', 
+    'auth:sign-up',
     'gemini:connect',
     'gemini:send-message',
     'db:save-preparation',
     'db:update-preparation',
-    'db:delete-preparation'
+    'db:delete-preparation',
   ])
 
   constructor() {
@@ -57,7 +57,7 @@ export class IPCSecurityManager {
   private setupSecureHandlers(): void {
     // 保存原始的handle方法
     const originalHandle = ipcMain.handle.bind(ipcMain)
-    
+
     // 重写handle方法，添加安全验证
     ipcMain.handle = (channel: string, listener: any) => {
       const secureListener = async (event: IpcMainInvokeEvent, ...args: any[]) => {
@@ -79,7 +79,7 @@ export class IPCSecurityManager {
               this.logger.warn(`IPC消息验证失败: ${channel}`)
               throw new Error('IPC消息验证失败')
             }
-            
+
             // 替换为验证后的载荷
             args[0] = validMessage.payload
           }
@@ -89,7 +89,6 @@ export class IPCSecurityManager {
 
           // 调用原始处理器
           return await listener(event, ...args)
-          
         } catch (error) {
           this.logger.error(`安全IPC调用失败 [${channel}]:`, toErrorMetadata(error))
           throw error
@@ -109,21 +108,21 @@ export class IPCSecurityManager {
   createSecureMessage(payload: any): SecureIPCMessage {
     const timestamp = Date.now()
     const nonce = crypto.randomBytes(16).toString('hex')
-    
+
     // 创建消息数据用于签名
-    const messageData = JSON.stringify({ 
-      payload, 
-      timestamp, 
-      nonce 
+    const messageData = JSON.stringify({
+      payload,
+      timestamp,
+      nonce,
     })
-    
+
     const signature = this.signMessage(messageData)
 
     return {
       payload,
       timestamp,
       signature,
-      nonce
+      nonce,
     }
   }
 
@@ -134,12 +133,14 @@ export class IPCSecurityManager {
   private validateSecureMessage(message: SecureIPCMessage): SecureIPCMessage | null {
     try {
       // 检查消息格式
-      if (!message || 
-          typeof message !== 'object' ||
-          !message.signature || 
-          !message.timestamp || 
-          !message.nonce ||
-          message.payload === undefined) {
+      if (
+        !message ||
+        typeof message !== 'object' ||
+        !message.signature ||
+        !message.timestamp ||
+        !message.nonce ||
+        message.payload === undefined
+      ) {
         this.logger.warn('IPC消息格式无效')
         return null
       }
@@ -151,7 +152,8 @@ export class IPCSecurityManager {
         return null
       }
 
-      if (message.timestamp > now + 5000) { // 允许5秒时钟偏差
+      if (message.timestamp > now + 5000) {
+        // 允许5秒时钟偏差
         this.logger.warn('IPC消息时间戳异常')
         return null
       }
@@ -167,9 +169,9 @@ export class IPCSecurityManager {
       const messageData = JSON.stringify({
         payload: message.payload,
         timestamp: message.timestamp,
-        nonce: message.nonce
+        nonce: message.nonce,
       })
-      
+
       if (!this.verifySignature(messageData, message.signature)) {
         this.logger.warn('IPC消息签名验证失败')
         return null
@@ -177,9 +179,8 @@ export class IPCSecurityManager {
 
       // 缓存消息ID防止重放
       this.messageCache.add(messageId)
-      
+
       return message
-      
     } catch (error) {
       this.logger.error('IPC消息验证异常:', toErrorMetadata(error))
       return null
@@ -191,10 +192,7 @@ export class IPCSecurityManager {
    * @param message 消息内容
    */
   private signMessage(message: string): string {
-    return crypto
-      .createHmac('sha256', this.secretKey)
-      .update(message)
-      .digest('hex')
+    return crypto.createHmac('sha256', this.secretKey).update(message).digest('hex')
   }
 
   /**
@@ -205,11 +203,11 @@ export class IPCSecurityManager {
   private verifySignature(message: string, signature: string): boolean {
     try {
       const expectedSignature = this.signMessage(message)
-      
+
       // 使用时间安全的比较方法
       return crypto.timingSafeEqual(
         Buffer.from(signature, 'hex'),
-        Buffer.from(expectedSignature, 'hex')
+        Buffer.from(expectedSignature, 'hex'),
       )
     } catch (error) {
       this.logger.error('签名验证异常:', toErrorMetadata(error))
@@ -224,7 +222,7 @@ export class IPCSecurityManager {
   private validateOrigin(event: IpcMainInvokeEvent): boolean {
     try {
       const sender = event.sender
-      
+
       // 检查发送方是否有效
       if (!sender || sender.isDestroyed()) {
         return false
@@ -238,7 +236,6 @@ export class IPCSecurityManager {
       }
 
       return true
-      
     } catch (error) {
       this.logger.error('验证IPC来源时发生错误:', toErrorMetadata(error))
       return false
@@ -250,9 +247,12 @@ export class IPCSecurityManager {
    */
   private startCacheCleanup(): void {
     // 每5分钟清理一次过期缓存
-    setInterval(() => {
-      this.cleanupMessageCache()
-    }, 5 * 60 * 1000)
+    setInterval(
+      () => {
+        this.cleanupMessageCache()
+      },
+      5 * 60 * 1000,
+    )
   }
 
   /**
@@ -304,7 +304,7 @@ export class IPCSecurityManager {
     return {
       secureChannels: this.SECURE_CHANNELS.size,
       cachedMessages: this.messageCache.size,
-      secretKeyLength: this.secretKey.length
+      secretKeyLength: this.secretKey.length,
     }
   }
 
@@ -314,11 +314,13 @@ export class IPCSecurityManager {
   rotateSecretKey(): void {
     const oldKeyLength = this.secretKey.length
     this.secretKey = this.generateSecretKey()
-    
+
     // 清空消息缓存，因为旧签名将无效
     this.messageCache.clear()
-    
-    this.logger.info(`IPC密钥已轮换（旧密钥长度: ${oldKeyLength}，新密钥长度: ${this.secretKey.length}）`)
+
+    this.logger.info(
+      `IPC密钥已轮换（旧密钥长度: ${oldKeyLength}，新密钥长度: ${this.secretKey.length}）`,
+    )
   }
 
   /**

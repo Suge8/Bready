@@ -5,7 +5,12 @@ import { getSystemPrompt } from './prompts'
 import { buildInterviewAnalysisPrompt } from './analysis-prompts'
 import { log, logRateLimited, logSampled } from './utils/logging'
 import { recordMetric } from './utils/metrics'
-import type { AnalyzePreparationRequest, AnalyzePreparationResponse, ExtractFileContentRequest, ExtractFileContentResponse } from '../shared/ipc'
+import type {
+  AnalyzePreparationRequest,
+  AnalyzePreparationResponse,
+  ExtractFileContentRequest,
+  ExtractFileContentResponse,
+} from '../shared/ipc'
 
 interface ChatMessage {
   role: 'system' | 'user' | 'assistant'
@@ -21,7 +26,8 @@ const DEFAULT_CHAT_ENDPOINT = 'https://ark.cn-beijing.volces.com/api/v3/chat/com
 const DEFAULT_CHAT_MODEL = 'doubao-seed-1-6-flash-250828'
 const DEFAULT_ASR_SAMPLE_RATE = 16000
 const MAX_CHAT_HISTORY = 20
-const TRANSCRIPTION_DEBOUNCE_MS = 800
+const FINAL_DEBOUNCE_MS = 1000 // definite: true 后的防抖，防止豆包语义判停太早
+const SIMILARITY_THRESHOLD = 0.8 // 相似度阈值，超过此值视为重复
 const CHAT_THINKING = { type: 'disabled' }
 
 const debugDoubao = process.env.DEBUG_DOUBAO === '1'
@@ -42,8 +48,8 @@ class DoubaoService {
   private lastFinalTranscriptionAt = 0
   private recentFinalTranscriptions: { text: string; at: number }[] = []
   private suppressCloseEvent = false
-  private pendingAsrReconnect = false  // 标记是否需要在下一个音频包时重连 ASR
-  private audioReceiveCount = 0  // 调试用：记录收到的音频包数量
+  private pendingAsrReconnect = false // 标记是否需要在下一个音频包时重连 ASR
+  private audioReceiveCount = 0 // 调试用：记录收到的音频包数量
   private onMessageToRenderer: (event: string, data?: any) => void
   private asrAppId = ''
   private asrAccessKey = ''
@@ -114,23 +120,23 @@ class DoubaoService {
   private buildFullRequestPayload(): Buffer {
     const payload = {
       user: {
-        uid: this.asrAppId
+        uid: this.asrAppId,
       },
       audio: {
         format: 'pcm',
         rate: this.asrSampleRate,
         bits: 16,
-        channel: 1
+        channel: 1,
       },
       request: {
         model_name: 'bigmodel',
-        enable_punc: true,
-        enable_itn: true,
+        enable_accelerate_text: true,
+        accelerate_score: 8,
         result_type: 'single',
         show_utterances: true,
-        end_window_size: 800,
-        force_to_speech_time: 1000
-      }
+        end_window_size: 1200,
+        force_to_speech_time: 2000,
+      },
     }
 
     const json = JSON.stringify(payload)
@@ -205,7 +211,8 @@ class DoubaoService {
   }
 
   private handleAsrError(errorCode?: number): void {
-    const codeText = typeof errorCode === 'number' ? `豆包语音识别错误码: ${errorCode}` : '豆包语音识别错误'
+    const codeText =
+      typeof errorCode === 'number' ? `豆包语音识别错误码: ${errorCode}` : '豆包语音识别错误'
     this.onMessageToRenderer('session-error', codeText)
     try {
       this.ws?.close()
@@ -228,7 +235,7 @@ class DoubaoService {
           flags: 0x2,
           serialization: 0x0,
           compression: 0x1,
-          payload: emptyPayload
+          payload: emptyPayload,
         })
         this.ws.send(frame)
       } catch {
@@ -284,6 +291,7 @@ class DoubaoService {
     let text = ''
     let isFinal = false
 
+    // 提取文本
     if (typeof result.text === 'string') {
       text = result.text
     } else if (typeof result === 'string') {
@@ -294,16 +302,27 @@ class DoubaoService {
       text = result.map((item: any) => item?.text || item?.transcript || '').join('')
     } else if (Array.isArray(result.utterances)) {
       text = result.utterances.map((item: any) => item?.text || '').join('')
-      if (result.utterances.length > 0 && result.utterances.every((item: any) => item?.definite)) {
-        isFinal = true
-      }
     } else if (Array.isArray(result.segments)) {
       text = result.segments.map((item: any) => item?.text || '').join('')
     } else if (Array.isArray(payload.data)) {
       text = payload.data.map((item: any) => item?.text || '').join('')
     }
 
-    if (result.final === true || result.is_final === true || payload.final === true || payload.is_final === true) {
+    // 单独检查 utterances 里的 definite 字段
+    if (Array.isArray(result.utterances) && result.utterances.length > 0) {
+      // 只要有任意一个 utterance 的 definite 为 true，就认为是最终结果
+      if (result.utterances.some((item: any) => item?.definite === true)) {
+        isFinal = true
+      }
+    }
+
+    // 兜底检查其他 final 字段
+    if (
+      result.final === true ||
+      result.is_final === true ||
+      payload.final === true ||
+      payload.is_final === true
+    ) {
       isFinal = true
     }
 
@@ -350,7 +369,9 @@ class DoubaoService {
 
   private pruneRecentFinals(now: number): void {
     const windowMs = 15000
-    this.recentFinalTranscriptions = this.recentFinalTranscriptions.filter(entry => now - entry.at < windowMs)
+    this.recentFinalTranscriptions = this.recentFinalTranscriptions.filter(
+      (entry) => now - entry.at < windowMs,
+    )
     if (this.recentFinalTranscriptions.length > 5) {
       this.recentFinalTranscriptions = this.recentFinalTranscriptions.slice(-5)
     }
@@ -365,14 +386,71 @@ class DoubaoService {
 
   private mergeTranscription(current: string, incoming: string): string {
     if (!current) return incoming
-    if (incoming.startsWith(current)) return incoming
-    if (current.startsWith(incoming)) return current
+    if (!incoming) return current
+
+    // 完全相同
+    if (current === incoming) return current
+
+    // incoming 包含 current（incoming 是更完整的版本）
     if (incoming.includes(current)) return incoming
+
+    // current 包含 incoming（current 已经更完整）
     if (current.includes(incoming)) return current
-    return `${current}${incoming}`
+
+    // incoming 以 current 开头（incoming 是 current 的扩展）
+    if (incoming.startsWith(current)) return incoming
+
+    // current 以 incoming 开头（current 是 incoming 的扩展，保持 current）
+    if (current.startsWith(incoming)) return current
+
+    // 检查 current 末尾是否与 incoming 开头有重叠
+    // 例如: current="...然后", incoming="然后讲一讲" → 结果应该是 "...然后讲一讲"
+    // 从长到短尝试找重叠
+    const maxOverlap = Math.min(current.length, incoming.length)
+    for (let i = maxOverlap; i >= 1; i--) {
+      const suffix = current.slice(-i)
+      if (incoming.startsWith(suffix)) {
+        // 找到重叠，用 incoming 替换重叠部分
+        return current.slice(0, -i) + incoming
+      }
+    }
+
+    // 没有任何重叠关系，说明是全新的 utterance，追加
+    return current + incoming
   }
 
-  private async finalizeCurrentTranscription(reason: 'debounce' | 'final' | 'silence'): Promise<void> {
+  // 计算两个字符串的相似度（基于最长公共子序列）
+  private calculateSimilarity(a: string, b: string): number {
+    if (!a || !b) return 0
+    if (a === b) return 1
+
+    const shorter = a.length < b.length ? a : b
+    const longer = a.length < b.length ? b : a
+
+    // 如果一个包含另一个，根据长度比例计算相似度
+    if (longer.includes(shorter)) {
+      return shorter.length / longer.length
+    }
+
+    // 简单的字符重叠计算
+    let matches = 0
+    const shorterChars = shorter.split('')
+    const longerChars = longer.split('')
+
+    for (const char of shorterChars) {
+      const idx = longerChars.indexOf(char)
+      if (idx !== -1) {
+        matches++
+        longerChars.splice(idx, 1)
+      }
+    }
+
+    return (matches * 2) / (a.length + b.length)
+  }
+
+  private async finalizeCurrentTranscription(
+    reason: 'debounce' | 'final' | 'silence',
+  ): Promise<void> {
     if (this.isProcessingVoiceInput) {
       return
     }
@@ -388,7 +466,13 @@ class DoubaoService {
     }
 
     const now = Date.now()
-    if (transcribedText === this.lastFinalTranscription && now - this.lastFinalTranscriptionAt < 3000) {
+    // 使用相似度检查去重，避免只差几个字或标点的重复发送
+    if (
+      this.lastFinalTranscription &&
+      now - this.lastFinalTranscriptionAt < 5000 &&
+      this.calculateSimilarity(transcribedText, this.lastFinalTranscription) > SIMILARITY_THRESHOLD
+    ) {
+      log('debug', '⏭️ 跳过重复转录（相似度过高）:', transcribedText.substring(0, 30))
       this.currentTranscription = ''
       return
     }
@@ -401,7 +485,7 @@ class DoubaoService {
 
     // bigmodel_async 模式：不需要发送负包，连接持续使用
     const reasonTag = reason === 'silence' ? '(静音触发)' : reason === 'final' ? '(VAD判停)' : ''
-    log('info', `🎤 语音转录完成${reasonTag}，调用文本模型:`, transcribedText.substring(0, 50))
+    log('info', `🎤 语音转录完成${reasonTag}，调用文本模型:`, transcribedText.substring(0, 100))
     this.onMessageToRenderer('transcription-complete', transcribedText)
 
     try {
@@ -428,21 +512,14 @@ class DoubaoService {
       this.onMessageToRenderer('transcription-update', this.currentTranscription)
     }
 
-    // 如果是确定的分句（definite: true），立即处理
+    // 只有在豆包判停（definite: true）时才启动防抖计时器
     if (isFinal) {
-      if (this.transcriptionDebounceTimer) {
-        clearTimeout(this.transcriptionDebounceTimer)
-        this.transcriptionDebounceTimer = null
-      }
-      void this.finalizeCurrentTranscription('final')
-    } else {
-      // 非确定分句，使用防抖
       if (this.transcriptionDebounceTimer) {
         clearTimeout(this.transcriptionDebounceTimer)
       }
       this.transcriptionDebounceTimer = setTimeout(() => {
-        void this.finalizeCurrentTranscription('debounce')
-      }, TRANSCRIPTION_DEBOUNCE_MS)
+        void this.finalizeCurrentTranscription('final')
+      }, FINAL_DEBOUNCE_MS)
     }
   }
 
@@ -451,7 +528,10 @@ class DoubaoService {
    */
   private async processReceivedTranscription(transcribedText: string): Promise<void> {
     const now = Date.now()
-    if (transcribedText === this.lastFinalTranscription && now - this.lastFinalTranscriptionAt < 3000) {
+    if (
+      transcribedText === this.lastFinalTranscription &&
+      now - this.lastFinalTranscriptionAt < 3000
+    ) {
       this.currentTranscription = ''
       this.isProcessingVoiceInput = false
       return
@@ -504,7 +584,7 @@ class DoubaoService {
         flags: 0x2,
         serialization: 0x0,
         compression: 0x1,
-        payload: emptyPayload
+        payload: emptyPayload,
       })
       this.ws.send(frame)
       log('info', '📤 已发送结束包给豆包 ASR')
@@ -519,7 +599,7 @@ class DoubaoService {
       'X-Api-App-Key': this.asrAppId,
       'X-Api-Access-Key': this.asrAccessKey,
       'X-Api-Resource-Id': this.asrResourceId,
-      'X-Api-Connect-Id': connectId
+      'X-Api-Connect-Id': connectId,
     }
 
     try {
@@ -553,7 +633,7 @@ class DoubaoService {
               flags: 0x0,
               serialization: 0x1,
               compression: 0x1,
-              payload
+              payload,
             })
 
             this.ws?.send(frame)
@@ -621,9 +701,8 @@ class DoubaoService {
           const transcription = this.extractTranscription(parsed.payload)
           if (transcription) {
             this.handleTranscriptionUpdate(transcription.text, transcription.isFinal)
-          } else {
-            log('debug', '⚠️ 无法从二进制响应中提取转录文本')
           }
+          // 空文本是正常的（检测到语音但还没识别出文字），静默忽略
         })
 
         this.ws!.on('error', (event) => {
@@ -657,7 +736,12 @@ class DoubaoService {
     }
   }
 
-  async initializeGeminiSession(apiKey: string, customPrompt = '', profile = 'interview', language = 'cmn-CN'): Promise<boolean> {
+  async initializeGeminiSession(
+    apiKey: string,
+    customPrompt = '',
+    profile = 'interview',
+    language = 'cmn-CN',
+  ): Promise<boolean> {
     if (this.isInitializingSession) {
       return false
     }
@@ -722,7 +806,7 @@ class DoubaoService {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${this.chatApiKey}`
+            Authorization: `Bearer ${this.chatApiKey}`,
           },
           body: JSON.stringify({
             model: this.chatModel,
@@ -730,14 +814,17 @@ class DoubaoService {
             stream: true,
             thinking: CHAT_THINKING,
             temperature: 1.0,
-            max_tokens: 2048
+            max_tokens: 2048,
           }),
-          signal: controller.signal
+          signal: controller.signal,
         })
 
         if (!response.ok) {
           const errorText = await response.text()
-          if (this.textChatHistory.length > 0 && this.textChatHistory[this.textChatHistory.length - 1].role === 'user') {
+          if (
+            this.textChatHistory.length > 0 &&
+            this.textChatHistory[this.textChatHistory.length - 1].role === 'user'
+          ) {
             this.textChatHistory.pop()
           }
           this.onMessageToRenderer('update-status', '正在聆听...')
@@ -817,7 +904,13 @@ class DoubaoService {
 
         this.onMessageToRenderer('ai-response', fullResponseText)
         this.onMessageToRenderer('update-status', '正在聆听...')
-        log('info', '✅ 豆包文本模型流式回答完成，共', chunkCount, '个块，总长度:', fullResponseText.length)
+        log(
+          'info',
+          '✅ 豆包文本模型流式回答完成，共',
+          chunkCount,
+          '个块，总长度:',
+          fullResponseText.length,
+        )
         recordMetric('doubao.text.response.success', { chunks: chunkCount })
       } else {
         this.textChatHistory.pop()
@@ -830,7 +923,10 @@ class DoubaoService {
       log('error', '❌ 豆包文本模型流式生成失败:', errorMessage)
       recordMetric('doubao.text.response.failure', { message: errorMessage })
 
-      if (this.textChatHistory.length > 0 && this.textChatHistory[this.textChatHistory.length - 1].role === 'user') {
+      if (
+        this.textChatHistory.length > 0 &&
+        this.textChatHistory[this.textChatHistory.length - 1].role === 'user'
+      ) {
         this.textChatHistory.pop()
       }
 
@@ -845,12 +941,22 @@ class DoubaoService {
     }
 
     this.disconnectGemini()
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    return await this.initializeGeminiSession('', this.currentCustomPrompt, this.currentProfile, this.currentLanguage)
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+    return await this.initializeGeminiSession(
+      '',
+      this.currentCustomPrompt,
+      this.currentProfile,
+      this.currentLanguage,
+    )
   }
 
   async manualReconnect(): Promise<boolean> {
-    return await this.initializeGeminiSession('', this.currentCustomPrompt, this.currentProfile, this.currentLanguage)
+    return await this.initializeGeminiSession(
+      '',
+      this.currentCustomPrompt,
+      this.currentProfile,
+      this.currentLanguage,
+    )
   }
 
   disconnectGemini(): boolean {
@@ -869,7 +975,7 @@ class DoubaoService {
           flags: 0x2,
           serialization: 0x0,
           compression: 0x1,
-          payload: emptyPayload
+          payload: emptyPayload,
         })
         this.ws.send(frame)
       } catch (error) {
@@ -908,7 +1014,7 @@ class DoubaoService {
       log('debug', `📥 豆包收到音频包 #${this.audioReceiveCount}，状态:`, {
         sessionReady: this.sessionReady,
         isInitializing: this.isInitializingSession,
-        wsState: this.ws?.readyState
+        wsState: this.ws?.readyState,
       })
     }
 
@@ -918,7 +1024,7 @@ class DoubaoService {
         log('debug', '⏸️ 豆包 ASR 未就绪，丢弃音频包:', {
           hasWs: !!this.ws,
           sessionReady: this.sessionReady,
-          wsState: this.ws?.readyState
+          wsState: this.ws?.readyState,
         })
       }
       return
@@ -932,7 +1038,7 @@ class DoubaoService {
         flags: 0x0,
         serialization: 0x0,
         compression: 0x1,
-        payload
+        payload,
       })
 
       this.ws.send(frame)
@@ -943,7 +1049,12 @@ class DoubaoService {
 
   // === 通用方法别名（用于多渠道支持）===
 
-  async initializeSession(apiKey: string, customPrompt = '', profile = 'interview', language = 'cmn-CN'): Promise<boolean> {
+  async initializeSession(
+    apiKey: string,
+    customPrompt = '',
+    profile = 'interview',
+    language = 'cmn-CN',
+  ): Promise<boolean> {
     return this.initializeGeminiSession(apiKey, customPrompt, profile, language)
   }
 
@@ -996,7 +1107,9 @@ class DoubaoService {
     }
   }
 
-  async analyzePreparation(preparationData: AnalyzePreparationRequest): Promise<AnalyzePreparationResponse> {
+  async analyzePreparation(
+    preparationData: AnalyzePreparationRequest,
+  ): Promise<AnalyzePreparationResponse> {
     try {
       if (!this.chatApiKey) {
         return { success: false, error: '豆包文本模型未配置' }
@@ -1007,7 +1120,7 @@ class DoubaoService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${this.chatApiKey}`
+          Authorization: `Bearer ${this.chatApiKey}`,
         },
         body: JSON.stringify({
           model: this.chatModel,
@@ -1015,8 +1128,8 @@ class DoubaoService {
           stream: false,
           thinking: CHAT_THINKING,
           temperature: 1.0,
-          max_tokens: 3000
-        })
+          max_tokens: 3000,
+        }),
       })
 
       if (!response.ok) {
@@ -1039,11 +1152,12 @@ class DoubaoService {
         }
 
         if (!analysis.jobRequirements) {
-          analysis.jobRequirements = analysis.job_requirements
-            || analysis.requirements
-            || analysis.岗位需求
-            || analysis.岗位要求
-            || []
+          analysis.jobRequirements =
+            analysis.job_requirements ||
+            analysis.requirements ||
+            analysis.岗位需求 ||
+            analysis.岗位要求 ||
+            []
         }
         if (!analysis.strengths) {
           analysis.strengths = analysis.核心优势 || []
@@ -1067,7 +1181,9 @@ class DoubaoService {
     }
   }
 
-  async extractFileContent(_fileData: ExtractFileContentRequest): Promise<ExtractFileContentResponse> {
+  async extractFileContent(
+    _fileData: ExtractFileContentRequest,
+  ): Promise<ExtractFileContentResponse> {
     void _fileData
     return { success: false, error: '豆包模式暂不支持文件内容提取，请切换 Gemini' }
   }
@@ -1075,7 +1191,9 @@ class DoubaoService {
 
 let doubaoService: DoubaoService | null = null
 
-export function initializeDoubaoService(onMessageToRenderer: (event: string, data?: any) => void): DoubaoService {
+export function initializeDoubaoService(
+  onMessageToRenderer: (event: string, data?: any) => void,
+): DoubaoService {
   if (!doubaoService) {
     doubaoService = new DoubaoService({ onMessageToRenderer })
   }

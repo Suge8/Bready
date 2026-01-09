@@ -2,11 +2,11 @@
 // 用于在主进程中集成性能监控功能
 
 import { ipcMain } from 'electron'
-import { 
-  performanceMonitor, 
-  audioPerformanceMonitor, 
-  logger, 
-  CrashReporter 
+import {
+  performanceMonitor,
+  audioPerformanceMonitor,
+  logger,
+  CrashReporter,
 } from './PerformanceMonitor'
 
 // 初始化性能监控系统

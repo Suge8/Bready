@@ -8,13 +8,13 @@ export const useKeyboardShortcuts = (onCreatePreparation?: () => void) => {
         e.preventDefault()
         onCreatePreparation?.()
       }
-      
+
       // Ctrl/Cmd + K: 快速搜索
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
         e.preventDefault()
         console.log('Open search panel shortcut pressed')
       }
-      
+
       // ESC: 关闭模态框
       if (e.key === 'Escape') {
         const modals = document.querySelectorAll('.modal-overlay')
@@ -24,7 +24,7 @@ export const useKeyboardShortcuts = (onCreatePreparation?: () => void) => {
         }
       }
     }
-    
+
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [onCreatePreparation])
@@ -35,10 +35,7 @@ interface ShortcutHintProps {
   description: string
 }
 
-export const ShortcutHint: React.FC<ShortcutHintProps> = ({ 
-  shortcut, 
-  description 
-}) => {
+export const ShortcutHint: React.FC<ShortcutHintProps> = ({ shortcut, description }) => {
   return (
     <div className="flex items-center justify-between py-2">
       <span className="text-gray-700 dark:text-gray-300">{description}</span>

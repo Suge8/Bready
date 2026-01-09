@@ -58,12 +58,12 @@ class GlobalErrorHandler {
 
     logger.error('未处理的 Promise 拒绝', {
       reason: errorMessage,
-      errorCount: this.errorCount
+      errorCount: this.errorCount,
     })
 
     recordMetric('error.unhandled_rejection', {
       message: errorMessage,
-      count: this.errorCount
+      count: this.errorCount,
     })
 
     // 尝试恢复
@@ -72,7 +72,7 @@ class GlobalErrorHandler {
       await recoveryManager.handleError({
         type: errorType,
         message: errorMessage,
-        originalError: reason
+        originalError: reason,
       })
     }
 
@@ -80,7 +80,7 @@ class GlobalErrorHandler {
       type: 'UnhandledRejection',
       message: errorMessage,
       stack: reason?.stack,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     })
   }
 
@@ -93,19 +93,19 @@ class GlobalErrorHandler {
     logger.error('未捕获的异常', {
       message: error.message,
       stack: error.stack,
-      errorCount: this.errorCount
+      errorCount: this.errorCount,
     })
 
     recordMetric('error.uncaught_exception', {
       message: error.message,
-      count: this.errorCount
+      count: this.errorCount,
     })
 
     this.recordCriticalError({
       type: 'UncaughtException',
       message: error.message,
       stack: error.stack,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     })
 
     // 严重错误可能导致应用不稳定
@@ -121,19 +121,19 @@ class GlobalErrorHandler {
   private handleRenderProcessGone(details: any): void {
     logger.error('渲染进程崩溃', {
       reason: details.reason,
-      exitCode: details.exitCode
+      exitCode: details.exitCode,
     })
 
     recordMetric('error.render_process_gone', {
       reason: details.reason,
-      exitCode: details.exitCode
+      exitCode: details.exitCode,
     })
 
     this.recordCriticalError({
       type: 'RenderProcessGone',
       message: `渲染进程崩溃: ${details.reason}`,
       timestamp: Date.now(),
-      context: details
+      context: details,
     })
   }
 
@@ -142,14 +142,14 @@ class GlobalErrorHandler {
    */
   private isCritical(error: Error): boolean {
     const criticalPatterns = [
-      'ENOSPC',           // 磁盘空间不足
-      'ENOMEM',           // 内存不足
-      'FATAL',            // 致命错误
-      'Segmentation fault' // 段错误
+      'ENOSPC', // 磁盘空间不足
+      'ENOMEM', // 内存不足
+      'FATAL', // 致命错误
+      'Segmentation fault', // 段错误
     ]
 
-    return criticalPatterns.some(pattern =>
-      error.message.includes(pattern) || error.stack?.includes(pattern)
+    return criticalPatterns.some(
+      (pattern) => error.message.includes(pattern) || error.stack?.includes(pattern),
     )
   }
 
@@ -172,7 +172,7 @@ class GlobalErrorHandler {
     return {
       totalErrors: this.errorCount,
       criticalErrors: this.criticalErrors.length,
-      recentCritical: this.criticalErrors.slice(-5)
+      recentCritical: this.criticalErrors.slice(-5),
     }
   }
 

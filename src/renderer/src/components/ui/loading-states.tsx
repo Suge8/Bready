@@ -68,7 +68,7 @@ interface FriendlyErrorPageProps {
 export const FriendlyErrorPage: React.FC<FriendlyErrorPageProps> = ({
   error,
   onRetry,
-  onGoBack
+  onGoBack,
 }) => {
   return (
     <div className="h-screen w-screen overflow-hidden bg-[var(--bready-bg)] flex flex-col">
@@ -125,7 +125,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   title,
   description,
   action,
-  icon = <FolderOpen className="w-8 h-8 text-gray-400" />
+  icon = <FolderOpen className="w-8 h-8 text-gray-400" />,
 }) => {
   return (
     <div className="text-center py-12">
@@ -133,13 +133,9 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         {icon}
       </div>
 
-      <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">
-        {title}
-      </h3>
+      <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">{title}</h3>
 
-      <p className="text-gray-500 dark:text-gray-400 mb-6">
-        {description}
-      </p>
+      <p className="text-gray-500 dark:text-gray-400 mb-6">{description}</p>
 
       {action && (
         <button

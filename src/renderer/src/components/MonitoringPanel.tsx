@@ -76,10 +76,7 @@ export const MonitoringPanel: React.FC = () => {
       <div className="bg-[var(--bready-surface)] border border-[var(--bready-border)] rounded-lg p-6 max-w-4xl w-full max-h-[80vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-[var(--bready-text)]">{t('monitoring.title')}</h2>
-          <Button
-            variant="outline"
-            onClick={() => setIsVisible(false)}
-          >
+          <Button variant="outline" onClick={() => setIsVisible(false)}>
             {t('monitoring.close')}
           </Button>
         </div>
@@ -95,19 +92,27 @@ export const MonitoringPanel: React.FC = () => {
             <Card className="p-4">
               <h3 className="text-lg font-semibold mb-4">{t('monitoring.systemStatus')}</h3>
               <div className="flex items-center space-x-4">
-                <div className={`w-3 h-3 rounded-full ${data.isRunning ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                <div
+                  className={`w-3 h-3 rounded-full ${data.isRunning ? 'bg-green-500' : 'bg-red-500'}`}
+                ></div>
                 <span className="text-sm">
-                  {t('monitoring.monitoringSystem')}: {data.isRunning ? t('monitoring.running') : t('monitoring.stopped')}
+                  {t('monitoring.monitoringSystem')}:{' '}
+                  {data.isRunning ? t('monitoring.running') : t('monitoring.stopped')}
                 </span>
               </div>
             </Card>
 
             {/* 性能指标 */}
             <Card className="p-4">
-              <h3 className="text-lg font-semibold mb-4">{t('monitoring.metricsTotal', { count: data.metrics.total })}</h3>
+              <h3 className="text-lg font-semibold mb-4">
+                {t('monitoring.metricsTotal', { count: data.metrics.total })}
+              </h3>
               <div className="space-y-2">
                 {data.metrics.latest.map((metric, index) => (
-                  <div key={index} className="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700">
+                  <div
+                    key={index}
+                    className="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700"
+                  >
                     <span className="text-sm font-medium">{metric.name}</span>
                     <span className="text-sm">
                       {typeof metric.value === 'number' ? metric.value.toFixed(2) : metric.value}
@@ -120,13 +125,20 @@ export const MonitoringPanel: React.FC = () => {
 
             {/* 错误统计 */}
             <Card className="p-4">
-              <h3 className="text-lg font-semibold mb-4">{t('monitoring.errorsTotal', { count: data.errors.total })}</h3>
+              <h3 className="text-lg font-semibold mb-4">
+                {t('monitoring.errorsTotal', { count: data.errors.total })}
+              </h3>
               {data.errors.recent.length === 0 ? (
-                <p className="text-sm text-[var(--bready-text-muted)]">{t('monitoring.noErrors')}</p>
+                <p className="text-sm text-[var(--bready-text-muted)]">
+                  {t('monitoring.noErrors')}
+                </p>
               ) : (
                 <div className="space-y-2">
                   {data.errors.recent.map((error, index) => (
-                    <div key={index} className="p-3 bg-red-50 dark:bg-red-900/20 rounded border-l-4 border-red-500">
+                    <div
+                      key={index}
+                      className="p-3 bg-red-50 dark:bg-red-900/20 rounded border-l-4 border-red-500"
+                    >
                       <div className="text-sm font-medium text-red-800 dark:text-red-200">
                         {error.message}
                       </div>
@@ -141,13 +153,20 @@ export const MonitoringPanel: React.FC = () => {
 
             {/* 用户行为 */}
             <Card className="p-4">
-              <h3 className="text-lg font-semibold mb-4">{t('monitoring.actionsTotal', { count: data.userActions.total })}</h3>
+              <h3 className="text-lg font-semibold mb-4">
+                {t('monitoring.actionsTotal', { count: data.userActions.total })}
+              </h3>
               {data.userActions.recent.length === 0 ? (
-                <p className="text-sm text-[var(--bready-text-muted)]">{t('monitoring.noActions')}</p>
+                <p className="text-sm text-[var(--bready-text-muted)]">
+                  {t('monitoring.noActions')}
+                </p>
               ) : (
                 <div className="space-y-2">
                   {data.userActions.recent.map((action, index) => (
-                    <div key={index} className="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700">
+                    <div
+                      key={index}
+                      className="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700"
+                    >
                       <span className="text-sm">{action.action}</span>
                       <span className="text-xs text-gray-500">
                         {new Date(action.timestamp).toLocaleString(locale)}

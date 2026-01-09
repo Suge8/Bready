@@ -142,7 +142,7 @@ export function setupAuthHandlers() {
       phoneCodeStore.set(key, {
         code,
         expiresAt: now + PHONE_CODE_TTL_MS,
-        lastSentAt: now
+        lastSentAt: now,
       })
 
       if (process.env.DEBUG_AUTH === '1') {
@@ -191,7 +191,9 @@ export function setupAuthHandlers() {
     void event
     try {
       const user = await getUserFromToken(token)
-      const trimmedEmail = String(email || '').trim().toLowerCase()
+      const trimmedEmail = String(email || '')
+        .trim()
+        .toLowerCase()
       if (!isValidEmail(trimmedEmail)) {
         return { success: false, error: '邮箱格式不正确' }
       }
@@ -212,7 +214,7 @@ export function setupUserHandlers() {
     try {
       const result = await query(
         'SELECT id, username, email, full_name, avatar_url, role, user_level, membership_expires_at, remaining_interview_minutes, total_purchased_minutes, discount_rate, created_at, updated_at FROM user_profiles WHERE id = $1',
-        [userId]
+        [userId],
       )
       return result.rows[0] || null
     } catch (error: any) {
@@ -226,10 +228,10 @@ export function setupUserHandlers() {
     try {
       const { id, ...updateData } = profile
       const { setClause, values } = buildUpdateSetClause(updateData, 2, ['updated_at = NOW()'])
-      const result = await query(`UPDATE user_profiles SET ${setClause} WHERE id = $1 RETURNING *`, [
-        id,
-        ...values,
-      ])
+      const result = await query(
+        `UPDATE user_profiles SET ${setClause} WHERE id = $1 RETURNING *`,
+        [id, ...values],
+      )
       return result.rows[0]
     } catch (error: any) {
       throw new Error(error.message)
@@ -241,7 +243,7 @@ export function setupUserHandlers() {
     void event
     try {
       const result = await query(
-        'SELECT id, username, email, full_name, avatar_url, role, user_level, membership_expires_at, remaining_interview_minutes, total_purchased_minutes, discount_rate, created_at, updated_at FROM user_profiles ORDER BY created_at DESC'
+        'SELECT id, username, email, full_name, avatar_url, role, user_level, membership_expires_at, remaining_interview_minutes, total_purchased_minutes, discount_rate, created_at, updated_at FROM user_profiles ORDER BY created_at DESC',
       )
       return result.rows
     } catch (error: any) {
@@ -255,7 +257,7 @@ export function setupUserHandlers() {
     try {
       const result = await query(
         'UPDATE user_profiles SET user_level = $2, updated_at = NOW() WHERE id = $1 RETURNING *',
-        [userId, userLevel]
+        [userId, userLevel],
       )
       return result.rows[0]
     } catch (error: any) {
@@ -269,7 +271,7 @@ export function setupUserHandlers() {
     try {
       const result = await query(
         'UPDATE user_profiles SET role = $2, updated_at = NOW() WHERE id = $1 RETURNING *',
-        [userId, role]
+        [userId, role],
       )
       return result.rows[0]
     } catch (error: any) {
@@ -285,7 +287,7 @@ export function setupMembershipHandlers() {
     void event
     try {
       const result = await query(
-        'SELECT * FROM membership_packages WHERE is_active = true ORDER BY price ASC'
+        'SELECT * FROM membership_packages WHERE is_active = true ORDER BY price ASC',
       )
       return result.rows
     } catch (error: any) {
@@ -300,35 +302,35 @@ export function setupMembershipHandlers() {
       // 获取套餐信息
       const packageResult = await query(
         'SELECT * FROM membership_packages WHERE id = $1 AND is_active = true',
-        [packageId]
+        [packageId],
       )
-      
+
       if (packageResult.rows.length === 0) {
         throw new Error('套餐不存在')
       }
-      
+
       const packageData = packageResult.rows[0]
 
       // 获取当前用户数据
       const userResult = await query(
         'SELECT user_level, remaining_interview_minutes, total_purchased_minutes FROM user_profiles WHERE id = $1',
-        [userId]
+        [userId],
       )
-      
+
       if (userResult.rows.length === 0) {
         throw new Error('用户不存在')
       }
-      
+
       const currentUser = userResult.rows[0]
 
       // 计算价格（简化版本）
-      let discountRate = 1.00
+      let discountRate = 1.0
       if (userLevel === '螺丝钉') {
-        discountRate = 0.90
+        discountRate = 0.9
       } else if (userLevel === '大牛') {
-        discountRate = 0.80
+        discountRate = 0.8
       }
-      
+
       const actualPrice = Math.round(packageData.price * discountRate * 100) / 100
 
       // 计算到期时间
@@ -339,7 +341,15 @@ export function setupMembershipHandlers() {
       const purchaseResult = await query(
         `INSERT INTO purchase_records (user_id, package_id, original_price, actual_price, discount_rate, interview_minutes, expires_at, status) 
          VALUES ($1, $2, $3, $4, $5, $6, $7, 'completed') RETURNING *`,
-        [userId, packageId, packageData.price, actualPrice, discountRate, packageData.interview_minutes, expiresAt.toISOString()]
+        [
+          userId,
+          packageId,
+          packageData.price,
+          actualPrice,
+          discountRate,
+          packageData.interview_minutes,
+          expiresAt.toISOString(),
+        ],
       )
 
       // 更新用户配置
@@ -353,8 +363,8 @@ export function setupMembershipHandlers() {
         [
           expiresAt.toISOString(),
           (currentUser.remaining_interview_minutes || 0) + packageData.interview_minutes,
-          (currentUser.total_purchased_minutes || 0) + packageData.interview_minutes
-        ]
+          (currentUser.total_purchased_minutes || 0) + packageData.interview_minutes,
+        ],
       )
 
       return purchaseResult.rows[0]
@@ -378,7 +388,7 @@ export function setupMembershipHandlers() {
            JOIN membership_packages mp ON pr.package_id = mp.id 
            WHERE pr.user_id = $1 
            ORDER BY pr.created_at DESC`,
-          [userId]
+          [userId],
         )
         return result.rows
       }
@@ -390,12 +400,12 @@ export function setupMembershipHandlers() {
          WHERE pr.user_id = $1 
          ORDER BY pr.created_at DESC 
          LIMIT $2 OFFSET $3`,
-        [userId, safeLimit + 1, safeOffset]
+        [userId, safeLimit + 1, safeOffset],
       )
       const rows = result.rows
       return {
         records: rows.slice(0, safeLimit),
-        hasMore: rows.length > safeLimit
+        hasMore: rows.length > safeLimit,
       }
     } catch (error: any) {
       throw new Error(error.message)
@@ -412,7 +422,7 @@ export function setupUsageHandlers() {
       const result = await query(
         `INSERT INTO interview_usage_records (user_id, preparation_id, session_type, minutes_used, started_at) 
          VALUES ($1, $2, $3, 0, NOW()) RETURNING *`,
-        [userId, preparationId || null, sessionType]
+        [userId, preparationId || null, sessionType],
       )
       return result.rows[0]
     } catch (error: any) {
@@ -427,19 +437,19 @@ export function setupUsageHandlers() {
       // 更新会话记录
       const sessionResult = await query(
         'UPDATE interview_usage_records SET minutes_used = $2, ended_at = NOW() WHERE id = $1 RETURNING *',
-        [sessionId, minutesUsed]
+        [sessionId, minutesUsed],
       )
-      
+
       if (sessionResult.rows.length === 0) {
         throw new Error('会话不存在')
       }
-      
+
       const session = sessionResult.rows[0]
 
       // 扣除用户剩余时间
       await query(
         'UPDATE user_profiles SET remaining_interview_minutes = GREATEST(remaining_interview_minutes - $2, 0), updated_at = NOW() WHERE id = $1',
-        [session.user_id, minutesUsed]
+        [session.user_id, minutesUsed],
       )
 
       return session
@@ -463,7 +473,7 @@ export function setupUsageHandlers() {
            LEFT JOIN preparations p ON iur.preparation_id = p.id 
            WHERE iur.user_id = $1 
            ORDER BY iur.created_at DESC`,
-          [userId]
+          [userId],
         )
         return result.rows
       }
@@ -475,12 +485,12 @@ export function setupUsageHandlers() {
          WHERE iur.user_id = $1 
          ORDER BY iur.created_at DESC 
          LIMIT $2 OFFSET $3`,
-        [userId, safeLimit + 1, safeOffset]
+        [userId, safeLimit + 1, safeOffset],
       )
       const rows = result.rows
       return {
         records: rows.slice(0, safeLimit),
-        hasMore: rows.length > safeLimit
+        hasMore: rows.length > safeLimit,
       }
     } catch (error: any) {
       throw new Error(error.message)
@@ -496,12 +506,12 @@ export function setupPreparationHandlers() {
     try {
       let queryText = 'SELECT * FROM preparations ORDER BY updated_at DESC'
       let params: any[] = []
-      
+
       if (userId) {
         queryText = 'SELECT * FROM preparations WHERE user_id = $1 ORDER BY updated_at DESC'
         params = [userId]
       }
-      
+
       const result = await query(queryText, params)
       return result.rows
     } catch (error: any) {
@@ -533,8 +543,8 @@ export function setupPreparationHandlers() {
           preparation.job_description,
           preparation.resume || null,
           preparation.analysis || null,
-          preparation.is_analyzing || false
-        ]
+          preparation.is_analyzing || false,
+        ],
       )
       return result.rows[0]
     } catch (error: any) {

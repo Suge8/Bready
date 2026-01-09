@@ -1,14 +1,14 @@
-import React, { useEffect, useRef, useState } from "react"
-import { Mic } from "lucide-react"
-import ReactMarkdown from "react-markdown"
-import remarkGfm from "remark-gfm"
-import rehypeHighlight from "rehype-highlight"
+import React, { useEffect, useRef, useState } from 'react'
+import { Mic } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import rehypeHighlight from 'rehype-highlight'
 
 interface ConversationEntry {
-  type: "user" | "ai"
+  type: 'user' | 'ai'
   content: string
   timestamp: Date
-  source: "voice" | "text"
+  source: 'voice' | 'text'
 }
 
 interface CollaborationSidebarProps {
@@ -36,7 +36,7 @@ const CollaborationSidebar: React.FC<CollaborationSidebarProps> = ({
     <div className="w-1/4 min-w-[200px] max-w-[320px] flex-shrink-0 flex flex-col bg-[var(--bready-surface)] rounded-xl border border-[var(--bready-border)]">
       <div className="px-3 py-2.5 border-b border-[var(--bready-border)] flex items-center justify-between">
         <h3 className="text-xs font-medium text-[var(--bready-text-muted)] tracking-wide">
-          {t("collaboration.sidebar.title")}
+          {t('collaboration.sidebar.title')}
         </h3>
         <span className="text-[10px] text-[var(--bready-text-muted)] tabular-nums">
           {conversationHistory.length}
@@ -47,7 +47,7 @@ const CollaborationSidebar: React.FC<CollaborationSidebarProps> = ({
         {conversationHistory.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-[var(--bready-text-muted)] text-xs">
             <span className="text-lg mb-1">💬</span>
-            <p>{t("collaboration.sidebar.empty")}</p>
+            <p>{t('collaboration.sidebar.empty')}</p>
           </div>
         ) : (
           conversationHistory.map((entry, index) => {
@@ -57,9 +57,9 @@ const CollaborationSidebar: React.FC<CollaborationSidebarProps> = ({
               <div
                 key={index}
                 className={`relative p-3 rounded-lg transition-all duration-150 cursor-pointer hover:bg-[var(--bready-surface-3)] active:scale-[0.98] ${
-                  entry.type === "user"
-                    ? "bg-[var(--bready-surface-2)]"
-                    : "bg-[var(--bready-surface-3)]"
+                  entry.type === 'user'
+                    ? 'bg-[var(--bready-surface-2)]'
+                    : 'bg-[var(--bready-surface-3)]'
                 }`}
                 onClick={() => copyToClipboard(entry.content)}
                 onMouseEnter={() => {
@@ -87,13 +87,13 @@ const CollaborationSidebar: React.FC<CollaborationSidebarProps> = ({
                   <div className="flex flex-col items-center flex-shrink-0">
                     <div
                       className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                        entry.type === "user"
-                          ? "bg-[var(--bready-accent)] text-[var(--bready-accent-contrast)]"
-                          : "bg-[var(--bready-surface-3)] text-[var(--bready-text)]"
+                        entry.type === 'user'
+                          ? 'bg-[var(--bready-accent)] text-[var(--bready-accent-contrast)]'
+                          : 'bg-[var(--bready-surface-3)] text-[var(--bready-text)]'
                       }`}
                     >
-                      {entry.type === "user" ? (
-                        entry.source === "voice" ? (
+                      {entry.type === 'user' ? (
+                        entry.source === 'voice' ? (
                           <Mic className="w-3 h-3" />
                         ) : (
                           <span className="text-[9px]">⌨</span>
@@ -104,16 +104,14 @@ const CollaborationSidebar: React.FC<CollaborationSidebarProps> = ({
                     </div>
                     <span className="text-[9px] text-[var(--bready-text-muted)] mt-1 tabular-nums">
                       {entry.timestamp.toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
+                        hour: '2-digit',
+                        minute: '2-digit',
                       })}
                     </span>
                   </div>
                   <div className="flex-1 min-w-0 text-xs text-[var(--bready-text)] leading-relaxed line-clamp-3 prose prose-sm max-w-none prose-p:m-0 prose-p:text-[var(--bready-text)] dark:prose-invert">
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {isTruncated
-                        ? entry.content.substring(0, 150) + "..."
-                        : entry.content}
+                      {isTruncated ? entry.content.substring(0, 150) + '...' : entry.content}
                     </ReactMarkdown>
                   </div>
                 </div>
@@ -139,13 +137,13 @@ const CollaborationSidebar: React.FC<CollaborationSidebarProps> = ({
                       <div className="flex items-center gap-2 mb-3 pb-2 border-b border-[var(--bready-border)]">
                         <div
                           className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${
-                            entry.type === "user"
-                              ? "bg-[var(--bready-accent)] text-[var(--bready-accent-contrast)]"
-                              : "bg-[var(--bready-surface-3)] text-[var(--bready-text)]"
+                            entry.type === 'user'
+                              ? 'bg-[var(--bready-accent)] text-[var(--bready-accent-contrast)]'
+                              : 'bg-[var(--bready-surface-3)] text-[var(--bready-text)]'
                           }`}
                         >
-                          {entry.type === "user" ? (
-                            entry.source === "voice" ? (
+                          {entry.type === 'user' ? (
+                            entry.source === 'voice' ? (
                               <Mic className="w-2.5 h-2.5" />
                             ) : (
                               <span className="text-[8px]">⌨</span>
@@ -156,13 +154,13 @@ const CollaborationSidebar: React.FC<CollaborationSidebarProps> = ({
                         </div>
                         <span className="text-[10px] text-[var(--bready-text-muted)] flex-shrink-0">
                           {entry.timestamp.toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            second: "2-digit",
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit',
                           })}
                         </span>
                         <span className="text-[10px] text-[var(--bready-text-muted)] ml-auto">
-                          {t("collaboration.actions.copy")}
+                          {t('collaboration.actions.copy')}
                         </span>
                       </div>
                       <div className="prose prose-sm max-w-none text-[var(--bready-text)] prose-p:text-[var(--bready-text)] prose-headings:text-[var(--bready-text)] dark:prose-invert text-sm leading-relaxed">

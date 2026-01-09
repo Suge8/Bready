@@ -20,5 +20,3 @@ describe.skip('DataEncryptionManager', () => {
     expect(dec).toEqual(obj)
   })
 })
-
-

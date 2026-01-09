@@ -20,5 +20,3 @@ describe.skip('membershipService.calculatePrice', () => {
     expect(discountRate).toBe(0.8)
   })
 })
-
-

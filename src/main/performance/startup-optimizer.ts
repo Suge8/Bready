@@ -38,7 +38,7 @@ export class StartupOptimizer {
     try {
       // 动态导入数据库模块，减少初始加载时间
       const { initializeDatabase, testConnection } = await import('../database')
-      
+
       // 先测试连接，如果失败则跳过初始化
       const isConnected = await testConnection()
       if (isConnected) {
@@ -70,10 +70,10 @@ export class StartupOptimizer {
         () => import('../prompts'),
         () => import('./PerformanceMonitor'),
         () => import('../utils/metrics'),
-        () => import('../utils/cleanup')
+        () => import('../utils/cleanup'),
       ]
 
-      await Promise.allSettled(modules.map(loader => loader()))
+      await Promise.allSettled(modules.map((loader) => loader()))
       if (debugStartup) {
         console.log('✅ 非关键模块延迟加载完成')
       }
@@ -94,9 +94,7 @@ export class StartupOptimizer {
         ]
 
         await Promise.allSettled(
-          domains.map(domain =>
-            fetch(`https://${domain}`, { method: 'HEAD' }).catch(() => {})
-          )
+          domains.map((domain) => fetch(`https://${domain}`, { method: 'HEAD' }).catch(() => {})),
         )
 
         if (debugStartup) {

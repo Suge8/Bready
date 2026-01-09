@@ -12,14 +12,14 @@ interface SmartFormValidationProps {
   maxLength?: number
 }
 
-export const SmartFormValidation: React.FC<SmartFormValidationProps> = ({ 
-  value, 
-  onChange, 
-  name, 
-  label, 
+export const SmartFormValidation: React.FC<SmartFormValidationProps> = ({
+  value,
+  onChange,
+  name,
+  label,
   placeholder = '',
   required = false,
-  maxLength = 50
+  maxLength = 50,
 }) => {
   const { t } = useI18n()
   const [error, setError] = useState<string | null>(null)
@@ -43,7 +43,11 @@ export const SmartFormValidation: React.FC<SmartFormValidationProps> = ({
     }
 
     setError(null)
-    setHelperText(value.length > 0 ? t('form.validation.counter', { count: value.length, max: maxLength }) : placeholder)
+    setHelperText(
+      value.length > 0
+        ? t('form.validation.counter', { count: value.length, max: maxLength })
+        : placeholder,
+    )
   }
 
   return (
@@ -52,7 +56,7 @@ export const SmartFormValidation: React.FC<SmartFormValidationProps> = ({
         {label}
         {required && <span className="text-red-500">*</span>}
       </label>
-      
+
       <input
         type="text"
         name={name}
@@ -61,15 +65,16 @@ export const SmartFormValidation: React.FC<SmartFormValidationProps> = ({
         className={`
           w-full px-3 py-2 border rounded-lg
           focus:outline-none focus:ring-2 focus:ring-black/10
-          ${error 
-            ? 'border-red-500 focus:border-red-500' 
-            : 'border-gray-300 dark:border-gray-600 focus:border-gray-400'
+          ${
+            error
+              ? 'border-red-500 focus:border-red-500'
+              : 'border-gray-300 dark:border-gray-600 focus:border-gray-400'
           }
           bg-white dark:bg-gray-800 text-black dark:text-white
         `}
         placeholder={placeholder}
       />
-      
+
       <div className={`mt-1 text-xs ${error ? 'text-red-500' : 'text-gray-500'}`}>
         {error || helperText}
       </div>
@@ -82,10 +87,7 @@ interface AutoSaveFormProps {
   children: React.ReactNode
 }
 
-export const AutoSaveForm: React.FC<AutoSaveFormProps> = ({ 
-  formData,
-  children 
-}) => {
+export const AutoSaveForm: React.FC<AutoSaveFormProps> = ({ formData, children }) => {
   const { t, locale } = useI18n()
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
   const [isSaving, setIsSaving] = useState(false)
@@ -105,14 +107,14 @@ export const AutoSaveForm: React.FC<AutoSaveFormProps> = ({
   return (
     <div>
       {children}
-      
+
       <div className="mt-4 text-xs text-gray-500 dark:text-gray-400 flex items-center">
         {isSaving ? (
           <>
             <motion.div
               className="w-3 h-3 border-2 border-[var(--bready-accent)] border-t-transparent rounded-full mr-2"
               animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
             />
             {t('form.autosave.saving')}
           </>

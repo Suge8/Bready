@@ -5,7 +5,7 @@ import * as fs from 'fs/promises'
 import { createLogger } from '../utils/logging'
 
 const toErrorMetadata = (error: unknown): Record<string, any> => ({
-  error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error)
+  error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error),
 })
 
 /**
@@ -39,18 +39,17 @@ export class SecureKeyManager {
       // 使用系统安全存储加密密钥
       const encryptedKey = safeStorage.encryptString(apiKey)
       const keyPath = await this.getSecureKeyPath(keyName)
-      
+
       // 写入加密文件
       await this.writeSecureFile(keyPath, encryptedKey)
-      
+
       // 更新内存缓存
       this.keyCache.set(keyName, {
         value: apiKey,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       })
-      
+
       this.logger.info(`API密钥 ${keyName} 已安全存储`)
-      
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       this.logger.error(`存储API密钥失败 [${keyName}]:`, toErrorMetadata(error))
@@ -67,14 +66,14 @@ export class SecureKeyManager {
     try {
       // 检查缓存是否有效
       const cached = this.keyCache.get(keyName)
-      if (cached && (Date.now() - cached.timestamp) < this.CACHE_TTL) {
+      if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
         return cached.value
       }
 
       // 从安全存储读取
       const keyPath = await this.getSecureKeyPath(keyName)
       const encryptedKey = await this.readSecureFile(keyPath)
-      
+
       if (!encryptedKey) {
         this.logger.warn(`API密钥不存在: ${keyName}`)
         return null
@@ -82,15 +81,14 @@ export class SecureKeyManager {
 
       // 解密密钥
       const decryptedKey = safeStorage.decryptString(encryptedKey)
-      
+
       // 更新缓存
       this.keyCache.set(keyName, {
         value: decryptedKey,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       })
-      
+
       return decryptedKey
-      
     } catch (error) {
       this.logger.error(`获取API密钥失败 [${keyName}]:`, toErrorMetadata(error))
       return null
@@ -104,7 +102,7 @@ export class SecureKeyManager {
   async deleteApiKey(keyName: string): Promise<void> {
     try {
       const keyPath = await this.getSecureKeyPath(keyName)
-      
+
       // 删除文件
       try {
         await fs.unlink(keyPath)
@@ -113,12 +111,11 @@ export class SecureKeyManager {
           throw error
         }
       }
-      
+
       // 清除缓存
       this.keyCache.delete(keyName)
-      
+
       this.logger.info(`API密钥 ${keyName} 已删除`)
-      
     } catch (error) {
       this.logger.error(`删除API密钥失败 [${keyName}]:`, toErrorMetadata(error))
       throw error
@@ -146,11 +143,8 @@ export class SecureKeyManager {
     try {
       const secureDir = await this.getSecureDirectory()
       const files = await fs.readdir(secureDir)
-      
-      return files
-        .filter(file => file.endsWith('.key'))
-        .map(file => file.replace('.key', ''))
-        
+
+      return files.filter((file) => file.endsWith('.key')).map((file) => file.replace('.key', ''))
     } catch (error) {
       this.logger.error('获取密钥列表失败:', toErrorMetadata(error))
       return []
@@ -191,11 +185,11 @@ export class SecureKeyManager {
       case 'GEMINI_API_KEY':
         // Gemini API密钥格式: AIza开头，后跟35个字符
         return /^AIza[0-9A-Za-z-_]{35}$/.test(apiKey)
-      
+
       case 'SUPABASE_ANON_KEY':
         // Supabase匿名密钥格式检查
         return apiKey.length > 100 && apiKey.includes('.')
-      
+
       default:
         // 通用验证：至少8个字符
         return apiKey.length >= 8
@@ -218,7 +212,7 @@ export class SecureKeyManager {
     const { app } = require('electron')
     const userDataPath = app.getPath('userData')
     const secureDir = path.join(userDataPath, '.secure')
-    
+
     // 确保目录存在且权限正确
     try {
       await fs.mkdir(secureDir, { recursive: true, mode: 0o700 })
@@ -227,7 +221,7 @@ export class SecureKeyManager {
         throw error
       }
     }
-    
+
     return secureDir
   }
 
@@ -240,7 +234,7 @@ export class SecureKeyManager {
     // 确保目录存在
     const dir = path.dirname(filePath)
     await fs.mkdir(dir, { recursive: true, mode: 0o700 })
-    
+
     // 写入文件，设置仅用户可读写权限
     await fs.writeFile(filePath, data, { mode: 0o600 })
   }
@@ -265,11 +259,7 @@ export class SecureKeyManager {
    * @param apiKey API密钥
    */
   generateKeyFingerprint(apiKey: string): string {
-    return crypto
-      .createHash('sha256')
-      .update(apiKey)
-      .digest('hex')
-      .substring(0, 16)
+    return crypto.createHash('sha256').update(apiKey).digest('hex').substring(0, 16)
   }
 
   /**
@@ -282,15 +272,15 @@ export class SecureKeyManager {
   }> {
     const keyNames = await this.getAllKeyNames()
     const lastAccessed: Record<string, number> = {}
-    
+
     for (const [keyName, cached] of this.keyCache.entries()) {
       lastAccessed[keyName] = cached.timestamp
     }
-    
+
     return {
       totalKeys: keyNames.length,
       cacheSize: this.keyCache.size,
-      lastAccessed
+      lastAccessed,
     }
   }
 }

@@ -34,7 +34,7 @@ export class ElectronNativeAudioCapture extends EventEmitter {
       channels: 1,
       bitDepth: 16,
       mode: 'system',
-      ...options
+      ...options,
     }
   }
 
@@ -73,7 +73,7 @@ export class ElectronNativeAudioCapture extends EventEmitter {
       if (this.mainWindow && !this.mainWindow.isDestroyed()) {
         const eventData = {
           mode: this.options.mode,
-          options: this.options
+          options: this.options,
         }
         if (debugAudio) {
           console.log('📡 主进程发送音频捕获启动事件到渲染进程:', eventData)
@@ -91,7 +91,6 @@ export class ElectronNativeAudioCapture extends EventEmitter {
       this.emit('started')
 
       return true
-
     } catch (error) {
       console.error('❌ 音频捕获启动失败:', error)
       this.emit('error', error)
@@ -211,7 +210,7 @@ export class ElectronNativeAudioCapture extends EventEmitter {
       }
       this.stopCapture()
       // 等待一小段时间确保停止完成
-      await new Promise(resolve => setTimeout(resolve, 100))
+      await new Promise((resolve) => setTimeout(resolve, 100))
     }
 
     this.options.mode = mode
@@ -240,7 +239,7 @@ export class ElectronNativeAudioCapture extends EventEmitter {
     return {
       capturing: this.isCapturing,
       mode: this.options.mode,
-      options: { ...this.options }
+      options: { ...this.options },
     }
   }
 }

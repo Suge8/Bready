@@ -15,8 +15,8 @@ export default defineConfig(({ mode }) => {
         'process.env.VITE_GEMINI_API_KEY': JSON.stringify(env.VITE_GEMINI_API_KEY),
         'process.env.VITE_SUPABASE_URL': JSON.stringify(env.VITE_SUPABASE_URL),
         'process.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(env.VITE_SUPABASE_ANON_KEY),
-        'process.env.VITE_DEV_MODE': JSON.stringify(env.VITE_DEV_MODE)
-      }
+        'process.env.VITE_DEV_MODE': JSON.stringify(env.VITE_DEV_MODE),
+      },
     },
     preload: {
       plugins: [externalizeDepsPlugin()],
@@ -24,23 +24,23 @@ export default defineConfig(({ mode }) => {
         'process.env.VITE_GEMINI_API_KEY': JSON.stringify(env.VITE_GEMINI_API_KEY),
         'process.env.VITE_SUPABASE_URL': JSON.stringify(env.VITE_SUPABASE_URL),
         'process.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(env.VITE_SUPABASE_ANON_KEY),
-        'process.env.VITE_DEV_MODE': JSON.stringify(env.VITE_DEV_MODE)
-      }
+        'process.env.VITE_DEV_MODE': JSON.stringify(env.VITE_DEV_MODE),
+      },
     },
     renderer: {
       resolve: {
         alias: {
           '@renderer': resolve('src/renderer/src'),
-          '@': resolve('src/renderer/src')
-        }
+          '@': resolve('src/renderer/src'),
+        },
       },
       plugins: [react(), tailwindcss()],
       define: {
         'process.env.VITE_GEMINI_API_KEY': JSON.stringify(env.VITE_GEMINI_API_KEY),
         'process.env.VITE_SUPABASE_URL': JSON.stringify(env.VITE_SUPABASE_URL),
         'process.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(env.VITE_SUPABASE_ANON_KEY),
-        'process.env.VITE_DEV_MODE': JSON.stringify(env.VITE_DEV_MODE)
-      }
-    }
+        'process.env.VITE_DEV_MODE': JSON.stringify(env.VITE_DEV_MODE),
+      },
+    },
   }
 })

@@ -1,13 +1,12 @@
-import * as React from "react"
-import { cn } from "../../lib/utils"
+import * as React from 'react'
+import { cn } from '../../lib/utils'
 
-export interface InputProps
-  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> {
+export interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'> {
   label?: string
   error?: string
   helperText?: string
-  size?: "sm" | "md" | "lg"
-  variant?: "outline" | "filled"
+  size?: 'sm' | 'md' | 'lg'
+  variant?: 'outline' | 'filled'
   leftIcon?: React.ReactNode
   rightIcon?: React.ReactNode
   loading?: boolean
@@ -19,8 +18,8 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
       label,
       error,
       helperText,
-      size = "md",
-      variant = "outline",
+      size = 'md',
+      variant = 'outline',
       leftIcon,
       rightIcon,
       loading = false,
@@ -28,19 +27,19 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
       disabled,
       ...props
     },
-    ref
+    ref,
   ) => {
     const sizeClasses = {
-      sm: "h-9 px-3 text-sm",
-      md: "h-10 px-3 text-sm",
-      lg: "h-11 px-4 text-base",
+      sm: 'h-9 px-3 text-sm',
+      md: 'h-10 px-3 text-sm',
+      lg: 'h-11 px-4 text-base',
     }
 
     const variantClasses = {
       outline:
-        "border border-[var(--bready-border)] bg-[var(--bready-surface)] focus-visible:border-black/40 focus-visible:ring-2 focus-visible:ring-black/10 dark:focus-visible:border-white/40 dark:focus-visible:ring-white/20",
+        'border border-[var(--bready-border)] bg-[var(--bready-surface)] focus-visible:border-black/40 focus-visible:ring-2 focus-visible:ring-black/10 dark:focus-visible:border-white/40 dark:focus-visible:ring-white/20',
       filled:
-        "border border-transparent bg-[var(--bready-surface-2)] focus-visible:bg-[var(--bready-surface)] focus-visible:border-black/30 focus-visible:ring-2 focus-visible:ring-black/10 dark:focus-visible:border-white/30 dark:focus-visible:ring-white/20",
+        'border border-transparent bg-[var(--bready-surface-2)] focus-visible:bg-[var(--bready-surface)] focus-visible:border-black/30 focus-visible:ring-2 focus-visible:ring-black/10 dark:focus-visible:border-white/30 dark:focus-visible:ring-white/20',
     }
 
     return (
@@ -62,14 +61,14 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             disabled={disabled || loading}
             className={cn(
-              "w-full rounded-lg text-[var(--bready-text)] placeholder:text-[var(--bready-text-muted)] transition-colors focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
+              'w-full rounded-lg text-[var(--bready-text)] placeholder:text-[var(--bready-text-muted)] transition-colors focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50',
               sizeClasses[size],
               variantClasses[variant],
-              leftIcon && "pl-10",
-              (rightIcon || loading) && "pr-10",
+              leftIcon && 'pl-10',
+              (rightIcon || loading) && 'pr-10',
               error &&
-                "border-red-500 focus-visible:border-red-500 focus-visible:ring-2 focus-visible:ring-red-500/20",
-              className
+                'border-red-500 focus-visible:border-red-500 focus-visible:ring-2 focus-visible:ring-red-500/20',
+              className,
             )}
             {...props}
           />
@@ -88,10 +87,8 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         {(error || helperText) && (
           <p
             className={cn(
-              "mt-2 text-sm",
-              error
-                ? "text-red-600 dark:text-red-400"
-                : "text-[var(--bready-text-muted)]"
+              'mt-2 text-sm',
+              error ? 'text-red-600 dark:text-red-400' : 'text-[var(--bready-text-muted)]',
             )}
           >
             {error || helperText}
@@ -99,38 +96,26 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         )}
       </div>
     )
-  }
+  },
 )
 
-Input.displayName = "Input"
+Input.displayName = 'Input'
 
-export interface TextareaProps
-  extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
+export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   label?: string
   error?: string
   helperText?: string
   rows?: number
-  resize?: "none" | "vertical" | "horizontal" | "both"
+  resize?: 'none' | 'vertical' | 'horizontal' | 'both'
 }
 
 export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
-  (
-    {
-      label,
-      error,
-      helperText,
-      rows = 4,
-      resize = "vertical",
-      className,
-      ...props
-    },
-    ref
-  ) => {
+  ({ label, error, helperText, rows = 4, resize = 'vertical', className, ...props }, ref) => {
     const resizeClasses = {
-      none: "resize-none",
-      vertical: "resize-y",
-      horizontal: "resize-x",
-      both: "resize",
+      none: 'resize-none',
+      vertical: 'resize-y',
+      horizontal: 'resize-x',
+      both: 'resize',
     }
 
     return (
@@ -145,11 +130,11 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           ref={ref}
           rows={rows}
           className={cn(
-            "w-full rounded-lg border border-[var(--bready-border)] bg-[var(--bready-surface)] px-4 py-2.5 text-sm text-[var(--bready-text)] placeholder:text-[var(--bready-text-muted)] transition-colors focus-visible:border-black/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/10 dark:focus-visible:border-white/40 dark:focus-visible:ring-white/20 disabled:cursor-not-allowed disabled:opacity-50",
+            'w-full rounded-lg border border-[var(--bready-border)] bg-[var(--bready-surface)] px-4 py-2.5 text-sm text-[var(--bready-text)] placeholder:text-[var(--bready-text-muted)] transition-colors focus-visible:border-black/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/10 dark:focus-visible:border-white/40 dark:focus-visible:ring-white/20 disabled:cursor-not-allowed disabled:opacity-50',
             resizeClasses[resize],
             error &&
-              "border-red-500 focus-visible:border-red-500 focus-visible:ring-2 focus-visible:ring-red-500/20",
-            className
+              'border-red-500 focus-visible:border-red-500 focus-visible:ring-2 focus-visible:ring-red-500/20',
+            className,
           )}
           {...props}
         />
@@ -157,10 +142,8 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         {(error || helperText) && (
           <p
             className={cn(
-              "mt-2 text-sm",
-              error
-                ? "text-red-600 dark:text-red-400"
-                : "text-[var(--bready-text-muted)]"
+              'mt-2 text-sm',
+              error ? 'text-red-600 dark:text-red-400' : 'text-[var(--bready-text-muted)]',
             )}
           >
             {error || helperText}
@@ -168,10 +151,10 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         )}
       </div>
     )
-  }
+  },
 )
 
-Textarea.displayName = "Textarea"
+Textarea.displayName = 'Textarea'
 
 export const SearchInput: React.FC<{
   value: string
@@ -180,22 +163,15 @@ export const SearchInput: React.FC<{
   onSearch?: (value: string) => void
   loading?: boolean
   className?: string
-}> = ({
-  value,
-  onChange,
-  placeholder = "搜索...",
-  onSearch,
-  loading = false,
-  className,
-}) => {
+}> = ({ value, onChange, placeholder = '搜索...', onSearch, loading = false, className }) => {
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && onSearch) {
+    if (e.key === 'Enter' && onSearch) {
       onSearch(value)
     }
   }
 
   return (
-    <div className={cn("relative", className)}>
+    <div className={cn('relative', className)}>
       <Input
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -215,7 +191,7 @@ export const SearchInput: React.FC<{
         rightIcon={
           value && !loading ? (
             <button
-              onClick={() => onChange("")}
+              onClick={() => onChange('')}
               className="text-[var(--bready-text-muted)] hover:text-[var(--bready-text)]"
             >
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

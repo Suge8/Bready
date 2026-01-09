@@ -71,7 +71,7 @@ app.post('/api/user/get-profile', async (req, res) => {
     const [userId] = args
     const result = await query(
       'SELECT id, username, email, full_name, avatar_url, role, user_level, membership_expires_at, remaining_interview_minutes, total_purchased_minutes, discount_rate, created_at, updated_at FROM user_profiles WHERE id = $1',
-      [userId]
+      [userId],
     )
     res.json({ data: result.rows[0] || null })
   } catch (error: any) {
@@ -83,12 +83,14 @@ app.post('/api/user/update-profile', async (req, res) => {
   try {
     const { args } = req.body
     const [{ userId, updates }] = args
-    const setClause = Object.keys(updates).map((key, index) => `${key} = $${index + 2}`).join(', ')
+    const setClause = Object.keys(updates)
+      .map((key, index) => `${key} = $${index + 2}`)
+      .join(', ')
     const values = [userId, ...Object.values(updates)]
-    
+
     const result = await query(
       `UPDATE user_profiles SET ${setClause}, updated_at = NOW() WHERE id = $1 RETURNING *`,
-      values
+      values,
     )
     res.json({ data: result.rows[0] })
   } catch (error: any) {
@@ -100,7 +102,7 @@ app.post('/api/user/get-all-users', async (req, res) => {
   void req
   try {
     const result = await query(
-      'SELECT id, username, email, full_name, avatar_url, role, user_level, membership_expires_at, remaining_interview_minutes, total_purchased_minutes, discount_rate, created_at, updated_at FROM user_profiles ORDER BY created_at DESC'
+      'SELECT id, username, email, full_name, avatar_url, role, user_level, membership_expires_at, remaining_interview_minutes, total_purchased_minutes, discount_rate, created_at, updated_at FROM user_profiles ORDER BY created_at DESC',
     )
     res.json({ data: result.rows })
   } catch (error: any) {
@@ -114,7 +116,7 @@ app.post('/api/user/update-level', async (req, res) => {
     const [{ userId, userLevel }] = args
     const result = await query(
       'UPDATE user_profiles SET user_level = $2, updated_at = NOW() WHERE id = $1 RETURNING *',
-      [userId, userLevel]
+      [userId, userLevel],
     )
     res.json({ data: result.rows[0] })
   } catch (error: any) {
@@ -129,7 +131,7 @@ app.post('/api/preparation/get-all', async (req, res) => {
     const [userId] = args
     const result = await query(
       'SELECT * FROM preparations WHERE user_id = $1 ORDER BY created_at DESC',
-      [userId]
+      [userId],
     )
     res.json({ data: result.rows })
   } catch (error: any) {
@@ -143,7 +145,13 @@ app.post('/api/preparation/create', async (req, res) => {
     const [preparationData] = args
     const result = await query(
       'INSERT INTO preparations (user_id, title, company, position, description) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [preparationData.user_id, preparationData.title, preparationData.company, preparationData.position, preparationData.description]
+      [
+        preparationData.user_id,
+        preparationData.title,
+        preparationData.company,
+        preparationData.position,
+        preparationData.description,
+      ],
     )
     res.json({ data: result.rows[0] })
   } catch (error: any) {
@@ -155,12 +163,14 @@ app.post('/api/preparation/update', async (req, res) => {
   try {
     const { args } = req.body
     const [{ id, updates }] = args
-    const setClause = Object.keys(updates).map((key, index) => `${key} = $${index + 2}`).join(', ')
+    const setClause = Object.keys(updates)
+      .map((key, index) => `${key} = $${index + 2}`)
+      .join(', ')
     const values = [id, ...Object.values(updates)]
 
     const result = await query(
       `UPDATE preparations SET ${setClause}, updated_at = NOW() WHERE id = $1 RETURNING *`,
-      values
+      values,
     )
     res.json({ data: result.rows[0] })
   } catch (error: any) {
@@ -184,7 +194,7 @@ app.post('/api/membership/get-packages', async (req, res) => {
   void req
   try {
     const result = await query(
-      'SELECT * FROM membership_packages WHERE is_active = true ORDER BY price ASC'
+      'SELECT * FROM membership_packages WHERE is_active = true ORDER BY price ASC',
     )
     res.json({ data: result.rows })
   } catch (error: any) {
@@ -198,10 +208,9 @@ app.post('/api/membership/purchase', async (req, res) => {
     const [{ userId, packageId }] = args
 
     // 获取套餐信息
-    const packageResult = await query(
-      'SELECT * FROM membership_packages WHERE id = $1',
-      [packageId]
-    )
+    const packageResult = await query('SELECT * FROM membership_packages WHERE id = $1', [
+      packageId,
+    ])
 
     if (packageResult.rows.length === 0) {
       return res.status(404).json({ error: '套餐不存在' })
@@ -212,13 +221,13 @@ app.post('/api/membership/purchase', async (req, res) => {
     // 创建购买记录
     const purchaseResult = await query(
       'INSERT INTO purchase_records (user_id, package_id, amount, interview_minutes) VALUES ($1, $2, $3, $4) RETURNING *',
-      [userId, packageId, membershipPackage.price, membershipPackage.interview_minutes]
+      [userId, packageId, membershipPackage.price, membershipPackage.interview_minutes],
     )
 
     // 更新用户配置
     await query(
       'UPDATE user_profiles SET remaining_interview_minutes = remaining_interview_minutes + $2, total_purchased_minutes = total_purchased_minutes + $2, updated_at = NOW() WHERE id = $1',
-      [userId, membershipPackage.interview_minutes]
+      [userId, membershipPackage.interview_minutes],
     )
 
     res.json({ data: purchaseResult.rows[0] })

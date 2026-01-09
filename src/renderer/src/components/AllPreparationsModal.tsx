@@ -17,7 +17,7 @@ const AllPreparationsModal: React.FC<AllPreparationsModalProps> = ({
   preparations,
   onClose,
   onDelete,
-  onView
+  onView,
 }) => {
   const { t, locale } = useI18n()
 
@@ -37,7 +37,7 @@ const AllPreparationsModal: React.FC<AllPreparationsModalProps> = ({
     return date.toLocaleDateString(locale, {
       year: 'numeric',
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
     })
   }
 
@@ -46,7 +46,9 @@ const AllPreparationsModal: React.FC<AllPreparationsModalProps> = ({
       <div className="flex items-center justify-between p-6 border-b border-[var(--bready-border)]">
         <div>
           <h2 className="text-xl font-bold text-[var(--bready-text)]">{t('prepList.title')}</h2>
-          <p className="text-sm text-[var(--bready-text-muted)] mt-1">{t('prepList.count', { count: preparations.length })}</p>
+          <p className="text-sm text-[var(--bready-text-muted)] mt-1">
+            {t('prepList.count', { count: preparations.length })}
+          </p>
         </div>
       </div>
 

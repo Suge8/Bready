@@ -1,7 +1,18 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowRight, Plus, Sparkles, UserCircle, Calendar, Trash2, FileText, Users, Code, Briefcase } from 'lucide-react'
+import {
+  ArrowRight,
+  Plus,
+  Sparkles,
+  UserCircle,
+  Calendar,
+  Trash2,
+  FileText,
+  Users,
+  Code,
+  Briefcase,
+} from 'lucide-react'
 import SelectPreparationModal from './SelectPreparationModal'
 import AllPreparationsModal from './AllPreparationsModal'
 import UserProfileModal from './user-profile/UserProfileModal'
@@ -34,19 +45,64 @@ const getCardVisualLayer = (index: number, isDark: boolean) => {
   // 定义5个视觉层次，循环使用
   const layers = isDark
     ? [
-      { bg: 'bg-zinc-900/80', border: 'border-zinc-700/40', shadow: 'shadow-lg shadow-black/20', accent: 'from-blue-500/10' },
-      { bg: 'bg-zinc-900/60', border: 'border-zinc-700/30', shadow: 'shadow-md shadow-black/15', accent: 'from-emerald-500/10' },
-      { bg: 'bg-zinc-900/50', border: 'border-zinc-700/25', shadow: 'shadow-sm shadow-black/10', accent: 'from-violet-500/10' },
-      { bg: 'bg-zinc-900/40', border: 'border-zinc-800/40', shadow: 'shadow-sm shadow-black/5', accent: 'from-amber-500/10' },
-      { bg: 'bg-zinc-900/30', border: 'border-zinc-800/30', shadow: '', accent: 'from-rose-500/10' },
-    ]
+        {
+          bg: 'bg-zinc-900/80',
+          border: 'border-zinc-700/40',
+          shadow: 'shadow-lg shadow-black/20',
+          accent: 'from-blue-500/10',
+        },
+        {
+          bg: 'bg-zinc-900/60',
+          border: 'border-zinc-700/30',
+          shadow: 'shadow-md shadow-black/15',
+          accent: 'from-emerald-500/10',
+        },
+        {
+          bg: 'bg-zinc-900/50',
+          border: 'border-zinc-700/25',
+          shadow: 'shadow-sm shadow-black/10',
+          accent: 'from-violet-500/10',
+        },
+        {
+          bg: 'bg-zinc-900/40',
+          border: 'border-zinc-800/40',
+          shadow: 'shadow-sm shadow-black/5',
+          accent: 'from-amber-500/10',
+        },
+        {
+          bg: 'bg-zinc-900/30',
+          border: 'border-zinc-800/30',
+          shadow: '',
+          accent: 'from-rose-500/10',
+        },
+      ]
     : [
-      { bg: 'bg-white', border: 'border-gray-200/80', shadow: 'shadow-lg shadow-gray-200/50', accent: 'from-blue-50' },
-      { bg: 'bg-gray-50/80', border: 'border-gray-200/60', shadow: 'shadow-md shadow-gray-200/40', accent: 'from-emerald-50' },
-      { bg: 'bg-gray-50/60', border: 'border-gray-200/50', shadow: 'shadow-sm shadow-gray-200/30', accent: 'from-violet-50' },
-      { bg: 'bg-gray-100/50', border: 'border-gray-200/40', shadow: 'shadow-sm shadow-gray-100/20', accent: 'from-amber-50' },
-      { bg: 'bg-gray-100/40', border: 'border-gray-200/30', shadow: '', accent: 'from-rose-50' },
-    ]
+        {
+          bg: 'bg-white',
+          border: 'border-gray-200/80',
+          shadow: 'shadow-lg shadow-gray-200/50',
+          accent: 'from-blue-50',
+        },
+        {
+          bg: 'bg-gray-50/80',
+          border: 'border-gray-200/60',
+          shadow: 'shadow-md shadow-gray-200/40',
+          accent: 'from-emerald-50',
+        },
+        {
+          bg: 'bg-gray-50/60',
+          border: 'border-gray-200/50',
+          shadow: 'shadow-sm shadow-gray-200/30',
+          accent: 'from-violet-50',
+        },
+        {
+          bg: 'bg-gray-100/50',
+          border: 'border-gray-200/40',
+          shadow: 'shadow-sm shadow-gray-100/20',
+          accent: 'from-amber-50',
+        },
+        { bg: 'bg-gray-100/40', border: 'border-gray-200/30', shadow: '', accent: 'from-rose-50' },
+      ]
   return layers[index % layers.length]
 }
 
@@ -61,10 +117,16 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
   const [showAdminPanelModal, setShowAdminPanelModal] = useState(false)
   const [isEnteringMode, setIsEnteringMode] = useState(false)
   const [viewingPreparation, setViewingPreparation] = useState<Preparation | null>(null)
-  const [editingPreparation, setEditingPreparation] = useState<Preparation | null | undefined>(undefined) // undefined = closed, null = create new
+  const [editingPreparation, setEditingPreparation] = useState<Preparation | null | undefined>(
+    undefined,
+  ) // undefined = closed, null = create new
   const [showCreateTypeModal, setShowCreateTypeModal] = useState(false)
-  const [editingSalesPreparation, setEditingSalesPreparation] = useState<Preparation | null | undefined>(undefined)
-  const [editingMeetingPreparation, setEditingMeetingPreparation] = useState<Preparation | null | undefined>(undefined)
+  const [editingSalesPreparation, setEditingSalesPreparation] = useState<
+    Preparation | null | undefined
+  >(undefined)
+  const [editingMeetingPreparation, setEditingMeetingPreparation] = useState<
+    Preparation | null | undefined
+  >(undefined)
 
   const slogans = list('slogans.main')
   const currentSlogan = React.useMemo(() => {
@@ -92,7 +154,7 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
   }
 
   const handleViewPreparation = (id: string) => {
-    const prep = preparations.find(p => p.id === id)
+    const prep = preparations.find((p) => p.id === id)
     if (prep) {
       setViewingPreparation(prep)
     }
@@ -102,7 +164,7 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
     if (confirm(t('alerts.deletePreparation'))) {
       try {
         await preparationService.delete(id)
-        const updatedPreparations = preparations.filter(p => p.id !== id)
+        const updatedPreparations = preparations.filter((p) => p.id !== id)
         setPreparations(updatedPreparations)
         await onReloadData()
       } catch (error) {
@@ -117,7 +179,7 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
     return date.toLocaleDateString(locale, {
       year: 'numeric',
       month: 'long',
-      day: 'numeric'
+      day: 'numeric',
     })
   }
 
@@ -130,9 +192,9 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
       opacity: 1,
       transition: {
         staggerChildren: 0.1,
-        delayChildren: 0.2
-      }
-    }
+        delayChildren: 0.2,
+      },
+    },
   }
 
   const itemVariants = {
@@ -143,9 +205,9 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
       transition: {
         type: 'spring' as const,
         stiffness: 100,
-        damping: 15
-      }
-    }
+        damping: 15,
+      },
+    },
   }
 
   const cardHoverVariants = {
@@ -156,25 +218,30 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
       transition: {
         type: 'spring' as const,
         stiffness: 300,
-        damping: 25
-      }
-    }
+        damping: 25,
+      },
+    },
   }
 
   // 动态背景类名，根据当前主题决定 - Vercel 风格纯黑
   const getBackgroundClasses = () => 'bg-[var(--bready-bg)]'
 
   // 判断是否为深色模式
-  const isDarkMode = theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+  const isDarkMode =
+    theme === 'dark' ||
+    (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)
 
   return (
-    <div className={`h-screen ${getBackgroundClasses()} text-[var(--bready-text)] flex flex-col transition-colors duration-500 relative overflow-hidden`}>
+    <div
+      className={`h-screen ${getBackgroundClasses()} text-[var(--bready-text)] flex flex-col transition-colors duration-500 relative overflow-hidden`}
+    >
       {/* 装饰性背景元素 */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         {/* 细微的噪点纹理 */}
-        <div className={`absolute inset-0 ${theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'opacity-[0.05]' : 'opacity-[0.02]'}`}
+        <div
+          className={`absolute inset-0 ${theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'opacity-[0.05]' : 'opacity-[0.02]'}`}
           style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`
+            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
           }}
         />
       </div>
@@ -190,12 +257,22 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, ease: 'easeOut' }}
           >
-            <div className={`w-8 h-8 -my-4 ${isDarkMode ? 'bg-white' : 'bg-black'} rounded-2xl flex items-center justify-center`}>
+            <div
+              className={`w-8 h-8 -my-4 ${isDarkMode ? 'bg-white' : 'bg-black'} rounded-2xl flex items-center justify-center`}
+            >
               <Sparkles className={`w-4 h-4 ${isDarkMode ? 'text-black' : 'text-white'}`} />
             </div>
             <div className="flex flex-col leading-none">
-              <span className={`text-[9px] uppercase tracking-[0.2em] ${isDarkMode ? 'text-gray-500' : 'text-gray-400'} font-medium`}>Bready</span>
-              <h1 className={`text-base font-semibold tracking-tight ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{t('app.name')}</h1>
+              <span
+                className={`text-[9px] uppercase tracking-[0.2em] ${isDarkMode ? 'text-gray-500' : 'text-gray-400'} font-medium`}
+              >
+                Bready
+              </span>
+              <h1
+                className={`text-base font-semibold tracking-tight ${isDarkMode ? 'text-white' : 'text-gray-900'}`}
+              >
+                {t('app.name')}
+              </h1>
             </div>
           </motion.div>
 
@@ -239,9 +316,7 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
                 className="text-5xl md:text-6xl font-bold mb-4 leading-[1.1] tracking-tight"
                 variants={itemVariants}
               >
-                <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>
-                  {currentSlogan}
-                </span>
+                <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>{currentSlogan}</span>
               </motion.h1>
 
               {/* 副标题 */}
@@ -261,9 +336,7 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
                   whileTap={{ scale: 0.98 }}
                   transition={{ type: 'spring', stiffness: 400, damping: 25 }}
                 >
-                  <span className="flex items-center justify-center">
-                    {t('home.start')}
-                  </span>
+                  <span className="flex items-center justify-center">{t('home.start')}</span>
                 </motion.button>
               </motion.div>
             </motion.div>
@@ -279,7 +352,9 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
             <div className="space-y-3">
               {/* 标题栏 */}
               <div className="flex items-center justify-between px-1">
-                <h2 className={`text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} tracking-wide`}>
+                <h2
+                  className={`text-sm font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} tracking-wide`}
+                >
                   {t('home.myPreparations')}
                 </h2>
                 {filteredPreparations.length > 0 && (
@@ -308,12 +383,18 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
                       animate={{ rotate: [0, 5, -5, 0] }}
                       transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
                     >
-                      <Sparkles className={`w-6 h-6 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`} />
+                      <Sparkles
+                        className={`w-6 h-6 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}
+                      />
                     </motion.div>
-                    <h3 className={`text-base mb-2 ${isDarkMode ? 'text-gray-200' : 'text-gray-700'} font-semibold`}>
+                    <h3
+                      className={`text-base mb-2 ${isDarkMode ? 'text-gray-200' : 'text-gray-700'} font-semibold`}
+                    >
                       {t('home.emptyTitle')}
                     </h3>
-                    <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} max-w-xs mb-6 leading-relaxed`}>
+                    <p
+                      className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} max-w-xs mb-6 leading-relaxed`}
+                    >
                       {t('home.emptyDescription')}
                     </p>
                     <motion.button
@@ -346,9 +427,13 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
                             className="group cursor-pointer flex-shrink-0 w-[280px]"
                             onClick={() => handleViewPreparation(preparation.id)}
                           >
-                            <div className={`relative h-[180px] ${visualLayer.bg} border ${visualLayer.border} ${visualLayer.shadow} rounded-2xl overflow-hidden transition-all duration-300 group-hover:border-opacity-60`}>
+                            <div
+                              className={`relative h-[180px] ${visualLayer.bg} border ${visualLayer.border} ${visualLayer.shadow} rounded-2xl overflow-hidden transition-all duration-300 group-hover:border-opacity-60`}
+                            >
                               {/* 微妙的渐变光效 */}
-                              <div className={`absolute inset-0 bg-gradient-to-br ${visualLayer.accent} to-transparent opacity-60 group-hover:opacity-100 transition-opacity duration-300`} />
+                              <div
+                                className={`absolute inset-0 bg-gradient-to-br ${visualLayer.accent} to-transparent opacity-60 group-hover:opacity-100 transition-opacity duration-300`}
+                              />
 
                               <div className="relative h-full p-5 flex flex-col">
                                 {/* 图标 */}
@@ -357,12 +442,16 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
                                   whileHover={{ rotate: [0, -10, 10, 0] }}
                                   transition={{ duration: 0.5 }}
                                 >
-                                  <IconComponent className={`w-4 h-4 ${isDarkMode ? 'text-zinc-300' : 'text-gray-600'}`} />
+                                  <IconComponent
+                                    className={`w-4 h-4 ${isDarkMode ? 'text-zinc-300' : 'text-gray-600'}`}
+                                  />
                                 </motion.div>
 
                                 {/* 标题和状态 */}
                                 <div className="flex-1 min-h-0 flex flex-col">
-                                  <h3 className={`text-[15px] font-semibold ${isDarkMode ? 'text-zinc-100 group-hover:text-white' : 'text-gray-800 group-hover:text-gray-900'} line-clamp-2 leading-snug transition-colors`}>
+                                  <h3
+                                    className={`text-[15px] font-semibold ${isDarkMode ? 'text-zinc-100 group-hover:text-white' : 'text-gray-800 group-hover:text-gray-900'} line-clamp-2 leading-snug transition-colors`}
+                                  >
                                     {preparation.name}
                                   </h3>
                                   {preparation.is_analyzing && (
@@ -382,9 +471,13 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
                                 </div>
 
                                 {/* 日期 - 固定在底部 */}
-                                <div className={`flex items-center text-xs ${isDarkMode ? 'text-zinc-500' : 'text-gray-400'} mt-auto pt-2 flex-shrink-0`}>
+                                <div
+                                  className={`flex items-center text-xs ${isDarkMode ? 'text-zinc-500' : 'text-gray-400'} mt-auto pt-2 flex-shrink-0`}
+                                >
                                   <Calendar className="w-3.5 h-3.5 mr-1.5 opacity-70" />
-                                  <span className="font-medium">{formatDate(preparation.updated_at)}</span>
+                                  <span className="font-medium">
+                                    {formatDate(preparation.updated_at)}
+                                  </span>
                                 </div>
                               </div>
 
@@ -442,7 +535,7 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
                   console.log('🌐 Running in browser mode - skipping window management')
                 }
 
-                await new Promise(resolve => setTimeout(resolve, 300))
+                await new Promise((resolve) => setTimeout(resolve, 300))
 
                 navigate('/collaboration')
 

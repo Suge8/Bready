@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react'
-import { 
-  CheckCircle, 
-  XCircle, 
-  AlertCircle, 
-  Settings, 
-  Mic, 
-  Monitor, 
-  Key, 
+import {
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Settings,
+  Mic,
+  Monitor,
+  Key,
   Volume2,
   RefreshCw,
   ExternalLink,
   Play,
-  Loader2
+  Loader2,
 } from 'lucide-react'
 import { useI18n } from '../contexts/I18nContext'
 import { Modal } from './ui/Modal'
@@ -75,15 +75,15 @@ const PermissionsSetup: React.FC<PermissionsSetupProps> = ({ onComplete, onSkip,
     setTesting('audio')
     try {
       const result = await window.bready.testAudioCapture()
-      setTestResults(prev => ({ ...prev, audio: result }))
-      
+      setTestResults((prev) => ({ ...prev, audio: result }))
+
       // 测试后重新检查权限状态
       setTimeout(checkAllPermissions, 1000)
     } catch (error) {
       console.error('音频测试失败:', error)
-      setTestResults(prev => ({ 
-        ...prev, 
-        audio: { success: false, message: t('permissionsSetup.testFailed') }
+      setTestResults((prev) => ({
+        ...prev,
+        audio: { success: false, message: t('permissionsSetup.testFailed') },
       }))
     } finally {
       setTesting(null)
@@ -94,8 +94,8 @@ const PermissionsSetup: React.FC<PermissionsSetupProps> = ({ onComplete, onSkip,
     setTesting('microphone')
     try {
       const result = await window.bready.requestMicrophonePermission()
-      setTestResults(prev => ({ ...prev, microphone: result }))
-      
+      setTestResults((prev) => ({ ...prev, microphone: result }))
+
       // 请求后重新检查权限状态
       setTimeout(checkAllPermissions, 1000)
     } catch (error) {
@@ -121,10 +121,11 @@ const PermissionsSetup: React.FC<PermissionsSetupProps> = ({ onComplete, onSkip,
     return t('permissionsSetup.status.denied')
   }
 
-  const allPermissionsGranted = permissions && 
-    permissions.screenRecording.granted && 
-    permissions.microphone.granted && 
-    permissions.apiKey.granted && 
+  const allPermissionsGranted =
+    permissions &&
+    permissions.screenRecording.granted &&
+    permissions.microphone.granted &&
+    permissions.apiKey.granted &&
     permissions.audioDevice.granted
 
   if (!isOpen) return null
@@ -138,7 +139,9 @@ const PermissionsSetup: React.FC<PermissionsSetupProps> = ({ onComplete, onSkip,
     >
       <div className="bg-[var(--bready-surface)] border border-[var(--bready-border)] flex flex-col flex-1 min-h-0">
         <div className="p-6 border-b border-[var(--bready-border)] flex-shrink-0">
-          <h2 className="text-2xl font-semibold text-[var(--bready-text)]">{t('permissionsSetup.title')}</h2>
+          <h2 className="text-2xl font-semibold text-[var(--bready-text)]">
+            {t('permissionsSetup.title')}
+          </h2>
           <p className="text-[var(--bready-text-muted)] mt-2">
             {t('permissionsSetup.description')}
           </p>
@@ -148,7 +151,9 @@ const PermissionsSetup: React.FC<PermissionsSetupProps> = ({ onComplete, onSkip,
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
-              <span className="ml-2 text-[var(--bready-text-muted)]">{t('permissionsSetup.checking')}</span>
+              <span className="ml-2 text-[var(--bready-text-muted)]">
+                {t('permissionsSetup.checking')}
+              </span>
             </div>
           ) : permissions ? (
             <>
@@ -158,8 +163,12 @@ const PermissionsSetup: React.FC<PermissionsSetupProps> = ({ onComplete, onSkip,
                   <div className="flex items-center space-x-3">
                     <Monitor className="w-6 h-6 text-[var(--bready-text)]" />
                     <div>
-                      <h3 className="font-medium text-[var(--bready-text)]">{t('permissionsSetup.screen.title')}</h3>
-                      <p className="text-sm text-[var(--bready-text-muted)]">{t('permissionsSetup.screen.description')}</p>
+                      <h3 className="font-medium text-[var(--bready-text)]">
+                        {t('permissionsSetup.screen.title')}
+                      </h3>
+                      <p className="text-sm text-[var(--bready-text-muted)]">
+                        {t('permissionsSetup.screen.description')}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -169,11 +178,11 @@ const PermissionsSetup: React.FC<PermissionsSetupProps> = ({ onComplete, onSkip,
                     </span>
                   </div>
                 </div>
-                
+
                 <p className="text-sm text-[var(--bready-text-muted)] mb-3">
                   {permissions.screenRecording.message}
                 </p>
-                
+
                 {!permissions.screenRecording.granted && (
                   <Button onClick={() => openSystemPreferences('screen-recording')} size="sm">
                     <ExternalLink className="w-4 h-4" />
@@ -188,8 +197,12 @@ const PermissionsSetup: React.FC<PermissionsSetupProps> = ({ onComplete, onSkip,
                   <div className="flex items-center space-x-3">
                     <Mic className="w-6 h-6 text-[var(--bready-text)]" />
                     <div>
-                      <h3 className="font-medium text-[var(--bready-text)]">{t('permissionsSetup.microphone.title')}</h3>
-                      <p className="text-sm text-[var(--bready-text-muted)]">{t('permissionsSetup.microphone.description')}</p>
+                      <h3 className="font-medium text-[var(--bready-text)]">
+                        {t('permissionsSetup.microphone.title')}
+                      </h3>
+                      <p className="text-sm text-[var(--bready-text-muted)]">
+                        {t('permissionsSetup.microphone.description')}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -199,11 +212,11 @@ const PermissionsSetup: React.FC<PermissionsSetupProps> = ({ onComplete, onSkip,
                     </span>
                   </div>
                 </div>
-                
+
                 <p className="text-sm text-[var(--bready-text-muted)] mb-3">
                   {permissions.microphone.message}
                 </p>
-                
+
                 <div className="flex space-x-2">
                   {!permissions.microphone.granted && permissions.microphone.canRequest && (
                     <Button
@@ -219,7 +232,7 @@ const PermissionsSetup: React.FC<PermissionsSetupProps> = ({ onComplete, onSkip,
                       <span>{t('permissionsSetup.microphone.request')}</span>
                     </Button>
                   )}
-                  
+
                   {!permissions.microphone.granted && !permissions.microphone.canRequest && (
                     <Button onClick={() => openSystemPreferences('microphone')} size="sm">
                       <ExternalLink className="w-4 h-4" />
@@ -227,11 +240,15 @@ const PermissionsSetup: React.FC<PermissionsSetupProps> = ({ onComplete, onSkip,
                     </Button>
                   )}
                 </div>
-                
+
                 {testResults.microphone && (
-                  <div className={`mt-3 p-3 rounded-lg ${
-                    testResults.microphone.granted ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'
-                  }`}>
+                  <div
+                    className={`mt-3 p-3 rounded-lg ${
+                      testResults.microphone.granted
+                        ? 'bg-green-50 text-green-800'
+                        : 'bg-red-50 text-red-800'
+                    }`}
+                  >
                     {testResults.microphone.message}
                   </div>
                 )}
@@ -243,27 +260,27 @@ const PermissionsSetup: React.FC<PermissionsSetupProps> = ({ onComplete, onSkip,
                   <div className="flex items-center space-x-3">
                     <Key className="w-6 h-6 text-[var(--bready-text)]" />
                     <div>
-                      <h3 className="font-medium text-[var(--bready-text)]">{t('permissionsSetup.apiKey.title')}</h3>
-                      <p className="text-sm text-[var(--bready-text-muted)]">{t('permissionsSetup.apiKey.description')}</p>
+                      <h3 className="font-medium text-[var(--bready-text)]">
+                        {t('permissionsSetup.apiKey.title')}
+                      </h3>
+                      <p className="text-sm text-[var(--bready-text-muted)]">
+                        {t('permissionsSetup.apiKey.description')}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
                     {getStatusIcon(permissions.apiKey)}
-                    <span className="text-sm font-medium">
-                      {getStatusText(permissions.apiKey)}
-                    </span>
+                    <span className="text-sm font-medium">{getStatusText(permissions.apiKey)}</span>
                   </div>
                 </div>
-                
+
                 <p className="text-sm text-[var(--bready-text-muted)] mb-3">
                   {permissions.apiKey.message}
                 </p>
-                
+
                 {!permissions.apiKey.granted && (
                   <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                    <p className="text-sm text-yellow-800">
-                      {t('permissionsSetup.apiKey.hint')}
-                    </p>
+                    <p className="text-sm text-yellow-800">{t('permissionsSetup.apiKey.hint')}</p>
                   </div>
                 )}
               </div>
@@ -274,8 +291,12 @@ const PermissionsSetup: React.FC<PermissionsSetupProps> = ({ onComplete, onSkip,
                   <div className="flex items-center space-x-3">
                     <Volume2 className="w-6 h-6 text-[var(--bready-text)]" />
                     <div>
-                      <h3 className="font-medium text-[var(--bready-text)]">{t('permissionsSetup.audio.title')}</h3>
-                      <p className="text-sm text-[var(--bready-text-muted)]">{t('permissionsSetup.audio.description')}</p>
+                      <h3 className="font-medium text-[var(--bready-text)]">
+                        {t('permissionsSetup.audio.title')}
+                      </h3>
+                      <p className="text-sm text-[var(--bready-text-muted)]">
+                        {t('permissionsSetup.audio.description')}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -285,11 +306,11 @@ const PermissionsSetup: React.FC<PermissionsSetupProps> = ({ onComplete, onSkip,
                     </span>
                   </div>
                 </div>
-                
+
                 <p className="text-sm text-[var(--bready-text-muted)] mb-3">
                   {permissions.audioDevice.message}
                 </p>
-                
+
                 <div className="flex space-x-2">
                   <Button
                     onClick={testAudioCapture}
@@ -315,19 +336,27 @@ const PermissionsSetup: React.FC<PermissionsSetupProps> = ({ onComplete, onSkip,
                     </Button>
                   )}
                 </div>
-                
+
                 {testResults.audio && (
-                  <div className={`mt-3 p-3 rounded-lg ${
-                    testResults.audio.success ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'
-                  }`}>
+                  <div
+                    className={`mt-3 p-3 rounded-lg ${
+                      testResults.audio.success
+                        ? 'bg-green-50 text-green-800'
+                        : 'bg-red-50 text-red-800'
+                    }`}
+                  >
                     <div className="font-medium">{testResults.audio.message}</div>
 
                     {testResults.audio.audioData !== undefined && (
                       <div className="text-xs mt-1">
-                        {t('permissionsSetup.metrics.capturedData', { bytes: testResults.audio.audioData })}
+                        {t('permissionsSetup.metrics.capturedData', {
+                          bytes: testResults.audio.audioData,
+                        })}
                         {testResults.audio.silencePercentage !== undefined && (
                           <span className="ml-2">
-                            {t('permissionsSetup.metrics.silence', { percent: testResults.audio.silencePercentage.toFixed(1) })}
+                            {t('permissionsSetup.metrics.silence', {
+                              percent: testResults.audio.silencePercentage.toFixed(1),
+                            })}
                           </span>
                         )}
                       </div>
@@ -335,7 +364,10 @@ const PermissionsSetup: React.FC<PermissionsSetupProps> = ({ onComplete, onSkip,
 
                     {testResults.audio.recommendation && (
                       <div className="text-sm mt-2 p-2 bg-white bg-opacity-50 rounded border-l-2 border-current">
-                        💡 {t('permissionsSetup.metrics.recommendation', { text: testResults.audio.recommendation })}
+                        💡{' '}
+                        {t('permissionsSetup.metrics.recommendation', {
+                          text: testResults.audio.recommendation,
+                        })}
                       </div>
                     )}
                   </div>
@@ -355,11 +387,7 @@ const PermissionsSetup: React.FC<PermissionsSetupProps> = ({ onComplete, onSkip,
           </Button>
 
           <div className="flex space-x-3">
-            <Button
-              onClick={checkAllPermissions}
-              disabled={loading}
-              variant="outline"
-            >
+            <Button onClick={checkAllPermissions} disabled={loading} variant="outline">
               {loading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (

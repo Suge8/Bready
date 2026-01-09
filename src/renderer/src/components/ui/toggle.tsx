@@ -9,29 +9,29 @@ export interface ToggleProps {
   size?: 'sm' | 'md' | 'lg'
 }
 
-export const Toggle: React.FC<ToggleProps> = ({ 
-  checked, 
-  onChange, 
+export const Toggle: React.FC<ToggleProps> = ({
+  checked,
+  onChange,
   disabled = false,
   className = '',
-  size = 'md'
+  size = 'md',
 }) => {
   const sizeClasses = {
     sm: 'w-8 h-4',
     md: 'w-10 h-5',
-    lg: 'w-12 h-6'
+    lg: 'w-12 h-6',
   }
 
   const thumbSizeClasses = {
     sm: 'w-3 h-3',
     md: 'w-4 h-4',
-    lg: 'w-5 h-5'
+    lg: 'w-5 h-5',
   }
 
   const translateClasses = {
     sm: 'translate-x-4',
     md: 'translate-x-5',
-    lg: 'translate-x-6'
+    lg: 'translate-x-6',
   }
 
   return (

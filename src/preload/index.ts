@@ -10,7 +10,7 @@ import type {
   ExtractFileContentRequest,
   ExtractFileContentResponse,
   PermissionStatus,
-  SystemPermissions
+  SystemPermissions,
 } from '../shared/ipc'
 
 // 自定义API接口
@@ -22,12 +22,22 @@ interface BreadyAPI {
   exitCollaborationMode: () => Promise<boolean>
 
   // AI API（通用，支持多个渠道）
-  initializeAI: (apiKey: string, customPrompt?: string, profile?: string, language?: string) => Promise<boolean>
+  initializeAI: (
+    apiKey: string,
+    customPrompt?: string,
+    profile?: string,
+    language?: string,
+  ) => Promise<boolean>
   reconnectAI: () => Promise<boolean>
   disconnectAI: () => Promise<boolean>
 
   // 旧方法（保持向后兼容）
-  initializeGemini: (apiKey: string, customPrompt?: string, profile?: string, language?: string) => Promise<boolean>
+  initializeGemini: (
+    apiKey: string,
+    customPrompt?: string,
+    profile?: string,
+    language?: string,
+  ) => Promise<boolean>
   reconnectGemini: () => Promise<boolean>
   disconnectGemini: () => Promise<boolean>
 
@@ -49,11 +59,19 @@ interface BreadyAPI {
   checkApiKeyStatus: () => Promise<PermissionStatus>
   checkAudioDeviceStatus: () => Promise<PermissionStatus>
   openSystemPreferences: (pane: string) => Promise<boolean>
-  testAudioCapture: () => Promise<{ success: boolean; message: string; audioData?: number; silencePercentage?: number; recommendation?: string }>
+  testAudioCapture: () => Promise<{
+    success: boolean
+    message: string
+    audioData?: number
+    silencePercentage?: number
+    recommendation?: string
+  }>
   requestMicrophonePermission: () => Promise<{ granted: boolean; message: string }>
 
   // AI 分析
-  analyzePreparation: (preparationData: AnalyzePreparationRequest) => Promise<AnalyzePreparationResponse>
+  analyzePreparation: (
+    preparationData: AnalyzePreparationRequest,
+  ) => Promise<AnalyzePreparationResponse>
 
   // 文件内容提取
   extractFileContent: (fileData: ExtractFileContentRequest) => Promise<ExtractFileContentResponse>
@@ -73,7 +91,9 @@ interface BreadyAPI {
   onAudioStreamRestored: (callback: () => void) => () => void
   onTranscriptionComplete: (callback: (transcription: string) => void) => () => void
   onAudioResponse: (callback: (data: AudioResponsePayload) => void) => () => void
-  onAudioDeviceChanged: (callback: (data: { deviceId: string; deviceLabel: string }) => void) => () => void
+  onAudioDeviceChanged: (
+    callback: (data: { deviceId: string; deviceLabel: string }) => void,
+  ) => () => void
   onPerformanceMetrics: (callback: (metrics: any) => void) => () => void
   onCrashReport: (callback: (report: any) => void) => () => void
 }
@@ -120,7 +140,8 @@ const breadyAPI: BreadyAPI = {
   requestMicrophonePermission: () => ipcRenderer.invoke('request-microphone-permission'),
 
   // AI 分析
-  analyzePreparation: (preparationData) => ipcRenderer.invoke('analyze-preparation', preparationData),
+  analyzePreparation: (preparationData) =>
+    ipcRenderer.invoke('analyze-preparation', preparationData),
 
   // 文件内容提取
   extractFileContent: (fileData) => ipcRenderer.invoke('extract-file-content', fileData),
@@ -226,7 +247,7 @@ const breadyAPI: BreadyAPI = {
     const listener = (_: any, report: any) => callback(report)
     ipcRenderer.on('crash-report', listener)
     return () => ipcRenderer.removeListener('crash-report', listener)
-  }
+  },
 }
 
 // 使用contextBridge暴露API
@@ -242,8 +263,8 @@ contextBridge.exposeInMainWorld('bready', {
       return () => ipcRenderer.removeListener(channel, subscription)
     },
     removeListener: (channel: string, listener: (...args: any[]) => void) =>
-      ipcRenderer.removeListener(channel, listener)
-  }
+      ipcRenderer.removeListener(channel, listener),
+  },
 })
 
 // 也可以暴露Node.js环境变量
@@ -256,5 +277,5 @@ contextBridge.exposeInMainWorld('env', {
   GEMINI_API_KEY: exposedApiKey,
   SUPABASE_URL: process.env.VITE_SUPABASE_URL,
   SUPABASE_ANON_KEY: process.env.VITE_SUPABASE_ANON_KEY,
-  DEV_MODE: process.env.VITE_DEV_MODE
+  DEV_MODE: process.env.VITE_DEV_MODE,
 })

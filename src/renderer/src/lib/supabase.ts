@@ -25,7 +25,7 @@ async function callHttpApi(channel: string, ...args: any[]) {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ args })
+      body: JSON.stringify({ args }),
     })
 
     if (!response.ok) {
@@ -50,7 +50,7 @@ console.log('本地数据库客户端初始化成功')
 let authStateListeners: Array<(event: string, session: any) => void> = []
 
 function notifyAuthStateChange(event: string, session: any) {
-  authStateListeners.forEach(callback => {
+  authStateListeners.forEach((callback) => {
     try {
       callback(event, session)
     } catch (error) {
@@ -177,10 +177,10 @@ export const authService = {
         data: {
           session: {
             user,
-            access_token: token
-          }
+            access_token: token,
+          },
         },
-        error: null
+        error: null,
       }
     } catch (error) {
       return { data: { session: null }, error }
@@ -203,9 +203,9 @@ export const authService = {
         return {
           data: {
             user: result.user,
-            session
+            session,
           },
-          error: null
+          error: null,
         }
       }
       return { data: { user: null, session: null }, error: { message: '登录失败' } }
@@ -228,7 +228,7 @@ export const authService = {
   async signInWithGoogle() {
     return {
       data: { user: null, session: null },
-      error: { message: 'Google OAuth 登录暂不支持，请使用邮箱密码登录' }
+      error: { message: 'Google OAuth 登录暂不支持，请使用邮箱密码登录' },
     }
   },
 
@@ -237,7 +237,7 @@ export const authService = {
     void phone
     return {
       data: { user: null, session: null },
-      error: { message: '手机号登录暂不支持，请使用邮箱密码登录' }
+      error: { message: '手机号登录暂不支持，请使用邮箱密码登录' },
     }
   },
 
@@ -247,7 +247,7 @@ export const authService = {
     void token
     return {
       data: { user: null, session: null },
-      error: { message: 'OTP 验证暂不支持，请使用邮箱密码登录' }
+      error: { message: 'OTP 验证暂不支持，请使用邮箱密码登录' },
     }
   },
 
@@ -270,7 +270,10 @@ export const authService = {
   },
 
   // 修改密码
-  async changePassword(oldPassword: string, newPassword: string): Promise<{ success: boolean; error?: string }> {
+  async changePassword(
+    oldPassword: string,
+    newPassword: string,
+  ): Promise<{ success: boolean; error?: string }> {
     try {
       const token = localStorage.getItem('auth_token')
       if (!token) {
@@ -283,7 +286,9 @@ export const authService = {
   },
 
   // 发送手机验证码
-  async sendPhoneCode(phone: string): Promise<{ success: boolean; error?: string; cooldownSeconds?: number }> {
+  async sendPhoneCode(
+    phone: string,
+  ): Promise<{ success: boolean; error?: string; cooldownSeconds?: number }> {
     try {
       const token = localStorage.getItem('auth_token')
       if (!token) {
@@ -343,11 +348,11 @@ export const authService = {
             if (index > -1) {
               authStateListeners.splice(index, 1)
             }
-          }
-        }
-      }
+          },
+        },
+      },
     }
-  }
+  },
 }
 
 // 用户配置服务
@@ -405,7 +410,7 @@ export const userProfileService = {
       console.error('Error updating user role:', error)
       throw error
     }
-  }
+  },
 }
 
 // 会员套餐服务
@@ -422,28 +427,35 @@ export const membershipService = {
   },
 
   // 计算用户购买价格（考虑折扣）
-  calculatePrice(originalPrice: number, userLevel: UserLevel): { actualPrice: number, discountRate: number } {
-    let discountRate = 1.00
+  calculatePrice(
+    originalPrice: number,
+    userLevel: UserLevel,
+  ): { actualPrice: number; discountRate: number } {
+    let discountRate = 1.0
 
     if (userLevel === '螺丝钉') {
-      discountRate = 0.90 // 9折
+      discountRate = 0.9 // 9折
     } else if (userLevel === '大牛') {
-      discountRate = 0.80 // 8折
+      discountRate = 0.8 // 8折
     }
 
     return {
       actualPrice: Math.round(originalPrice * discountRate * 100) / 100,
-      discountRate
+      discountRate,
     }
   },
 
   // 购买套餐
-  async purchasePackage(userId: string, packageId: string, userLevel: UserLevel): Promise<PurchaseRecord> {
+  async purchasePackage(
+    userId: string,
+    packageId: string,
+    userLevel: UserLevel,
+  ): Promise<PurchaseRecord> {
     try {
       const purchaseData = await invokeIpc('membership:purchase-package', {
         userId,
         packageId,
-        userLevel
+        userLevel,
       })
       return purchaseData
     } catch (error) {
@@ -463,34 +475,42 @@ export const membershipService = {
     }
   },
 
-  async getUserPurchasesPage(userId: string, page: number, pageSize: number): Promise<PagedResult<PurchaseRecord>> {
+  async getUserPurchasesPage(
+    userId: string,
+    page: number,
+    pageSize: number,
+  ): Promise<PagedResult<PurchaseRecord>> {
     try {
       const offset = Math.max(0, page) * pageSize
       const result = await invokeIpc('membership:get-user-purchases', {
         userId,
         limit: pageSize,
-        offset
+        offset,
       })
       return {
         records: result.records || [],
-        hasMore: result.hasMore === true
+        hasMore: result.hasMore === true,
       }
     } catch (error) {
       console.error('Error fetching user purchases page:', error)
       throw error
     }
-  }
+  },
 }
 
 // 面试时间使用记录服务
 export const usageRecordService = {
   // 开始面试会话
-  async startSession(userId: string, sessionType: 'collaboration' | 'live_interview', preparationId?: string): Promise<InterviewUsageRecord> {
+  async startSession(
+    userId: string,
+    sessionType: 'collaboration' | 'live_interview',
+    preparationId?: string,
+  ): Promise<InterviewUsageRecord> {
     try {
       const session = await invokeIpc('usage:start-session', {
         userId,
         sessionType,
-        preparationId
+        preparationId,
       })
       return session
     } catch (error) {
@@ -504,7 +524,7 @@ export const usageRecordService = {
     try {
       const session = await invokeIpc('usage:end-session', {
         sessionId,
-        minutesUsed
+        minutesUsed,
       })
       return session
     } catch (error) {
@@ -524,23 +544,27 @@ export const usageRecordService = {
     }
   },
 
-  async getUserUsageRecordsPage(userId: string, page: number, pageSize: number): Promise<PagedResult<InterviewUsageRecord>> {
+  async getUserUsageRecordsPage(
+    userId: string,
+    page: number,
+    pageSize: number,
+  ): Promise<PagedResult<InterviewUsageRecord>> {
     try {
       const offset = Math.max(0, page) * pageSize
       const result = await invokeIpc('usage:get-user-records', {
         userId,
         limit: pageSize,
-        offset
+        offset,
       })
       return {
         records: result.records || [],
-        hasMore: result.hasMore === true
+        hasMore: result.hasMore === true,
       }
     } catch (error) {
       console.error('Error fetching usage records page:', error)
       throw error
     }
-  }
+  },
 }
 
 // 数据库操作函数
@@ -568,7 +592,9 @@ export const preparationService = {
   },
 
   // 创建新的准备项
-  async create(preparation: Omit<Preparation, 'id' | 'created_at' | 'updated_at'>): Promise<Preparation> {
+  async create(
+    preparation: Omit<Preparation, 'id' | 'created_at' | 'updated_at'>,
+  ): Promise<Preparation> {
     try {
       const newPreparation = await invokeIpc('preparation:create', preparation)
       return newPreparation
@@ -579,7 +605,10 @@ export const preparationService = {
   },
 
   // 更新准备项
-  async update(id: string, preparation: Partial<Omit<Preparation, 'id' | 'created_at' | 'updated_at'>>): Promise<Preparation> {
+  async update(
+    id: string,
+    preparation: Partial<Omit<Preparation, 'id' | 'created_at' | 'updated_at'>>,
+  ): Promise<Preparation> {
     try {
       const updatedPreparation = await invokeIpc('preparation:update', { id, preparation })
       return updatedPreparation
@@ -597,5 +626,5 @@ export const preparationService = {
       console.error('Error deleting preparation:', error)
       throw error
     }
-  }
+  },
 }

@@ -1,5 +1,12 @@
 import { ipcMain } from 'electron'
-import { startAudioCapture, stopAudioCapture, switchAudioMode, getAudioStatus, startSystemAudioDump, stopSystemAudioDump } from '../audio-manager'
+import {
+  startAudioCapture,
+  stopAudioCapture,
+  switchAudioMode,
+  getAudioStatus,
+  startSystemAudioDump,
+  stopSystemAudioDump,
+} from '../audio-manager'
 import { electronAudioCapture } from '../audio/electron-native-capture'
 import { broadcastToAllWindows } from '../window-manager'
 import type { AudioMode } from '../../shared/ipc'
@@ -69,7 +76,7 @@ ipcMain.on('audio-mode-fallback', (event, fallbackInfo) => {
   broadcastToAllWindows('audio-mode-changed', {
     mode: 'microphone',
     fallback: true,
-    reason: reason
+    reason: reason,
   })
 })
 
@@ -126,7 +133,6 @@ ipcMain.handle('check-system-audio-dump-available', async () => {
       }
       return { available: false, reason: 'SystemAudioDump 权限不足' }
     }
-
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
     console.error('检查 SystemAudioDump 可用性失败:', errorMessage)

@@ -25,12 +25,22 @@ declare global {
       exitCollaborationMode: () => Promise<boolean>
 
       // AI API（通用）
-      initializeAI: (apiKey: string, customPrompt?: string, profile?: string, language?: string) => Promise<boolean>
+      initializeAI: (
+        apiKey: string,
+        customPrompt?: string,
+        profile?: string,
+        language?: string,
+      ) => Promise<boolean>
       reconnectAI: () => Promise<boolean>
       disconnectAI: () => Promise<boolean>
 
       // 旧方法（向后兼容）
-      initializeGemini: (apiKey: string, customPrompt?: string, profile?: string, language?: string) => Promise<boolean>
+      initializeGemini: (
+        apiKey: string,
+        customPrompt?: string,
+        profile?: string,
+        language?: string,
+      ) => Promise<boolean>
       reconnectGemini: () => Promise<boolean>
       disconnectGemini: () => Promise<boolean>
 
@@ -59,16 +69,34 @@ declare global {
       onSessionReady: (callback: () => void) => () => void
       onSessionError: (callback: (error: string) => void) => () => void
       onSessionClosed: (callback: () => void) => () => void
-      onAudioModeChanged: (callback: (modeInfo: { mode: 'system' | 'microphone'; fallback?: boolean; reason?: string }) => void) => () => void
-      onAudioDeviceChanged: (callback: (data: { deviceId: string; deviceLabel: string }) => void) => () => void
-      onContextCompressed: (callback: (data: { previousCount: number, newCount: number }) => void) => () => void
+      onAudioModeChanged: (
+        callback: (modeInfo: {
+          mode: 'system' | 'microphone'
+          fallback?: boolean
+          reason?: string
+        }) => void,
+      ) => () => void
+      onAudioDeviceChanged: (
+        callback: (data: { deviceId: string; deviceLabel: string }) => void,
+      ) => () => void
+      onContextCompressed: (
+        callback: (data: { previousCount: number; newCount: number }) => void,
+      ) => () => void
       onAudioStreamInterrupted: (callback: () => void) => () => void
       onAudioStreamRestored: (callback: () => void) => () => void
       onTranscriptionComplete: (callback: (transcription: string) => void) => () => void
       onPerformanceMetrics: (callback: (metrics: any) => void) => () => void
       onCrashReport: (callback: (report: any) => void) => () => void
-      analyzePreparation: (data: { name: string; jobDescription: string; resume?: string }) => Promise<{ success: boolean; analysis?: any; error?: string }>
-      extractFileContent: (data: { fileName: string; fileType: string; base64Data: string }) => Promise<{ success: boolean; content?: string; error?: string }>
+      analyzePreparation: (data: {
+        name: string
+        jobDescription: string
+        resume?: string
+      }) => Promise<{ success: boolean; analysis?: any; error?: string }>
+      extractFileContent: (data: {
+        fileName: string
+        fileType: string
+        base64Data: string
+      }) => Promise<{ success: boolean; content?: string; error?: string }>
     }
     env: {
       GEMINI_API_KEY?: string
@@ -143,7 +171,7 @@ function AppContent() {
   const [showPermissionGuide, setShowPermissionGuide] = useState(false)
   const [permissionStatus, setPermissionStatus] = useState({
     screenRecording: false,
-    microphone: false
+    microphone: false,
   })
 
   // 移除全局音频初始化，改为在协作模式组件中按需初始化
@@ -183,19 +211,17 @@ function AppContent() {
       // 更新权限状态
       setPermissionStatus({
         screenRecording: permissions.screenRecording?.granted || false,
-        microphone: permissions.microphone?.granted || false
+        microphone: permissions.microphone?.granted || false,
       })
 
       // 检查是否所有必要权限都已授予
       const allPermissionsGranted =
-        permissions.screenRecording?.granted &&
-        permissions.microphone?.granted
+        permissions.screenRecording?.granted && permissions.microphone?.granted
 
       // 只有当权限未全部授予时才显示引导
       if (!allPermissionsGranted) {
         setShowPermissionGuide(true)
       }
-
     } catch (error) {
       console.error('权限检查失败:', error)
     }
@@ -304,14 +330,21 @@ function AppContent() {
             className="fixed inset-0 bg-white/30 dark:bg-black/30 backdrop-blur-md flex items-center justify-center z-[9999] p-4 cursor-pointer"
             onClick={() => setShowPermissionGuide(false)}
           >
-            <div className="bg-[var(--bready-surface)] border border-[var(--bready-border)] rounded-2xl w-full max-w-md shadow-2xl cursor-auto" onClick={(e) => e.stopPropagation()}>
+            <div
+              className="bg-[var(--bready-surface)] border border-[var(--bready-border)] rounded-2xl w-full max-w-md shadow-2xl cursor-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="p-6">
                 <div className="mb-6">
-                  <h2 className="text-xl font-bold text-black dark:text-white">{t('permissionsGuide.title')}</h2>
+                  <h2 className="text-xl font-bold text-black dark:text-white">
+                    {t('permissionsGuide.title')}
+                  </h2>
                 </div>
 
                 <div className="mb-6">
-                  <p className="text-gray-600 dark:text-gray-400 mb-4">{t('permissionsGuide.description')}</p>
+                  <p className="text-gray-600 dark:text-gray-400 mb-4">
+                    {t('permissionsGuide.description')}
+                  </p>
 
                   <div className="space-y-3">
                     {/* 屏幕录制权限卡片 - 可点击 */}
@@ -326,16 +359,21 @@ function AppContent() {
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center space-x-2">
                           <Volume2 className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                          <span className="font-medium text-black dark:text-white">{t('permissionsGuide.screen')}</span>
+                          <span className="font-medium text-black dark:text-white">
+                            {t('permissionsGuide.screen')}
+                          </span>
                         </div>
                         <CheckCircle
-                          className={`w-5 h-5 ${permissionStatus.screenRecording
-                            ? 'text-green-500 dark:text-green-400'
-                            : 'text-gray-400'
-                            }`}
+                          className={`w-5 h-5 ${
+                            permissionStatus.screenRecording
+                              ? 'text-green-500 dark:text-green-400'
+                              : 'text-gray-400'
+                          }`}
                         />
                       </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">{t('permissionsGuide.screenDesc')}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        {t('permissionsGuide.screenDesc')}
+                      </p>
                     </div>
 
                     {/* 麦克风权限卡片 - 可点击 */}
@@ -350,16 +388,21 @@ function AppContent() {
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center space-x-2">
                           <Mic className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                          <span className="font-medium text-black dark:text-white">{t('permissionsGuide.mic')}</span>
+                          <span className="font-medium text-black dark:text-white">
+                            {t('permissionsGuide.mic')}
+                          </span>
                         </div>
                         <CheckCircle
-                          className={`w-5 h-5 ${permissionStatus.microphone
-                            ? 'text-green-500 dark:text-green-400'
-                            : 'text-gray-400'
-                            }`}
+                          className={`w-5 h-5 ${
+                            permissionStatus.microphone
+                              ? 'text-green-500 dark:text-green-400'
+                              : 'text-gray-400'
+                          }`}
                         />
                       </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">{t('permissionsGuide.micDesc')}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        {t('permissionsGuide.micDesc')}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -376,7 +419,9 @@ function AppContent() {
                   </Button>
                 </div>
 
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-4 text-center">{t('permissionsGuide.note')}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-4 text-center">
+                  {t('permissionsGuide.note')}
+                </p>
               </div>
             </div>
           </div>

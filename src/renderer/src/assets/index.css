@@ -1,7 +1,7 @@
 /* 导入 Space Grotesk 和 Inter 字体 */
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
 
-@import "tailwindcss";
+@import 'tailwindcss';
 
 :root {
   --background: 0 0% 100%;
@@ -88,7 +88,12 @@ html,
 body {
   margin: 0;
   padding: 0;
-  font-family: 'Inter', 'Space Grotesk', system-ui, -apple-system, sans-serif;
+  font-family:
+    'Inter',
+    'Space Grotesk',
+    system-ui,
+    -apple-system,
+    sans-serif;
   background-color: var(--bready-bg);
   color: var(--bready-text);
   font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
@@ -129,7 +134,7 @@ body {
 /* AI回复和对话记录强制允许文本选择 */
 .collaboration-content .text-selectable,
 .collaboration-content .text-selectable *,
-.collaboration-content [style*="user-select: text"] {
+.collaboration-content [style*='user-select: text'] {
   -webkit-user-select: text !important;
   -moz-user-select: text !important;
   -ms-user-select: text !important;
@@ -160,21 +165,21 @@ body {
 
 /* 暗色模式滚动条 */
 .dark ::-webkit-scrollbar-track,
-[class*="bg-black"] ::-webkit-scrollbar-track,
-[class*="bg-zinc-9"] ::-webkit-scrollbar-track {
+[class*='bg-black'] ::-webkit-scrollbar-track,
+[class*='bg-zinc-9'] ::-webkit-scrollbar-track {
   background: rgba(39, 39, 42, 0.5);
 }
 
 .dark ::-webkit-scrollbar-thumb,
-[class*="bg-black"] ::-webkit-scrollbar-thumb,
-[class*="bg-zinc-9"] ::-webkit-scrollbar-thumb {
+[class*='bg-black'] ::-webkit-scrollbar-thumb,
+[class*='bg-zinc-9'] ::-webkit-scrollbar-thumb {
   background: linear-gradient(180deg, rgba(113, 113, 122, 0.6) 0%, rgba(82, 82, 91, 0.6) 100%);
   border: 2px solid rgba(39, 39, 42, 0.5);
 }
 
 .dark ::-webkit-scrollbar-thumb:hover,
-[class*="bg-black"] ::-webkit-scrollbar-thumb:hover,
-[class*="bg-zinc-9"] ::-webkit-scrollbar-thumb:hover {
+[class*='bg-black'] ::-webkit-scrollbar-thumb:hover,
+[class*='bg-zinc-9'] ::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(180deg, rgba(161, 161, 170, 0.7) 0%, rgba(113, 113, 122, 0.7) 100%);
 }
 
@@ -254,7 +259,6 @@ body {
 }
 
 @keyframes dots {
-
   0%,
   20% {
     content: '';
@@ -297,15 +301,21 @@ body {
 
 /* 阴影效果 */
 .shadow-soft {
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 .shadow-medium {
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
 .shadow-large {
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
 .shadow-xl {
@@ -338,7 +348,6 @@ body {
 }
 
 @keyframes pulse {
-
   0%,
   100% {
     opacity: 1;
@@ -499,8 +508,9 @@ body {
 /* 渐变边框效果 */
 .gradient-border {
   position: relative;
-  background: linear-gradient(var(--bready-surface), var(--bready-surface)) padding-box,
-              linear-gradient(135deg, rgba(59, 130, 246, 0.5), rgba(147, 51, 234, 0.5)) border-box;
+  background:
+    linear-gradient(var(--bready-surface), var(--bready-surface)) padding-box,
+    linear-gradient(135deg, rgba(59, 130, 246, 0.5), rgba(147, 51, 234, 0.5)) border-box;
   border: 1px solid transparent;
 }
 
@@ -520,26 +530,20 @@ body {
 
 .floating-card:hover {
   transform: translateY(-8px) scale(1.02);
-  box-shadow: 
+  box-shadow:
     0 25px 50px -12px rgba(0, 0, 0, 0.15),
     0 0 0 1px rgba(59, 130, 246, 0.1);
 }
 
 .dark .floating-card:hover {
-  box-shadow: 
+  box-shadow:
     0 25px 50px -12px rgba(0, 0, 0, 0.4),
     0 0 0 1px rgba(96, 165, 250, 0.15);
 }
 
 /* 渐变文字动画 */
 .gradient-text-animated {
-  background: linear-gradient(
-    90deg,
-    #3b82f6,
-    #8b5cf6,
-    #ec4899,
-    #3b82f6
-  );
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899, #3b82f6);
   background-size: 300% 100%;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -548,7 +552,8 @@ body {
 }
 
 @keyframes gradient-shift {
-  0%, 100% {
+  0%,
+  100% {
     background-position: 0% 50%;
   }
   50% {
@@ -558,7 +563,8 @@ body {
 
 /* 呼吸动画 */
 @keyframes breathe {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
     opacity: 0.8;
   }
@@ -574,7 +580,8 @@ body {
 
 /* 浮动动画 */
 @keyframes float {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0px);
   }
   50% {
@@ -623,7 +630,9 @@ body {
   background: rgba(255, 255, 255, 0.3);
   border-radius: 50%;
   transform: translate(-50%, -50%);
-  transition: width 0.6s ease, height 0.6s ease;
+  transition:
+    width 0.6s ease,
+    height 0.6s ease;
 }
 
 .ripple-effect:active::after {
@@ -670,14 +679,14 @@ body {
 
 /* 现代化阴影 */
 .shadow-modern {
-  box-shadow: 
+  box-shadow:
     0 1px 2px rgba(0, 0, 0, 0.02),
     0 4px 8px rgba(0, 0, 0, 0.04),
     0 16px 32px rgba(0, 0, 0, 0.06);
 }
 
 .shadow-modern-lg {
-  box-shadow: 
+  box-shadow:
     0 2px 4px rgba(0, 0, 0, 0.02),
     0 8px 16px rgba(0, 0, 0, 0.04),
     0 24px 48px rgba(0, 0, 0, 0.08);

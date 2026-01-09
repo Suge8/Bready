@@ -9,13 +9,13 @@
 ### 结构规范
 
 ```tsx
-<div 
+<div
   className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 cursor-pointer"
-  onClick={handleClose}  // 点击外部关闭
+  onClick={handleClose} // 点击外部关闭
 >
-  <div 
+  <div
     className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-2xl cursor-auto"
-    onClick={(e) => e.stopPropagation()}  // 阻止事件冒泡
+    onClick={(e) => e.stopPropagation()} // 阻止事件冒泡
   >
     {/* 模态框内容 */}
   </div>
@@ -25,6 +25,7 @@
 ### 交互规范
 
 #### 1. 关闭方式
+
 - ❌ **不使用**右上角 X 关闭按钮
 - ✅ **点击外部背景**关闭（外层 div 的 onClick）
 - ✅ 内容区域点击不关闭（stopPropagation）
@@ -32,12 +33,15 @@
 #### 2. 光标样式（Electron 应用）
 
 **外层背景**：
+
 - `cursor-pointer` - 提示用户可以点击关闭
 
 **内层内容**：
+
 - `cursor-auto` - 重置光标，避免继承外层的 cursor-pointer
 
 **交互元素**：
+
 - 所有按钮：`cursor-pointer`
 - 所有下拉框：`cursor-pointer`
 - 可点击的卡片/div：`cursor-pointer`
@@ -57,18 +61,15 @@
 ### 按钮规范
 
 #### 主要操作按钮
+
 ```tsx
-<button className="bg-black text-white hover:bg-gray-800 cursor-pointer">
-  确定
-</button>
+<button className="bg-black text-white hover:bg-gray-800 cursor-pointer">确定</button>
 ```
 
 #### 取消/次要按钮
+
 ```tsx
-<button 
-  variant="outline"
-  className="border-gray-300 hover:bg-gray-50 cursor-pointer"
->
+<button variant="outline" className="border-gray-300 hover:bg-gray-50 cursor-pointer">
   取消
 </button>
 ```
@@ -76,17 +77,20 @@
 ### 实际案例
 
 #### 案例 1：准备面试模态框
+
 - 标题居左
 - 无关闭按钮
 - 按钮居中显示
 - 点击外部关闭
 
 #### 案例 2：退出确认对话框
+
 - 只有一个"退出"按钮（全宽）
 - 删除了"取消"按钮（点击外部即可取消）
 - 按钮居中显示
 
 #### 案例 3：权限设置模态框
+
 - 无右上角关闭按钮
 - 无底部关闭按钮
 - 点击外部关闭
@@ -101,6 +105,7 @@
 ### 文字规范
 
 保持简洁：
+
 - "请选择本次面试的准备项" → "准备面试"
 - "面试语言" → "语言"
 - "使用目的" → "目的"

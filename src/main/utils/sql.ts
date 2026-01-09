@@ -27,7 +27,3 @@ export function buildUpdateSetClause(
     values,
   }
 }
-
-
-
-

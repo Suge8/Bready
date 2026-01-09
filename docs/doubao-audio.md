@@ -1,6 +1,3 @@
-大模型流式语音识别API
-
-简介
 本文档介绍如何通过WebSocket协议实时访问大模型流式语音识别服务 (ASR)，主要包含鉴权相关、协议详情、常见问题和使用Demo四部分。
 双向流式模式使用的接口地址是 wss://openspeech.bytedance.com/api/v3/sauc/bigmodel
 流式输入模式使用的接口地址是 wss://openspeech.bytedance.com/api/v3/sauc/bigmodel_nostream
@@ -14,7 +11,7 @@
 该模式下，不再是每一包输入对应一包返回，只有当结果有变化时才会返回新的数据包（性能优化 rtf 和首字、尾字时延均有一定程度提升）
 双向流式版本，更推荐使用双向流式模式（优化版本），性能相对更优。
 
-鉴权
+鉴权 #
 在 websocket 建连的 HTTP 请求头（Header 中）添加以下信息
 
 Key
@@ -82,18 +79,19 @@ X-Api-Resource-Id: volc.bigasr.sauc.duration
 X-Api-Connect-Id: 随机生成的UUID
 
 ## 返回 Header
+
 X-Tt-Logid: 202407261553070FACFE6D19421815D605
 
-协议详情
+协议详情 #
 
-交互流程
+交互流程 #
 Image
 
-WebSocket 二进制协议
+WebSocket 二进制协议 #
 WebSocket 使用二进制协议传输数据。协议的组成由至少 4 个字节的可变 header、payload size 和 payload 三部分组成，其中 header 描述消息类型、序列化方式以及压缩格式等信息，payload size 是 payload 的长度，payload 是具体负载内容，依据消息类型不同 payload 内容不同。
 需注意：协议中整数类型的字段都使用大端表示。
 
-header 数据格式
+header 数据格式 #
 Byte \ Bit
 
 7
@@ -146,8 +144,7 @@ Reserved
 
 ...
 
-
-header 字段描述
+header 字段描述 #
 字段 (size in bits)
 
 说明
@@ -204,14 +201,13 @@ Reserved (8)
 
 保留以供将来使用，还用作填充（使整个标头总计4个字节）。
 
+请求流程 #
 
-请求流程
-
-建立连接
+建立连接 #
 根据 WebSocket 协议本身的机制，client 会发送 HTTP GET 请求和 server 建立连接做协议升级。
 需要在其中根据身份认证协议加入鉴权签名头。设置方法请参考鉴权。
 
-发送 full client request
+发送 full client request #
 WebSocket 建立连接后，发送的第一个请求是 full client request。格式是：
 
 31 ... 24
@@ -628,8 +624,8 @@ force_to_speech_time
 
 int
 
-单位ms，默认为10000，最小1。音频时长超过该值之后，才会判停，根据静音时长输出definite，需配合end_window_size使用。
-用于解决短音频+实时性要求较高场景，不配置该参数，只使用end_window_size时，前10s不会判停。推荐设置1000，可能会影响识别准确率。
+单位ms，最小1。音频时长超过该值之后，才会尝试判停并返回definite=true，需配合end_window_size参数使用。对小于该数值的音频不做判停处理。
+推荐设置1000，可能会影响识别准确率。
 
 sensitive_words_filter
 
@@ -643,7 +639,7 @@ string
 示例：
 system_reserved_filter //是否使用系统敏感词，会替换成*(默认系统敏感词主要包含一些限制级词汇）
 filter_with_empty // 想要替换成空的敏感词
-filter_with_signed // 想要替换成 * 的敏感词
+filter_with_signed // 想要替换成 \* 的敏感词
 
 "sensitive_words_filter":{\"system_reserved_filter\":true,\"filter_with_empty\":[\"敏感词\"],\"filter_with_signed\":[\"敏感词\"]}",
 enable_poi_fc（nostream接口&双向流式优化版-开启二遍支持）
@@ -658,10 +654,10 @@ bool
 示例：
 
 "request": {
-    "enable_poi_fc": true,
-    "corpus": {
-        "context": "{\"loc_info\":{\"city_name\":\"北京市\"}}"
-    }
+"enable_poi_fc": true,
+"corpus": {
+"context": "{\"loc_info\":{\"city_name\":\"北京市\"}}"
+}
 }
 其中loc_info字段可选，传入该字段结果相对更精准，city_name单位为地级市。
 
@@ -677,7 +673,7 @@ bool
 示例：
 
 "request": {
-    "enable_music_fc": true
+"enable_music_fc": true
 }
 corpus
 
@@ -750,52 +746,52 @@ b.聊天所在bot信息:如"我在和林黛玉聊天","我在使用A助手和手
 c.个性化信息:"我当前在北京市海淀区","我有四川口音","我喜欢音乐"
 d.业务场景信息:"当前是中国平安的营销人员针对外部客户采访的录音,可能涉及..."
 {
-    \"context_type\": \"dialog_ctx\",
-    \"context_data\":[
-        {\"text\": \"text1\"},
-        {\"image_url\": \"image_url\"},
-        {\"text\": \"text2\"},
-        {\"text\": \"text3\"},
-        {\"text\": \"text4\"},
-        ...
-    ]
+\"context_type\": \"dialog_ctx\",
+\"context_data\":[
+{\"text\": \"text1\"},
+{\"image_url\": \"image_url\"},
+{\"text\": \"text2\"},
+{\"text\": \"text3\"},
+{\"text\": \"text4\"},
+...
+]
 }
 参数示例：
 
 {
-    "user": {
-        "uid": "388808088185088"
-    },
-    "audio": {
-        "format": "wav",
-        "rate": 16000,
-        "bits": 16,
-        "channel": 1,
-        "language": "zh-CN"
-    },
-    "request": {
-        "model_name": "bigmodel",
-        "enable_itn": false,
-        "enable_ddc": false,
-        "enable_punc": false,
-        "corpus": {
-            "boosting_table_id": "通过自学习平台配置热词的词表id",
-            },
-            "context": {
-                \"context_type\": \"dialog_ctx\",
-                \"context_data\":[
-                    {\"text\": \"text1\"},
-                    {\"text\": \"text2\"},
-                    {\"text\": \"text3\"},
-                    {\"text\": \"text4\"},
-                    ...
-                ]
-            }
-        }
-    }
+"user": {
+"uid": "388808088185088"
+},
+"audio": {
+"format": "wav",
+"rate": 16000,
+"bits": 16,
+"channel": 1,
+"language": "zh-CN"
+},
+"request": {
+"model_name": "bigmodel",
+"enable_itn": false,
+"enable_ddc": false,
+"enable_punc": false,
+"corpus": {
+"boosting_table_id": "通过自学习平台配置热词的词表id",
+},
+"context": {
+\"context_type\": \"dialog_ctx\",
+\"context_data\":[
+{\"text\": \"text1\"},
+{\"text\": \"text2\"},
+{\"text\": \"text3\"},
+{\"text\": \"text4\"},
+...
+]
+}
+}
+}
 }
 
-发送 audio only request
+发送 audio only request #
 Client 发送 full client request 后，再发送包含音频数据的 audio-only client request。音频应采用 full client request 中指定的格式（音频格式、编解码器、采样率、声道）。格式如下：
 
 31 ... 24
@@ -814,7 +810,7 @@ Payload
 
 Payload 是使用指定压缩方法，压缩音频数据后的内容。可以多次发送 audio only request 请求，例如在流式语音识别中如果每次发送 100ms 的音频数据，那么 audio only request 中的 Payload 就是 100ms 的音频数据。
 
-full server response
+full server response #
 Client 发送的 full client request 和 audio only request，服务端都会返回 full server response。格式如下：
 
 31 ... 24
@@ -918,112 +914,112 @@ bool
 仅当识别成功且开启show_utterances时填写。
 
 {
-  "audio_info": {"duration": 10000},
-  "result": {
-      "text": "这是字节跳动， 今日头条母公司。",
-      "utterances": [
-        {
-          "definite": true,
-          "end_time": 1705,
-          "start_time": 0,
-          "text": "这是字节跳动，",
-          "words": [
-            {
-              "blank_duration": 0,
-              "end_time": 860,
-              "start_time": 740,
-              "text": "这"
-            },
-            {
-              "blank_duration": 0,
-              "end_time": 1020,
-              "start_time": 860,
-              "text": "是"
-            },
-            {
-              "blank_duration": 0,
-              "end_time": 1200,
-              "start_time": 1020,
-              "text": "字"
-            },
-            {
-              "blank_duration": 0,
-              "end_time": 1400,
-              "start_time": 1200,
-              "text": "节"
-            },
-            {
-              "blank_duration": 0,
-              "end_time": 1560,
-              "start_time": 1400,
-              "text": "跳"
-            },
-            {
-              "blank_duration": 0,
-              "end_time": 1640,
-              "start_time": 1560,
-              "text": "动"
-            }
-          ]
-        },
-        {
-          "definite": true,
-          "end_time": 3696,
-          "start_time": 2110,
-          "text": "今日头条母公司。",
-          "words": [
-            {
-              "blank_duration": 0,
-              "end_time": 3070,
-              "start_time": 2910,
-              "text": "今"
-            },
-            {
-              "blank_duration": 0,
-              "end_time": 3230,
-              "start_time": 3070,
-              "text": "日"
-            },
-            {
-              "blank_duration": 0,
-              "end_time": 3390,
-              "start_time": 3230,
-              "text": "头"
-            },
-            {
-              "blank_duration": 0,
-              "end_time": 3550,
-              "start_time": 3390,
-              "text": "条"
-            },
-            {
-              "blank_duration": 0,
-              "end_time": 3670,
-              "start_time": 3550,
-              "text": "母"
-            },
-            {
-              "blank_duration": 0,
-              "end_time": 3696,
-              "start_time": 3670,
-              "text": "公"
-            },
-            {
-              "blank_duration": 0,
-              "end_time": 3696,
-              "start_time": 3696,
-              "text": "司"
-            }
-          ]
-        }
-      ]
-   },
-  "audio_info": {
-    "duration": 3696
-  }
+"audio_info": {"duration": 10000},
+"result": {
+"text": "这是字节跳动， 今日头条母公司。",
+"utterances": [
+{
+"definite": true,
+"end_time": 1705,
+"start_time": 0,
+"text": "这是字节跳动，",
+"words": [
+{
+"blank_duration": 0,
+"end_time": 860,
+"start_time": 740,
+"text": "这"
+},
+{
+"blank_duration": 0,
+"end_time": 1020,
+"start_time": 860,
+"text": "是"
+},
+{
+"blank_duration": 0,
+"end_time": 1200,
+"start_time": 1020,
+"text": "字"
+},
+{
+"blank_duration": 0,
+"end_time": 1400,
+"start_time": 1200,
+"text": "节"
+},
+{
+"blank_duration": 0,
+"end_time": 1560,
+"start_time": 1400,
+"text": "跳"
+},
+{
+"blank_duration": 0,
+"end_time": 1640,
+"start_time": 1560,
+"text": "动"
+}
+]
+},
+{
+"definite": true,
+"end_time": 3696,
+"start_time": 2110,
+"text": "今日头条母公司。",
+"words": [
+{
+"blank_duration": 0,
+"end_time": 3070,
+"start_time": 2910,
+"text": "今"
+},
+{
+"blank_duration": 0,
+"end_time": 3230,
+"start_time": 3070,
+"text": "日"
+},
+{
+"blank_duration": 0,
+"end_time": 3390,
+"start_time": 3230,
+"text": "头"
+},
+{
+"blank_duration": 0,
+"end_time": 3550,
+"start_time": 3390,
+"text": "条"
+},
+{
+"blank_duration": 0,
+"end_time": 3670,
+"start_time": 3550,
+"text": "母"
+},
+{
+"blank_duration": 0,
+"end_time": 3696,
+"start_time": 3670,
+"text": "公"
+},
+{
+"blank_duration": 0,
+"end_time": 3696,
+"start_time": 3696,
+"text": "司"
+}
+]
+}
+]
+},
+"audio_info": {
+"duration": 3696
+}
 }
 
-Error message from server
+Error message from server #
 当 server 发现无法解决的二进制/传输协议问题时，将发送 Error message from server 消息（例如，client 以 server 不支持的序列化格式发送消息）。格式如下：
 
 31 ... 24
@@ -1047,7 +1043,7 @@ Error message code： 错误码，使用大端表示。
 Error message size： 错误信息长度，使用大端表示。
 Error message： 错误信息。
 
-示例
+示例 #
 
 示例：客户发送 3 个请求
 下面的 message flow 会发送多次消息，每个消息都带有版本、header 大小、保留数据。由于每次消息中这些字段值相同，所以有些消息中这些字段省略了。
@@ -1132,8 +1128,7 @@ Error code data: 0x2A 0x0D 0x0A2 0xff (4byte) 错误码
 payload size = 错误信息对象的 JSON 长度
 payload: 错误信息对象的 JSON 数据
 
-
-错误码
+错误码 #
 错误码
 
 含义

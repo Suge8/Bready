@@ -1,14 +1,14 @@
-import React, { useEffect } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { cn } from "../../lib/utils"
-import { Button } from "./button"
+import React, { useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { cn } from '../../lib/utils'
+import { Button } from './button'
 
 export interface ModalProps {
   isOpen: boolean
   onClose: () => void
   title?: string
   children: React.ReactNode
-  size?: "sm" | "md" | "lg" | "xl" | "full"
+  size?: 'sm' | 'md' | 'lg' | 'xl' | 'full'
   closeOnOverlayClick?: boolean
   closeOnEscape?: boolean
   showCloseButton?: boolean
@@ -20,37 +20,37 @@ export const Modal: React.FC<ModalProps> = ({
   onClose,
   title,
   children,
-  size = "md",
+  size = 'md',
   closeOnOverlayClick = true,
   closeOnEscape = true,
   showCloseButton = false,
   className,
 }) => {
   const sizeClasses = {
-    sm: "max-w-md",
-    md: "max-w-lg",
-    lg: "max-w-2xl",
-    xl: "max-w-4xl",
-    full: "max-w-[calc(100%-2rem)]",
+    sm: 'max-w-md',
+    md: 'max-w-lg',
+    lg: 'max-w-2xl',
+    xl: 'max-w-4xl',
+    full: 'max-w-[calc(100%-2rem)]',
   }
 
   useEffect(() => {
     if (!isOpen) return
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && closeOnEscape) {
+      if (event.key === 'Escape' && closeOnEscape) {
         onClose()
       }
     }
 
-    document.addEventListener("keydown", handleKeyDown)
-    return () => document.removeEventListener("keydown", handleKeyDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
   }, [isOpen, closeOnEscape, onClose])
 
   useEffect(() => {
-    document.body.style.overflow = isOpen ? "hidden" : "unset"
+    document.body.style.overflow = isOpen ? 'hidden' : 'unset'
     return () => {
-      document.body.style.overflow = "unset"
+      document.body.style.overflow = 'unset'
     }
   }, [isOpen])
 
@@ -78,19 +78,17 @@ export const Modal: React.FC<ModalProps> = ({
             initial={{ opacity: 0, scale: 0.98, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.98, y: 20 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
             className={cn(
-              "relative w-full flex flex-col rounded-2xl border border-[var(--bready-border)] bg-[var(--bready-surface)] shadow-2xl cursor-auto p-6 max-h-[90vh]",
+              'relative w-full flex flex-col rounded-2xl border border-[var(--bready-border)] bg-[var(--bready-surface)] shadow-2xl cursor-auto p-6 max-h-[90vh]',
               sizeClasses[size],
-              className
+              className,
             )}
           >
             {(title || showCloseButton) && (
               <div className="mb-6 flex items-start justify-between gap-4 flex-shrink-0">
                 {title && (
-                  <h2 className="text-xl font-semibold text-[var(--bready-text)]">
-                    {title}
-                  </h2>
+                  <h2 className="text-xl font-semibold text-[var(--bready-text)]">{title}</h2>
                 )}
                 {showCloseButton && (
                   <button
@@ -98,12 +96,7 @@ export const Modal: React.FC<ModalProps> = ({
                     className="text-[var(--bready-text-muted)] hover:text-[var(--bready-text)] transition-colors"
                     aria-label="关闭"
                   >
-                    <svg
-                      className="h-5 w-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -132,29 +125,29 @@ export const ConfirmDialog: React.FC<{
   message: string
   confirmText?: string
   cancelText?: string
-  type?: "info" | "warning" | "danger"
+  type?: 'info' | 'warning' | 'danger'
 }> = ({
   isOpen,
   onClose,
   onConfirm,
   title,
   message,
-  confirmText = "确认",
-  cancelText = "取消",
-  type = "info",
+  confirmText = '确认',
+  cancelText = '取消',
+  type = 'info',
 }) => {
   const typeStyles = {
     info: {
-      icon: "💡",
-      confirmClass: "bg-black text-white hover:bg-black/90",
+      icon: '💡',
+      confirmClass: 'bg-black text-white hover:bg-black/90',
     },
     warning: {
-      icon: "⚠️",
-      confirmClass: "bg-amber-500 text-white hover:bg-amber-600",
+      icon: '⚠️',
+      confirmClass: 'bg-amber-500 text-white hover:bg-amber-600',
     },
     danger: {
-      icon: "⚠️",
-      confirmClass: "bg-red-600 text-white hover:bg-red-700",
+      icon: '⚠️',
+      confirmClass: 'bg-red-600 text-white hover:bg-red-700',
     },
   }
 
@@ -186,28 +179,21 @@ export const Drawer: React.FC<{
   onClose: () => void
   title?: string
   children: React.ReactNode
-  position?: "left" | "right"
-  size?: "sm" | "md" | "lg"
-}> = ({
-  isOpen,
-  onClose,
-  title,
-  children,
-  position = "right",
-  size = "md",
-}) => {
+  position?: 'left' | 'right'
+  size?: 'sm' | 'md' | 'lg'
+}> = ({ isOpen, onClose, title, children, position = 'right', size = 'md' }) => {
   const sizeClasses = {
-    sm: "w-80",
-    md: "w-96",
-    lg: "w-1/2",
+    sm: 'w-80',
+    md: 'w-96',
+    lg: 'w-1/2',
   }
 
   const positionClasses = {
-    left: "left-0",
-    right: "right-0",
+    left: 'left-0',
+    right: 'right-0',
   }
 
-  const slideDirection = position === "left" ? -100 : 100
+  const slideDirection = position === 'left' ? -100 : 100
 
   return (
     <AnimatePresence>
@@ -225,28 +211,21 @@ export const Drawer: React.FC<{
             initial={{ x: slideDirection }}
             animate={{ x: 0 }}
             exit={{ x: slideDirection }}
-            transition={{ duration: 0.3, ease: "easeInOut" }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
             className={cn(
-              "fixed top-0 h-full bg-[var(--bready-surface)] border-l border-[var(--bready-border)] shadow-xl flex flex-col",
+              'fixed top-0 h-full bg-[var(--bready-surface)] border-l border-[var(--bready-border)] shadow-xl flex flex-col',
               positionClasses[position],
-              sizeClasses[size]
+              sizeClasses[size],
             )}
           >
             {title && (
               <div className="flex items-center justify-between border-b border-[var(--bready-border)] p-4">
-                <h2 className="text-lg font-semibold text-[var(--bready-text)]">
-                  {title}
-                </h2>
+                <h2 className="text-lg font-semibold text-[var(--bready-text)]">{title}</h2>
                 <button
                   onClick={onClose}
                   className="text-[var(--bready-text-muted)] hover:text-[var(--bready-text)]"
                 >
-                  <svg
-                    className="h-5 w-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"

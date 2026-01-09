@@ -51,14 +51,22 @@ class ErrorBoundaryCore extends Component<Props & { copy: ErrorBoundaryCopy }, S
               <div className="max-w-md w-full text-center">
                 <div className="mb-6">
                   <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
-                    <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    <svg
+                      className="w-8 h-8 text-red-600"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+                      />
                     </svg>
                   </div>
                   <h1 className="text-xl font-bold text-[var(--bready-text)] mb-2">{copy.title}</h1>
-                  <p className="text-[var(--bready-text-muted)] text-sm">
-                    {copy.description}
-                  </p>
+                  <p className="text-[var(--bready-text-muted)] text-sm">{copy.description}</p>
                 </div>
 
                 <div className="space-y-3">
@@ -91,7 +99,9 @@ class ErrorBoundaryCore extends Component<Props & { copy: ErrorBoundaryCopy }, S
                           const btn = e.currentTarget
                           const originalText = btn.innerText
                           btn.innerText = copy.copied
-                          setTimeout(() => { btn.innerText = originalText }, 2000)
+                          setTimeout(() => {
+                            btn.innerText = originalText
+                          }, 2000)
                         }}
                         className="text-xs text-[var(--bready-text)] font-medium px-2 py-1 rounded hover:bg-[var(--bready-surface-2)] transition-colors"
                       >
@@ -109,7 +119,9 @@ class ErrorBoundaryCore extends Component<Props & { copy: ErrorBoundaryCopy }, S
                       {this.state.errorInfo && (
                         <div>
                           <strong>{copy.labels.componentStack}:</strong>
-                          <pre className="whitespace-pre-wrap">{this.state.errorInfo.componentStack}</pre>
+                          <pre className="whitespace-pre-wrap">
+                            {this.state.errorInfo.componentStack}
+                          </pre>
                         </div>
                       )}
                     </div>
@@ -139,8 +151,8 @@ const ErrorBoundary: React.FC<Props> = ({ children }) => {
     labels: {
       error: t('errorBoundary.labels.error'),
       stack: t('errorBoundary.labels.stack'),
-      componentStack: t('errorBoundary.labels.componentStack')
-    }
+      componentStack: t('errorBoundary.labels.componentStack'),
+    },
   }
 
   return <ErrorBoundaryCore copy={copy}>{children}</ErrorBoundaryCore>

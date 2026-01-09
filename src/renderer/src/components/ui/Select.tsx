@@ -37,40 +37,40 @@ export const Select: React.FC<SelectProps> = ({
   searchable = false,
   multiple = false,
   size = 'md',
-  className = ''
+  className = '',
 }) => {
   const [isOpen, setIsOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedValues, setSelectedValues] = useState<string[]>(
-    multiple ? (Array.isArray(value) ? value : []) : (value ? [value] : [])
+    multiple ? (Array.isArray(value) ? value : []) : value ? [value] : [],
   )
-  
+
   const selectRef = useRef<HTMLDivElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
 
   const sizeClasses = {
     sm: 'px-3 py-2 text-sm',
     md: 'px-4 py-2.5 text-sm',
-    lg: 'px-4 py-3 text-base'
+    lg: 'px-4 py-3 text-base',
   }
 
   // 过滤选项
-  const filteredOptions = options.filter(option =>
-    option.label.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredOptions = options.filter((option) =>
+    option.label.toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
   // 获取选中选项的显示文本
   const getDisplayText = () => {
     if (selectedValues.length === 0) return placeholder
-    
+
     if (multiple) {
       if (selectedValues.length === 1) {
-        const option = options.find(opt => opt.value === selectedValues[0])
+        const option = options.find((opt) => opt.value === selectedValues[0])
         return option?.label || selectedValues[0]
       }
       return `已选择 ${selectedValues.length} 项`
     } else {
-      const option = options.find(opt => opt.value === selectedValues[0])
+      const option = options.find((opt) => opt.value === selectedValues[0])
       return option?.label || selectedValues[0]
     }
   }
@@ -79,9 +79,9 @@ export const Select: React.FC<SelectProps> = ({
   const handleOptionClick = (optionValue: string) => {
     if (multiple) {
       const newValues = selectedValues.includes(optionValue)
-        ? selectedValues.filter(v => v !== optionValue)
+        ? selectedValues.filter((v) => v !== optionValue)
         : [...selectedValues, optionValue]
-      
+
       setSelectedValues(newValues)
       onChange(newValues as any)
     } else {
@@ -136,24 +136,29 @@ export const Select: React.FC<SelectProps> = ({
         disabled={disabled}
         className={`
           w-full text-left rounded-lg border transition-all duration-200
-          ${error 
-            ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
-            : 'border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500'
+          ${
+            error
+              ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+              : 'border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500'
           }
-          ${disabled 
-            ? 'bg-gray-100 dark:bg-gray-700 cursor-not-allowed opacity-50' 
-            : 'bg-white dark:bg-gray-800 hover:border-gray-400 dark:hover:border-gray-500'
+          ${
+            disabled
+              ? 'bg-gray-100 dark:bg-gray-700 cursor-not-allowed opacity-50'
+              : 'bg-white dark:bg-gray-800 hover:border-gray-400 dark:hover:border-gray-500'
           }
           ${sizeClasses[size]}
         `}
       >
         <div className="flex items-center justify-between">
-          <span className={`
-            ${selectedValues.length === 0 
-              ? 'text-gray-500 dark:text-gray-400' 
-              : 'text-gray-900 dark:text-white'
+          <span
+            className={`
+            ${
+              selectedValues.length === 0
+                ? 'text-gray-500 dark:text-gray-400'
+                : 'text-gray-900 dark:text-white'
             }
-          `}>
+          `}
+          >
             {getDisplayText()}
           </span>
           <motion.svg
@@ -202,7 +207,7 @@ export const Select: React.FC<SelectProps> = ({
               ) : (
                 filteredOptions.map((option) => {
                   const isSelected = selectedValues.includes(option.value)
-                  
+
                   return (
                     <motion.button
                       key={option.value}
@@ -212,26 +217,28 @@ export const Select: React.FC<SelectProps> = ({
                       whileHover={{ backgroundColor: 'rgba(59, 130, 246, 0.1)' }}
                       className={`
                         w-full px-4 py-3 text-left text-sm transition-colors
-                        ${isSelected 
-                          ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' 
-                          : 'text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700'
+                        ${
+                          isSelected
+                            ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
+                            : 'text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700'
                         }
-                        ${option.disabled 
-                          ? 'opacity-50 cursor-not-allowed' 
-                          : 'cursor-pointer'
-                        }
+                        ${option.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
                       `}
                     >
                       <div className="flex items-center">
-                        {option.icon && (
-                          <span className="mr-3 flex-shrink-0">
-                            {option.icon}
-                          </span>
-                        )}
+                        {option.icon && <span className="mr-3 flex-shrink-0">{option.icon}</span>}
                         <span className="flex-1">{option.label}</span>
                         {multiple && isSelected && (
-                          <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          <svg
+                            className="w-4 h-4 text-blue-600 dark:text-blue-400"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                              clipRule="evenodd"
+                            />
                           </svg>
                         )}
                       </div>

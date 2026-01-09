@@ -28,8 +28,8 @@ function createWindow(): BrowserWindow {
       sandbox: false,
       nodeIntegration: false,
       contextIsolation: true,
-      webSecurity: false
-    }
+      webSecurity: false,
+    },
   })
 
   mainWindow.on('ready-to-show', () => {
@@ -62,10 +62,10 @@ function createWindow(): BrowserWindow {
         if (!mainWindow) return
         const [w, h] = mainWindow.getSize()
         fs.writeFileSync(boundsFile, JSON.stringify({ width: w, height: h }))
-      } catch { }
+      } catch {}
     }
     mainWindow.on('resized', saveBounds)
-  } catch { }
+  } catch {}
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
@@ -101,8 +101,8 @@ function createFloatingWindow(): BrowserWindow {
       sandbox: false,
       nodeIntegration: false,
       contextIsolation: true,
-      webSecurity: false // 允许外部API连接
-    }
+      webSecurity: false, // 允许外部API连接
+    },
   })
 
   // macOS 隐形功能 - 防止在屏幕共享中显示
@@ -150,7 +150,12 @@ function broadcastToAllWindows(channel: string, data?: any): void {
   }
 
   windows.forEach((window) => {
-    if (window && !window.isDestroyed() && window.webContents && !window.webContents.isDestroyed()) {
+    if (
+      window &&
+      !window.isDestroyed() &&
+      window.webContents &&
+      !window.webContents.isDestroyed()
+    ) {
       try {
         if (window.webContents.getURL()) {
           batcher.send(window, channel, data)
@@ -171,5 +176,5 @@ export {
   setMainWindow,
   getMainWindow,
   getFloatingWindow,
-  broadcastToAllWindows
+  broadcastToAllWindows,
 }

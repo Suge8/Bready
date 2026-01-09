@@ -2,7 +2,7 @@ import * as crypto from 'crypto'
 import { createLogger } from '../utils/logging'
 
 const toErrorMetadata = (error: unknown): Record<string, any> => ({
-  error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error)
+  error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error),
 })
 
 /**
@@ -38,34 +38,31 @@ export class DataEncryptionManager {
     try {
       // 派生加密密钥
       const key = this.deriveKey(password)
-      
+
       // 生成随机初始化向量
       const iv = crypto.randomBytes(this.IV_LENGTH)
-      
+
       // 创建加密器
       const cipher = crypto.createCipheriv(this.ALGORITHM, key, iv)
       cipher.setAAD(this.AAD)
-      
+
       // 加密数据
       let encrypted = cipher.update(data, 'utf8', 'hex')
       encrypted += cipher.final('hex')
-      
+
       // 获取认证标签
       const tag = cipher.getAuthTag()
-      
+
       // 组合结果：IV + TAG + 加密数据
-      const result = iv.toString('hex') + 
-                    tag.toString('hex') + 
-                    encrypted
-      
+      const result = iv.toString('hex') + tag.toString('hex') + encrypted
+
       this.logger.debug('数据加密成功')
-      
+
       return {
         data: result,
         algorithm: this.ALGORITHM,
-        version: this.VERSION
+        version: this.VERSION,
       }
-      
     } catch (error) {
       this.logger.error('数据加密失败:', toErrorMetadata(error))
       throw new Error('数据加密失败')
@@ -91,14 +88,14 @@ export class DataEncryptionManager {
 
       // 派生解密密钥
       const key = this.deriveKey(password)
-      
+
       const data = encryptedData.data
-      
+
       // 提取IV、认证标签和加密数据
       const iv = Buffer.from(data.slice(0, this.IV_LENGTH * 2), 'hex')
       const tag = Buffer.from(
         data.slice(this.IV_LENGTH * 2, (this.IV_LENGTH + this.TAG_LENGTH) * 2),
-        'hex'
+        'hex',
       )
       const encrypted = data.slice((this.IV_LENGTH + this.TAG_LENGTH) * 2)
 
@@ -109,7 +106,11 @@ export class DataEncryptionManager {
         return decrypted
       } catch (error) {
         this.logger.warn('数据解密失败，尝试兼容旧格式（无 AAD）', toErrorMetadata(error))
-        const legacyDecipher = crypto.createDecipheriv(this.ALGORITHM, key, iv) as crypto.DecipherGCM
+        const legacyDecipher = crypto.createDecipheriv(
+          this.ALGORITHM,
+          key,
+          iv,
+        ) as crypto.DecipherGCM
         const decrypted = this.decryptPayload(legacyDecipher, encrypted, tag, false)
         this.logger.debug('数据解密成功（兼容旧格式）')
         return decrypted
@@ -178,9 +179,9 @@ export class DataEncryptionManager {
       const [saltHex, hashHex] = hashedPassword.split(':')
       const salt = Buffer.from(saltHex, 'hex')
       const hash = Buffer.from(hashHex, 'hex')
-      
+
       const computedHash = crypto.pbkdf2Sync(password, salt, 100000, 64, 'sha256')
-      
+
       return crypto.timingSafeEqual(hash, computedHash)
     } catch (error) {
       this.logger.error('密码验证失败:', toErrorMetadata(error))
@@ -195,12 +196,17 @@ export class DataEncryptionManager {
   private deriveKey(password: string): Buffer {
     // 使用固定盐值（在实际应用中可以考虑使用动态盐值）
     const salt = Buffer.from('bready-encryption-salt-2024', 'utf8')
-    
+
     // 使用PBKDF2派生密钥
     return crypto.pbkdf2Sync(password, salt, 100000, this.KEY_LENGTH, 'sha256')
   }
 
-  private decryptPayload(decipher: crypto.DecipherGCM, encrypted: string, tag: Buffer, useAAD: boolean): string {
+  private decryptPayload(
+    decipher: crypto.DecipherGCM,
+    encrypted: string,
+    tag: Buffer,
+    useAAD: boolean,
+  ): string {
     if (useAAD) {
       decipher.setAAD(this.AAD)
     }
@@ -216,11 +222,7 @@ export class DataEncryptionManager {
    * @param data 数据
    */
   generateFingerprint(data: string): string {
-    return crypto
-      .createHash('sha256')
-      .update(data)
-      .digest('hex')
-      .substring(0, 16)
+    return crypto.createHash('sha256').update(data).digest('hex').substring(0, 16)
   }
 
   /**
@@ -262,7 +264,7 @@ export class DataEncryptionManager {
       keyLength: this.KEY_LENGTH,
       ivLength: this.IV_LENGTH,
       tagLength: this.TAG_LENGTH,
-      version: this.VERSION
+      version: this.VERSION,
     }
   }
 }

@@ -61,7 +61,10 @@ class GeminiService {
 
   private logGeminiFailure(reason: string, error?: unknown): void {
     const now = Date.now()
-    if (reason === this.lastGeminiError && now - this.lastGeminiErrorAt < geminiErrorLogCooldownMs) {
+    if (
+      reason === this.lastGeminiError &&
+      now - this.lastGeminiErrorAt < geminiErrorLogCooldownMs
+    ) {
       return
     }
     this.lastGeminiError = reason
@@ -122,14 +125,19 @@ class GeminiService {
 
   private isRegionNotSupportedError(message: string): boolean {
     if (!message) return false
-    return message.includes('User location is not supported')
-      || message.includes('location is not supported')
-      || message.includes('not supported for the API use')
+    return (
+      message.includes('User location is not supported') ||
+      message.includes('location is not supported') ||
+      message.includes('not supported for the API use')
+    )
   }
 
   private initializeApiKeysPool(apiKey: string): void {
     if (apiKey && apiKey.includes(',')) {
-      this.apiKeys = apiKey.split(',').map(k => k.trim()).filter(k => k.length > 0)
+      this.apiKeys = apiKey
+        .split(',')
+        .map((k) => k.trim())
+        .filter((k) => k.length > 0)
       this.currentKeyIndex = 0
     } else if (apiKey) {
       this.apiKeys = [apiKey]
@@ -177,7 +185,7 @@ class GeminiService {
         try {
           session.sendClientContent({
             turns: [],
-            turnComplete: false
+            turnComplete: false,
           })
         } catch (error) {
           if (this.reconnectAttempts < this.maxReconnectAttempts) {
@@ -216,7 +224,10 @@ class GeminiService {
       delay = Math.min(delay * 2, 60000)
     }
 
-    this.onMessageToRenderer('update-status', `连接丢失，${Math.ceil(delay / 1000)}秒后重连... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`)
+    this.onMessageToRenderer(
+      'update-status',
+      `连接丢失，${Math.ceil(delay / 1000)}秒后重连... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`,
+    )
     recordMetric('gemini.reconnect.scheduled', { attempt: this.reconnectAttempts, delayMs: delay })
 
     this.reconnectTimeout = setTimeout(async () => {
@@ -229,7 +240,12 @@ class GeminiService {
 
       try {
         if (!this.currentApiKey) return
-        const success = await this.initializeGeminiSession(this.currentApiKey, this.currentCustomPrompt, this.currentProfile, this.currentLanguage)
+        const success = await this.initializeGeminiSession(
+          this.currentApiKey,
+          this.currentCustomPrompt,
+          this.currentProfile,
+          this.currentLanguage,
+        )
         if (!success) {
           if (this.reconnectAttempts < this.maxReconnectAttempts) {
             this.scheduleReconnect()
@@ -262,12 +278,12 @@ class GeminiService {
 
       this.textChatHistory.push({
         role: 'user',
-        parts: [{ text: userMessage }]
+        parts: [{ text: userMessage }],
       })
 
-      const contents = this.textChatHistory.map(msg => ({
+      const contents = this.textChatHistory.map((msg) => ({
         role: msg.role,
-        parts: msg.parts
+        parts: msg.parts,
       }))
 
       const streamResponse = await this.textClient.models.generateContentStream({
@@ -278,9 +294,9 @@ class GeminiService {
           temperature: 1.0,
           maxOutputTokens: 2048,
           thinkingConfig: {
-            thinkingBudget: TEXT_RESPONSE_THINKING_BUDGET
-          }
-        }
+            thinkingBudget: TEXT_RESPONSE_THINKING_BUDGET,
+          },
+        },
       })
 
       let fullResponseText = ''
@@ -301,11 +317,17 @@ class GeminiService {
       }
 
       if (fullResponseText) {
-        log('info', '✅ 文本模型流式回答完成，共', chunkCount, '个块，总长度:', fullResponseText.length)
+        log(
+          'info',
+          '✅ 文本模型流式回答完成，共',
+          chunkCount,
+          '个块，总长度:',
+          fullResponseText.length,
+        )
 
         this.textChatHistory.push({
           role: 'model',
-          parts: [{ text: fullResponseText }]
+          parts: [{ text: fullResponseText }],
         })
 
         if (this.textChatHistory.length > MAX_CHAT_HISTORY * 2) {
@@ -321,13 +343,15 @@ class GeminiService {
       }
 
       return { success: true }
-
     } catch (error: any) {
       const errorMessage = error?.message || String(error)
       log('error', '❌ 文本模型流式生成失败:', errorMessage)
       recordMetric('gemini.text.response.failure', { message: errorMessage })
 
-      if (this.textChatHistory.length > 0 && this.textChatHistory[this.textChatHistory.length - 1].role === 'user') {
+      if (
+        this.textChatHistory.length > 0 &&
+        this.textChatHistory[this.textChatHistory.length - 1].role === 'user'
+      ) {
         this.textChatHistory.pop()
       }
 
@@ -343,7 +367,12 @@ class GeminiService {
     }
   }
 
-  async initializeGeminiSession(apiKey: string, customPrompt = '', profile = 'interview', language = 'cmn-CN'): Promise<boolean> {
+  async initializeGeminiSession(
+    apiKey: string,
+    customPrompt = '',
+    profile = 'interview',
+    language = 'cmn-CN',
+  ): Promise<boolean> {
     if (this.isInitializingSession) {
       return false
     }
@@ -379,7 +408,11 @@ class GeminiService {
 
       const systemPrompt = getSystemPrompt(profile, customPrompt, false, language)
       log('debug', '📝 生成的系统提示词 (前500字符):', systemPrompt.substring(0, 500))
-      log('debug', '📝 系统提示词参数:', { profile, language, customPromptLength: customPrompt.length })
+      log('debug', '📝 系统提示词参数:', {
+        profile,
+        language,
+        customPromptLength: customPrompt.length,
+      })
       this.textClient = client
       this.textSystemPrompt = systemPrompt
 
@@ -393,16 +426,16 @@ class GeminiService {
           automaticActivityDetection: {
             disabled: false,
             silenceDurationMs: 200,
-            endOfSpeechSensitivity: EndSensitivity.END_SENSITIVITY_HIGH
-          }
+            endOfSpeechSensitivity: EndSensitivity.END_SENSITIVITY_HIGH,
+          },
         },
         systemInstruction: {
-          parts: [{ text: systemPrompt }]
+          parts: [{ text: systemPrompt }],
         },
         thinkingConfig: {
           thinkingBudget: 0,
-          includeThoughts: false
-        }
+          includeThoughts: false,
+        },
       }
 
       const connectPromise = client.live.connect({
@@ -425,7 +458,9 @@ class GeminiService {
             this.onMessageToRenderer('update-status', '已连接 Gemini - 正在启动录音...')
           },
           onmessage: (message: any) => {
-            const hasAudioData = message.serverContent?.modelTurn?.parts?.some((p: any) => p.inlineData)
+            const hasAudioData = message.serverContent?.modelTurn?.parts?.some(
+              (p: any) => p.inlineData,
+            )
 
             if (message.serverContent?.outputTranscription) {
               // 日志在下面 outputTranscription 处理时打印
@@ -447,13 +482,20 @@ class GeminiService {
             }
 
             const inputTranscription = message.serverContent?.inputTranscription
-            const transcriptionChunk = inputTranscription?.text
-              || (Array.isArray(inputTranscription?.results)
+            const transcriptionChunk =
+              inputTranscription?.text ||
+              (Array.isArray(inputTranscription?.results)
                 ? inputTranscription.results.map((result: any) => result?.transcript || '').join('')
                 : '')
             if (transcriptionChunk) {
               this.currentTranscription += transcriptionChunk
-              logRateLimited('transcription-update', 1000, 'debug', '📝 [后端] 发送转录:', this.currentTranscription.substring(0, 30))
+              logRateLimited(
+                'transcription-update',
+                1000,
+                'debug',
+                '📝 [后端] 发送转录:',
+                this.currentTranscription.substring(0, 30),
+              )
               this.onMessageToRenderer('transcription-update', this.currentTranscription)
 
               if (this.transcriptionDebounceTimer) {
@@ -503,7 +545,11 @@ class GeminiService {
               return
             }
 
-            if (errorMessage.includes('API key') || errorMessage.includes('authentication') || errorMessage.includes('unauthorized')) {
+            if (
+              errorMessage.includes('API key') ||
+              errorMessage.includes('authentication') ||
+              errorMessage.includes('unauthorized')
+            ) {
               this.currentApiKey = null
               this.reconnectAttempts = this.maxReconnectAttempts
               return
@@ -528,7 +574,12 @@ class GeminiService {
             }
             this.onMessageToRenderer('session-closed')
 
-            if (reason.includes('language') || reason.includes('API key') || reason.includes('authentication') || reason.includes('unauthorized')) {
+            if (
+              reason.includes('language') ||
+              reason.includes('API key') ||
+              reason.includes('authentication') ||
+              reason.includes('unauthorized')
+            ) {
               log('warn', '会话因配置错误关闭:', reason)
               this.currentApiKey = null
               this.reconnectAttempts = this.maxReconnectAttempts
@@ -539,7 +590,10 @@ class GeminiService {
             if (this.isRegionNotSupportedError(reason)) {
               this.currentApiKey = null
               this.reconnectAttempts = this.maxReconnectAttempts
-              this.onMessageToRenderer('session-error', '当前地区不支持 Gemini API，请更换支持地区或改用 Vertex AI')
+              this.onMessageToRenderer(
+                'session-error',
+                '当前地区不支持 Gemini API，请更换支持地区或改用 Vertex AI',
+              )
               this.textClient = null
               this.textSystemPrompt = ''
               if (this.reconnectTimeout) {
@@ -550,12 +604,16 @@ class GeminiService {
               return
             }
 
-            if (this.reconnectAttempts < this.maxReconnectAttempts && this.currentApiKey && !this.isInitializingSession) {
+            if (
+              this.reconnectAttempts < this.maxReconnectAttempts &&
+              this.currentApiKey &&
+              !this.isInitializingSession
+            ) {
               this.scheduleReconnect()
             } else {
               this.onMessageToRenderer('update-status', '会话已关闭')
             }
-          }
+          },
         },
         config: liveConnectConfig,
       })
@@ -564,7 +622,7 @@ class GeminiService {
         connectPromise,
         new Promise<never>((_, reject) => {
           setTimeout(() => reject(new Error('连接超时，请检查网络或 API 状态')), 7000)
-        })
+        }),
       ])
 
       this.geminiSession = session
@@ -586,21 +644,37 @@ class GeminiService {
         errorMessage = error.toString()
       }
 
-      if (errorMessage.includes('not found') || errorMessage.includes('not supported') || errorMessage.includes('model')) {
+      if (
+        errorMessage.includes('not found') ||
+        errorMessage.includes('not supported') ||
+        errorMessage.includes('model')
+      ) {
         errorMessage = `模型不可用: ${errorMessage}\n\n建议尝试以下模型之一:\n- gemini-2.0-flash-exp\n- models/gemini-2.0-flash-exp`
-      } else if (errorMessage.includes('API_KEY_INVALID') || errorMessage.includes('401') || errorMessage.includes('API key')) {
+      } else if (
+        errorMessage.includes('API_KEY_INVALID') ||
+        errorMessage.includes('401') ||
+        errorMessage.includes('API key')
+      ) {
         errorMessage = 'API密钥无效，请检查.env.local文件中的VITE_GEMINI_API_KEY配置'
         this.currentApiKey = null
       } else if (errorMessage.includes('PERMISSION_DENIED') || errorMessage.includes('403')) {
         errorMessage = 'API权限被拒绝，请检查API密钥权限'
       } else if (errorMessage.includes('language') || errorMessage.includes('Language')) {
         errorMessage = '语言配置错误，已自动修复为支持的语言代码'
-      } else if (errorMessage.includes('ECONNRESET') || errorMessage.includes('socket disconnected') || errorMessage.includes('TLS connection')) {
+      } else if (
+        errorMessage.includes('ECONNRESET') ||
+        errorMessage.includes('socket disconnected') ||
+        errorMessage.includes('TLS connection')
+      ) {
         errorMessage = '网络连接被重置，这通常是网络不稳定导致的，请点击重连'
         if (this.reconnectAttempts < this.maxReconnectAttempts) {
           this.scheduleReconnect()
         }
-      } else if (errorMessage.includes('NETWORK') || errorMessage.includes('fetch') || errorMessage.includes('timeout')) {
+      } else if (
+        errorMessage.includes('NETWORK') ||
+        errorMessage.includes('fetch') ||
+        errorMessage.includes('timeout')
+      ) {
         errorMessage = '网络连接错误，请检查网络连接或点击重连'
       } else if (errorMessage.includes('WebSocket') || errorMessage.includes('connection')) {
         errorMessage = '连接已断开，请点击重连按钮'
@@ -648,12 +722,19 @@ class GeminiService {
       this.currentTranscription = ''
       this.textChatHistory = []
 
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      await new Promise((resolve) => setTimeout(resolve, 1000))
 
-      return await this.initializeGeminiSession(this.currentApiKey, this.currentCustomPrompt, this.currentProfile, this.currentLanguage)
+      return await this.initializeGeminiSession(
+        this.currentApiKey,
+        this.currentCustomPrompt,
+        this.currentProfile,
+        this.currentLanguage,
+      )
     } catch (error) {
       this.isInitializingSession = false
-      recordMetric('gemini.reconnect.failure', { message: error instanceof Error ? error.message : String(error) })
+      recordMetric('gemini.reconnect.failure', {
+        message: error instanceof Error ? error.message : String(error),
+      })
       return false
     }
   }
@@ -667,7 +748,12 @@ class GeminiService {
 
     if (this.currentApiKey) {
       recordMetric('gemini.reconnect.manual')
-      const success = await this.initializeGeminiSession(this.currentApiKey, this.currentCustomPrompt, this.currentProfile, this.currentLanguage)
+      const success = await this.initializeGeminiSession(
+        this.currentApiKey,
+        this.currentCustomPrompt,
+        this.currentProfile,
+        this.currentLanguage,
+      )
       if (success) {
         this.onMessageToRenderer('session-paused-silence', false)
         this.onMessageToRenderer('update-status', '手动重连成功')
@@ -734,7 +820,12 @@ class GeminiService {
 
   // === 通用方法别名（用于多渠道支持）===
 
-  async initializeSession(apiKey: string, customPrompt = '', profile = 'interview', language = 'cmn-CN'): Promise<boolean> {
+  async initializeSession(
+    apiKey: string,
+    customPrompt = '',
+    profile = 'interview',
+    language = 'cmn-CN',
+  ): Promise<boolean> {
     return this.initializeGeminiSession(apiKey, customPrompt, profile, language)
   }
 
@@ -774,7 +865,7 @@ class GeminiService {
         log('error', 'AI分析失败: API密钥未配置')
         return {
           success: false,
-          error: 'Gemini API 密钥未配置'
+          error: 'Gemini API 密钥未配置',
         }
       }
 
@@ -788,15 +879,15 @@ class GeminiService {
         config: {
           responseMimeType: 'application/json',
           temperature: 0.7,
-          maxOutputTokens: 3000
-        }
+          maxOutputTokens: 3000,
+        },
       })
 
       const analysisText = response.text
       if (!analysisText) {
         return {
           success: false,
-          error: 'AI 分析返回空结果'
+          error: 'AI 分析返回空结果',
         }
       }
 
@@ -814,11 +905,12 @@ class GeminiService {
         }
 
         if (!analysis.jobRequirements) {
-          analysis.jobRequirements = analysis.job_requirements
-            || analysis.requirements
-            || analysis.岗位需求
-            || analysis.岗位要求
-            || []
+          analysis.jobRequirements =
+            analysis.job_requirements ||
+            analysis.requirements ||
+            analysis.岗位需求 ||
+            analysis.岗位要求 ||
+            []
         }
         if (!analysis.strengths) {
           analysis.strengths = analysis.核心优势 || []
@@ -834,22 +926,21 @@ class GeminiService {
 
         return {
           success: true,
-          analysis
+          analysis,
         }
       } catch (parseError) {
         log('error', 'Failed to parse AI analysis result:', parseError)
         log('error', '原始文本:', analysisText)
         return {
           success: false,
-          error: 'AI 分析结果格式错误'
+          error: 'AI 分析结果格式错误',
         }
       }
-
     } catch (error: any) {
       log('error', 'AI analysis failed:', error)
       return {
         success: false,
-        error: `AI 分析失败: ${error.message || error}`
+        error: `AI 分析失败: ${error.message || error}`,
       }
     }
   }
@@ -871,7 +962,7 @@ class GeminiService {
         log('error', '文件内容提取失败: API密钥未配置')
         return {
           success: false,
-          error: 'Gemini API 密钥未配置'
+          error: 'Gemini API 密钥未配置',
         }
       }
 
@@ -926,39 +1017,38 @@ class GeminiService {
               {
                 inlineData: {
                   mimeType: mimeType,
-                  data: fileData.base64Data
-                }
+                  data: fileData.base64Data,
+                },
               },
               {
-                text: extractionPrompt
-              }
-            ]
-          }
+                text: extractionPrompt,
+              },
+            ],
+          },
         ],
         config: {
           temperature: 0.1,
-          maxOutputTokens: 8000
-        }
+          maxOutputTokens: 8000,
+        },
       })
 
       const extractedText = response.text
       if (!extractedText) {
         return {
           success: false,
-          error: '文件内容提取返回空结果'
+          error: '文件内容提取返回空结果',
         }
       }
 
       return {
         success: true,
-        content: extractedText.trim()
+        content: extractedText.trim(),
       }
-
     } catch (error: any) {
       log('error', 'File content extraction failed:', error)
       return {
         success: false,
-        error: `文件内容提取失败: ${error.message || error}`
+        error: `文件内容提取失败: ${error.message || error}`,
       }
     }
   }
@@ -981,9 +1071,12 @@ class GeminiService {
       log('debug', '📝 开始压缩对话历史，旧消息:', older.length, '条')
 
       // 生成摘要
-      const summaryText = older.map((msg, i) =>
-        `${i + 1}. ${msg.role === 'user' ? '用户' : 'AI'}: ${msg.parts[0].text.substring(0, 100)}...`
-      ).join('\n')
+      const summaryText = older
+        .map(
+          (msg, i) =>
+            `${i + 1}. ${msg.role === 'user' ? '用户' : 'AI'}: ${msg.parts[0].text.substring(0, 100)}...`,
+        )
+        .join('\n')
 
       const summaryPrompt = `请将以下对话历史简化为一段简短的摘要（50-100字），保留关键信息：\n\n${summaryText}`
 
@@ -992,15 +1085,15 @@ class GeminiService {
         contents: [{ role: 'user', parts: [{ text: summaryPrompt }] }],
         config: {
           temperature: 0.3,
-          maxOutputTokens: 200
-        }
+          maxOutputTokens: 200,
+        },
       })
 
       const summary = response?.text?.trim()
       if (summary) {
         this.textChatHistory = [
           { role: 'user', parts: [{ text: `[之前的对话摘要] ${summary}` }] },
-          ...recent
+          ...recent,
         ]
         log('info', '✅ 对话历史已压缩:', this.textChatHistory.length, '条（含摘要）')
         recordMetric('gemini.history.compress.success', { newCount: this.textChatHistory.length })
@@ -1020,7 +1113,9 @@ class GeminiService {
 
 let geminiService: GeminiService | null = null
 
-export function initializeGeminiService(onMessageToRenderer: (event: string, data?: any) => void): GeminiService {
+export function initializeGeminiService(
+  onMessageToRenderer: (event: string, data?: any) => void,
+): GeminiService {
   if (!geminiService) {
     geminiService = new GeminiService({ onMessageToRenderer })
   }

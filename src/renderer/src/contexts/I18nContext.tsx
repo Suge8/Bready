@@ -16,7 +16,9 @@ const AI_LANGUAGE_KEY = 'bready-selected-language'
 const I18nContext = createContext<I18nContextValue | undefined>(undefined)
 
 const getByPath = (obj: any, path: string) => {
-  return path.split('.').reduce((acc, key) => (acc && acc[key] !== undefined ? acc[key] : undefined), obj)
+  return path
+    .split('.')
+    .reduce((acc, key) => (acc && acc[key] !== undefined ? acc[key] : undefined), obj)
 }
 
 const interpolate = (text: string, vars?: Record<string, string | number>) => {
@@ -87,7 +89,7 @@ export const I18nProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       return interpolate(value, vars)
     },
-    [language]
+    [language],
   )
 
   const list = useCallback(
@@ -95,12 +97,12 @@ export const I18nProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const value = getByPath(translations[language], key) ?? getByPath(translations['cmn-CN'], key)
       return Array.isArray(value) ? value : []
     },
-    [language]
+    [language],
   )
 
   const languageOptions = useMemo(
     () => SUPPORTED_LANGUAGES.map((lang) => ({ value: lang, label: t(`languages.${lang}`) })),
-    [t]
+    [t],
   )
 
   const locale = useMemo(() => {
@@ -115,9 +117,9 @@ export const I18nProvider: React.FC<{ children: React.ReactNode }> = ({ children
       t,
       list,
       languageOptions,
-      locale
+      locale,
     }),
-    [language, setLanguage, t, list, languageOptions, locale]
+    [language, setLanguage, t, list, languageOptions, locale],
   )
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>

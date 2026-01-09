@@ -13,7 +13,7 @@ const levelOrder: Record<LogLevel, number> = {
   debug: 10,
   info: 20,
   warn: 30,
-  error: 40
+  error: 40,
 }
 
 const isDev = process.env.NODE_ENV === 'development'
@@ -24,7 +24,7 @@ const sampleRateByLevel: Record<LogLevel, number> = {
   debug: Number.parseFloat(process.env.LOG_SAMPLE_DEBUG || (isDev ? '1' : '0.1')),
   info: Number.parseFloat(process.env.LOG_SAMPLE_INFO || (isDev ? '1' : '0.5')),
   warn: Number.parseFloat(process.env.LOG_SAMPLE_WARN || '1'),
-  error: Number.parseFloat(process.env.LOG_SAMPLE_ERROR || '1')
+  error: Number.parseFloat(process.env.LOG_SAMPLE_ERROR || '1'),
 }
 
 const lastLogAtByKey: Record<string, number> = {}
@@ -32,7 +32,7 @@ const logStats: Record<LogLevel, { total: number; sampled: number }> = {
   debug: { total: 0, sampled: 0 },
   info: { total: 0, sampled: 0 },
   warn: { total: 0, sampled: 0 },
-  error: { total: 0, sampled: 0 }
+  error: { total: 0, sampled: 0 },
 }
 
 function shouldLog(level: LogLevel): boolean {
@@ -80,7 +80,12 @@ export function log(level: LogLevel, message: string, ...args: unknown[]): void 
   emit(level, message, ...args)
 }
 
-export function logSampled(level: LogLevel, rate: number, message: string, ...args: unknown[]): void {
+export function logSampled(
+  level: LogLevel,
+  rate: number,
+  message: string,
+  ...args: unknown[]
+): void {
   if (!shouldLog(level)) return
   if (!shouldSample(level, rate)) return
   emit(level, message, ...args)
@@ -111,15 +116,15 @@ export function getLogStats() {
     level,
     total: counts.total,
     sampled: counts.sampled,
-    sampleRate: counts.total > 0 ? (counts.sampled / counts.total * 100).toFixed(1) + '%' : '0%'
+    sampleRate: counts.total > 0 ? ((counts.sampled / counts.total) * 100).toFixed(1) + '%' : '0%',
   }))
 
   return {
     levels: stats,
     summary: {
       total: stats.reduce((sum, s) => sum + s.total, 0),
-      sampled: stats.reduce((sum, s) => sum + s.sampled, 0)
-    }
+      sampled: stats.reduce((sum, s) => sum + s.sampled, 0),
+    },
   }
 }
 
@@ -127,7 +132,7 @@ export function getLogStats() {
  * 重置日志统计
  */
 export function resetLogStats() {
-  Object.keys(logStats).forEach(level => {
+  Object.keys(logStats).forEach((level) => {
     logStats[level as LogLevel] = { total: 0, sampled: 0 }
   })
 }
@@ -142,7 +147,7 @@ export function logStructured(entry: LogEntry): void {
   const structured = {
     ...entry,
     timestamp: entry.timestamp || Date.now(),
-    env: process.env.NODE_ENV || 'production'
+    env: process.env.NODE_ENV || 'production',
   }
 
   // JSON 格式输出便于分析
@@ -164,7 +169,10 @@ export function logStructured(entry: LogEntry): void {
  * 模块级日志记录器
  */
 export class Logger {
-  constructor(private module: string, private traceId?: string) {}
+  constructor(
+    private module: string,
+    private traceId?: string,
+  ) {}
 
   debug(message: string, metadata?: Record<string, any>): void {
     logStructured({
@@ -173,7 +181,7 @@ export class Logger {
       module: this.module,
       message,
       metadata,
-      traceId: this.traceId
+      traceId: this.traceId,
     })
   }
 
@@ -184,7 +192,7 @@ export class Logger {
       module: this.module,
       message,
       metadata,
-      traceId: this.traceId
+      traceId: this.traceId,
     })
   }
 
@@ -195,7 +203,7 @@ export class Logger {
       module: this.module,
       message,
       metadata,
-      traceId: this.traceId
+      traceId: this.traceId,
     })
   }
 
@@ -206,7 +214,7 @@ export class Logger {
       module: this.module,
       message,
       metadata,
-      traceId: this.traceId
+      traceId: this.traceId,
     })
   }
 

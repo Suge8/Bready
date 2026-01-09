@@ -4,11 +4,7 @@ interface TouchButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement>
   children: React.ReactNode
 }
 
-export const TouchButton: React.FC<TouchButtonProps> = ({ 
-  children, 
-  className = '',
-  ...props 
-}) => {
+export const TouchButton: React.FC<TouchButtonProps> = ({ children, className = '', ...props }) => {
   return (
     <button
       {...props}
@@ -33,32 +29,32 @@ interface SwipeableCardProps {
   className?: string
 }
 
-export const SwipeableCard: React.FC<SwipeableCardProps> = ({ 
-  children, 
-  onSwipeLeft, 
+export const SwipeableCard: React.FC<SwipeableCardProps> = ({
+  children,
+  onSwipeLeft,
   onSwipeRight,
-  className = ''
+  className = '',
 }) => {
-  const [touchStart, setTouchStart] = React.useState<{ x: number, y: number } | null>(null)
-  
+  const [touchStart, setTouchStart] = React.useState<{ x: number; y: number } | null>(null)
+
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchStart({
       x: e.touches[0].clientX,
-      y: e.touches[0].clientY
+      y: e.touches[0].clientY,
     })
   }
-  
+
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (!touchStart) return
-    
+
     const touchEnd = {
       x: e.changedTouches[0].clientX,
-      y: e.changedTouches[0].clientY
+      y: e.changedTouches[0].clientY,
     }
-    
+
     const deltaX = touchEnd.x - touchStart.x
     const deltaY = touchEnd.y - touchStart.y
-    
+
     // 确保是水平滑动且幅度足够
     if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
       if (deltaX > 0) {
@@ -67,10 +63,10 @@ export const SwipeableCard: React.FC<SwipeableCardProps> = ({
         onSwipeLeft?.()
       }
     }
-    
+
     setTouchStart(null)
   }
-  
+
   return (
     <div
       onTouchStart={handleTouchStart}

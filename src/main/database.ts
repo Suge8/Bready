@@ -13,26 +13,28 @@ const dbConfig = {
   password: process.env.DB_PASSWORD || '',
   // 优化的连接池配置
   max: parseInt(process.env.DB_MAX_CONNECTIONS || '10'), // 降低最大连接数
-  min: parseInt(process.env.DB_MIN_CONNECTIONS || '2'),  // 最小连接数
+  min: parseInt(process.env.DB_MIN_CONNECTIONS || '2'), // 最小连接数
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000, // 增加连接超时时间
-  acquireTimeoutMillis: 20000,   // 获取连接超时时间
+  acquireTimeoutMillis: 20000, // 获取连接超时时间
   createRetryIntervalMillis: 1000, // 重试间隔
-  createTimeoutMillis: 5000,     // 创建连接超时
+  createTimeoutMillis: 5000, // 创建连接超时
   // 连接验证
   allowExitOnIdle: true,
   // 错误处理
   log: (msg: string) => {
     // 只在开发模式下显示连接相关日志，且过滤掉频繁的正常操作
-    if (debugDb &&
-        process.env.NODE_ENV === 'development' && 
-        !msg.includes('pulse queue') && 
-        !msg.includes('no queued requests') && 
-        !msg.includes('checking client timeout') &&
-        !msg.includes('connecting new client')) {
+    if (
+      debugDb &&
+      process.env.NODE_ENV === 'development' &&
+      !msg.includes('pulse queue') &&
+      !msg.includes('no queued requests') &&
+      !msg.includes('checking client timeout') &&
+      !msg.includes('connecting new client')
+    ) {
       console.log('🔍 DB Pool:', msg)
     }
-  }
+  },
 }
 
 // 创建连接池
@@ -44,20 +46,22 @@ let poolMetrics = {
   idleConnections: 0,
   waitingClients: 0,
   lastError: null as Error | null,
-  lastHealthCheck: Date.now()
+  lastHealthCheck: Date.now(),
 }
 
 // 连接池事件监听
 pool.on('connect', () => {
   poolMetrics.totalConnections++
   // 只在连接数量发生显著变化时记录日志
-  if (process.env.DEBUG_DB === '1' &&
-      process.env.NODE_ENV === 'development' &&
-      poolMetrics.totalConnections % 5 === 1) {
+  if (
+    process.env.DEBUG_DB === '1' &&
+    process.env.NODE_ENV === 'development' &&
+    poolMetrics.totalConnections % 5 === 1
+  ) {
     console.log('📊 数据库连接池: 新连接创建', {
       totalConnections: poolMetrics.totalConnections,
       idleConnections: poolMetrics.idleConnections,
-      waitingClients: poolMetrics.waitingClients
+      waitingClients: poolMetrics.waitingClients,
     })
   }
 })
@@ -65,12 +69,14 @@ pool.on('connect', () => {
 pool.on('remove', () => {
   poolMetrics.totalConnections--
   // 只在连接数量显著变化时记录
-  if (process.env.DEBUG_DB === '1' &&
-      process.env.NODE_ENV === 'development' &&
-      poolMetrics.totalConnections % 5 === 0) {
+  if (
+    process.env.DEBUG_DB === '1' &&
+    process.env.NODE_ENV === 'development' &&
+    poolMetrics.totalConnections % 5 === 0
+  ) {
     console.log('📊 数据库连接池: 连接移除', {
       totalConnections: poolMetrics.totalConnections,
-      idleConnections: poolMetrics.idleConnections
+      idleConnections: poolMetrics.idleConnections,
     })
   }
 })
@@ -87,7 +93,7 @@ setInterval(async () => {
     poolMetrics.idleConnections = pool.idleCount
     poolMetrics.waitingClients = pool.waitingCount
     poolMetrics.lastHealthCheck = Date.now()
-    
+
     // 如果等待客户端过多，发出警告
     if (poolMetrics.waitingClients > 5) {
       console.warn('⚠️ 数据库连接池压力过大，等待客户端数:', poolMetrics.waitingClients)
@@ -103,7 +109,7 @@ export function getPoolMetrics() {
     ...poolMetrics,
     totalConnections: pool.totalCount,
     idleConnections: pool.idleCount,
-    waitingClients: pool.waitingCount
+    waitingClients: pool.waitingCount,
   }
 }
 
@@ -234,7 +240,7 @@ export class AuthService {
     const payload = {
       userId,
       iat: Math.floor(Date.now() / 1000),
-      random: Math.random().toString(36).substring(2, 15)
+      random: Math.random().toString(36).substring(2, 15),
     }
     return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' })
   }
@@ -249,11 +255,17 @@ export class AuthService {
   }
 
   // 用户注册
-  static async signUp(email: string, password: string, userData?: { full_name?: string }): Promise<UserProfile> {
+  static async signUp(
+    email: string,
+    password: string,
+    userData?: { full_name?: string },
+  ): Promise<UserProfile> {
     const client = await pool.connect()
     try {
       // 检查邮箱是否已存在
-      const existingUser = await client.query('SELECT id FROM user_profiles WHERE email = $1', [email])
+      const existingUser = await client.query('SELECT id FROM user_profiles WHERE email = $1', [
+        email,
+      ])
       if (existingUser.rows.length > 0) {
         throw new Error('邮箱已被注册')
       }
@@ -266,7 +278,7 @@ export class AuthService {
         `INSERT INTO user_profiles (email, password_hash, full_name) 
          VALUES ($1, $2, $3) 
          RETURNING id, email, full_name, role, user_level, remaining_interview_minutes, total_purchased_minutes, discount_rate, created_at, updated_at`,
-        [email, passwordHash, userData?.full_name || null]
+        [email, passwordHash, userData?.full_name || null],
       )
 
       return result.rows[0]
@@ -276,16 +288,16 @@ export class AuthService {
   }
 
   // 用户登录
-  static async signIn(email: string, password: string): Promise<{ user: UserProfile; token: string }> {
+  static async signIn(
+    email: string,
+    password: string,
+  ): Promise<{ user: UserProfile; token: string }> {
     const client = await pool.connect()
     try {
       await client.query('BEGIN')
 
       // 查找用户
-      const result = await client.query(
-        'SELECT * FROM user_profiles WHERE email = $1',
-        [email]
-      )
+      const result = await client.query('SELECT * FROM user_profiles WHERE email = $1', [email])
 
       if (result.rows.length === 0) {
         throw new Error('用户不存在')
@@ -308,7 +320,7 @@ export class AuthService {
       // 保存新会话
       await client.query(
         'INSERT INTO user_sessions (user_id, token, expires_at) VALUES ($1, $2, $3)',
-        [user.id, token, new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)] // 7天后过期
+        [user.id, token, new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)], // 7天后过期
       )
 
       await client.query('COMMIT')
@@ -338,7 +350,7 @@ export class AuthService {
       // 检查会话是否存在且未过期
       const sessionResult = await client.query(
         'SELECT user_id FROM user_sessions WHERE token = $1 AND expires_at > NOW()',
-        [token]
+        [token],
       )
 
       if (sessionResult.rows.length === 0) {
@@ -348,7 +360,7 @@ export class AuthService {
       // 获取用户信息
       const userResult = await client.query(
         'SELECT id, username, email, full_name, avatar_url, role, user_level, membership_expires_at, remaining_interview_minutes, total_purchased_minutes, discount_rate, created_at, updated_at FROM user_profiles WHERE id = $1',
-        [payload.userId]
+        [payload.userId],
       )
 
       return userResult.rows[0] || null
@@ -368,12 +380,18 @@ export class AuthService {
   }
 
   // 修改密码
-  static async changePassword(userId: string, oldPassword: string, newPassword: string): Promise<void> {
+  static async changePassword(
+    userId: string,
+    oldPassword: string,
+    newPassword: string,
+  ): Promise<void> {
     const client = await pool.connect()
     try {
       await client.query('BEGIN')
 
-      const result = await client.query('SELECT password_hash FROM user_profiles WHERE id = $1', [userId])
+      const result = await client.query('SELECT password_hash FROM user_profiles WHERE id = $1', [
+        userId,
+      ])
       if (result.rows.length === 0) {
         throw new Error('用户不存在')
       }
@@ -387,7 +405,7 @@ export class AuthService {
       const newHash = await this.hashPassword(newPassword)
       await client.query(
         'UPDATE user_profiles SET password_hash = $2, updated_at = NOW() WHERE id = $1',
-        [userId, newHash]
+        [userId, newHash],
       )
 
       await client.query('DELETE FROM user_sessions WHERE user_id = $1', [userId])
@@ -412,10 +430,10 @@ export class AuthService {
         throw new Error('邮箱已被占用')
       }
 
-      await client.query(
-        'UPDATE user_profiles SET email = $2, updated_at = NOW() WHERE id = $1',
-        [userId, email]
-      )
+      await client.query('UPDATE user_profiles SET email = $2, updated_at = NOW() WHERE id = $1', [
+        userId,
+        email,
+      ])
 
       await client.query('COMMIT')
     } catch (error) {
@@ -438,10 +456,10 @@ export class AuthService {
         throw new Error('手机号已被占用')
       }
 
-      await client.query(
-        'UPDATE user_profiles SET phone = $2, updated_at = NOW() WHERE id = $1',
-        [userId, phone]
-      )
+      await client.query('UPDATE user_profiles SET phone = $2, updated_at = NOW() WHERE id = $1', [
+        userId,
+        phone,
+      ])
 
       await client.query('COMMIT')
     } catch (error) {

@@ -14,5 +14,3 @@ describe.skip('buildUpdateSetClause', () => {
     expect(values).toEqual(['n'])
   })
 })
-
-

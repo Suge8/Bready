@@ -8,10 +8,10 @@ interface SmartSearchProps {
   className?: string
 }
 
-export const SmartSearch: React.FC<SmartSearchProps> = ({ 
-  onSearch, 
+export const SmartSearch: React.FC<SmartSearchProps> = ({
+  onSearch,
   placeholder = '搜索准备项...',
-  className = ''
+  className = '',
 }) => {
   const [query, setQuery] = useState('')
   const [suggestions, setSuggestions] = useState<string[]>([])
@@ -23,7 +23,7 @@ export const SmartSearch: React.FC<SmartSearchProps> = ({
         `${query} 面试`,
         `${query} 准备`,
         `如何准备 ${query}`,
-        `${query} 岗位`
+        `${query} 岗位`,
       ]
       setSuggestions(mockSuggestions)
     } else {
@@ -85,7 +85,7 @@ interface AdvancedFilterProps {
 export const AdvancedFilter: React.FC<AdvancedFilterProps> = ({ onFilterChange }) => {
   const [filters, setFilters] = useState({
     status: '',
-    category: ''
+    category: '',
   })
   const [isOpen, setIsOpen] = useState(false)
 
@@ -117,7 +117,7 @@ export const AdvancedFilter: React.FC<AdvancedFilterProps> = ({ onFilterChange }
           className="absolute top-full right-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-4 dark:bg-gray-800 dark:border-gray-700"
         >
           <h3 className="font-medium text-gray-900 dark:text-white mb-3">高级筛选</h3>
-          
+
           <div className="space-y-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -125,7 +125,7 @@ export const AdvancedFilter: React.FC<AdvancedFilterProps> = ({ onFilterChange }
               </label>
               <select
                 value={filters.status}
-                onChange={(e) => setFilters({...filters, status: e.target.value})}
+                onChange={(e) => setFilters({ ...filters, status: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
               >
                 <option value="">全部状态</option>
@@ -133,14 +133,14 @@ export const AdvancedFilter: React.FC<AdvancedFilterProps> = ({ onFilterChange }
                 <option value="completed">已完成</option>
               </select>
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 类别
               </label>
               <select
                 value={filters.category}
-                onChange={(e) => setFilters({...filters, category: e.target.value})}
+                onChange={(e) => setFilters({ ...filters, category: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
               >
                 <option value="">全部类别</option>
@@ -150,7 +150,7 @@ export const AdvancedFilter: React.FC<AdvancedFilterProps> = ({ onFilterChange }
               </select>
             </div>
           </div>
-          
+
           <div className="flex space-x-2 mt-4">
             <button
               onClick={resetFilters}

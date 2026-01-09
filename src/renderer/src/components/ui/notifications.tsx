@@ -11,11 +11,11 @@ interface ToastNotificationProps {
   onClose?: () => void
 }
 
-export const ToastNotification: React.FC<ToastNotificationProps> = ({ 
-  message, 
-  type, 
+export const ToastNotification: React.FC<ToastNotificationProps> = ({
+  message,
+  type,
   duration = 3000,
-  onClose
+  onClose,
 }) => {
   const [visible, setVisible] = useState(true)
 
@@ -23,14 +23,14 @@ export const ToastNotification: React.FC<ToastNotificationProps> = ({
     success: 'bg-green-500 text-white',
     info: 'bg-blue-500 text-white',
     warning: 'bg-yellow-500 text-white',
-    error: 'bg-red-500 text-white'
+    error: 'bg-red-500 text-white',
   }
 
   const typeIcons = {
     success: '✓',
     info: 'ℹ',
     warning: '⚠',
-    error: '✗'
+    error: '✗',
   }
 
   React.useEffect(() => {
@@ -59,7 +59,7 @@ export const ToastNotification: React.FC<ToastNotificationProps> = ({
       >
         <span className="text-lg font-bold">{typeIcons[type]}</span>
         <span className="flex-1 text-sm">{message}</span>
-        <button 
+        <button
           onClick={() => {
             setVisible(false)
             setTimeout(() => onClose?.(), 300)
@@ -82,13 +82,13 @@ interface ConfirmationDialogProps {
   cancelText?: string
 }
 
-export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({ 
-  title, 
-  message, 
-  onConfirm, 
+export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
+  title,
+  message,
+  onConfirm,
   onCancel,
   confirmText = '确认',
-  cancelText = '取消'
+  cancelText = '取消',
 }) => {
   return (
     <Modal isOpen onClose={onCancel} size="sm" title={title}>

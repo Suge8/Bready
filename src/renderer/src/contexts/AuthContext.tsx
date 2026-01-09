@@ -51,7 +51,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const getInitialSession = async () => {
       try {
         console.log('AuthProvider: Getting initial session')
-        const { data: { session }, error } = await authService.getCurrentSession()
+        const {
+          data: { session },
+          error,
+        } = await authService.getCurrentSession()
 
         if (error) {
           console.error('AuthProvider: Error getting session:', error)
@@ -84,30 +87,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     // 监听认证状态变化
     try {
-      const { data: { subscription } } = authService.onAuthStateChange(
-        async (event, session) => {
-          console.log('AuthProvider: Auth state changed:', event, session)
-          setSession(session)
-          setUser(session?.user ?? null)
+      const {
+        data: { subscription },
+      } = authService.onAuthStateChange(async (event, session) => {
+        console.log('AuthProvider: Auth state changed:', event, session)
+        setSession(session)
+        setUser(session?.user ?? null)
 
-          // 处理用户配置
-          if (session?.user) {
-            try {
-              await loadUserProfile(session.user.id)
-            } catch (error) {
-              console.error('Error loading user profile on auth change:', error)
-              // 即使加载失败也要设置profile为null
-              setProfile(null)
-            } finally {
-              setLoading(false)
-            }
-          } else {
-            // 登出时清理用户配置
+        // 处理用户配置
+        if (session?.user) {
+          try {
+            await loadUserProfile(session.user.id)
+          } catch (error) {
+            console.error('Error loading user profile on auth change:', error)
+            // 即使加载失败也要设置profile为null
             setProfile(null)
+          } finally {
             setLoading(false)
           }
+        } else {
+          // 登出时清理用户配置
+          setProfile(null)
+          setLoading(false)
         }
-      )
+      })
 
       return () => {
         console.log('AuthProvider: Cleaning up subscription')
@@ -129,8 +132,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (currentUser.data.user) {
           userProfile = await userProfileService.upsertProfile({
             id: userId,
-            full_name: currentUser.data.user.user_metadata?.full_name || currentUser.data.user.email || 'User',
-            role: 'user'
+            full_name:
+              currentUser.data.user.user_metadata?.full_name ||
+              currentUser.data.user.email ||
+              'User',
+            role: 'user',
           })
         }
       }
@@ -231,12 +237,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     signInWithGoogle,
     signInWithPhone,
     verifyOtp,
-    signOut
+    signOut,
   }
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  )
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

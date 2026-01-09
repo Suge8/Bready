@@ -16,9 +16,9 @@ interface MemoryMetrics {
 }
 
 interface MemoryThresholds {
-  warning: number    // 警告阈值（MB）
-  critical: number   // 关键阈值（MB）
-  gcTrigger: number  // GC触发阈值（MB）
+  warning: number // 警告阈值（MB）
+  critical: number // 关键阈值（MB）
+  gcTrigger: number // GC触发阈值（MB）
 }
 
 export class MemoryOptimizer extends EventEmitter {
@@ -37,16 +37,16 @@ export class MemoryOptimizer extends EventEmitter {
   private readonly gcCooldownMs = 30000
   private readonly optimizeCooldownMs = 60000
   private readonly emergencyCooldownMs = 120000
-  
+
   private thresholds: MemoryThresholds = {
-    warning: 150,   // 150MB
-    critical: 200,  // 200MB  
-    gcTrigger: 120  // 120MB
+    warning: 150, // 150MB
+    critical: 200, // 200MB
+    gcTrigger: 120, // 120MB
   }
 
   constructor(customThresholds?: Partial<MemoryThresholds>) {
     super()
-    
+
     if (customThresholds) {
       this.thresholds = { ...this.thresholds, ...customThresholds }
     }
@@ -63,7 +63,7 @@ export class MemoryOptimizer extends EventEmitter {
     if (this.debugMemory) {
       console.log('🧠 启动内存监控...')
     }
-    
+
     this.monitoringInterval = setInterval(() => {
       this.collectMetrics()
     }, intervalMs)
@@ -97,7 +97,7 @@ export class MemoryOptimizer extends EventEmitter {
       heapUsed: memoryUsage.heapUsed / 1024 / 1024, // MB
       heapTotal: memoryUsage.heapTotal / 1024 / 1024, // MB
       rss: memoryUsage.rss / 1024 / 1024, // MB
-      timestamp: Date.now()
+      timestamp: Date.now(),
     }
 
     // 保存指标历史
@@ -121,9 +121,13 @@ export class MemoryOptimizer extends EventEmitter {
     const now = Date.now()
 
     const level: 'normal' | 'gc' | 'warning' | 'critical' =
-      usedMB > this.thresholds.critical ? 'critical' :
-      usedMB > this.thresholds.warning ? 'warning' :
-      usedMB > this.thresholds.gcTrigger ? 'gc' : 'normal'
+      usedMB > this.thresholds.critical
+        ? 'critical'
+        : usedMB > this.thresholds.warning
+          ? 'warning'
+          : usedMB > this.thresholds.gcTrigger
+            ? 'gc'
+            : 'normal'
 
     const levelChanged = level !== this.lastLevel
     if (levelChanged) {
@@ -168,18 +172,18 @@ export class MemoryOptimizer extends EventEmitter {
     if (this.debugMemory) {
       console.log('🔧 执行内存优化...')
     }
-    
+
     // 1. 触发垃圾回收
     this.triggerGarbageCollection()
-    
+
     // 2. 清理旧的指标数据
     if (this.metrics.length > 50) {
       this.metrics.splice(0, this.metrics.length - 50)
     }
-    
+
     // 3. 通知应用清理缓存
     this.emit('optimize-memory')
-    
+
     if (this.debugMemory) {
       console.log('✅ 内存优化完成')
     }
@@ -192,16 +196,16 @@ export class MemoryOptimizer extends EventEmitter {
     if (this.debugMemory) {
       console.log('🆘 执行紧急内存清理...')
     }
-    
+
     // 1. 强制垃圾回收
     this.triggerGarbageCollection(true)
-    
+
     // 2. 清理所有历史数据
     this.metrics.length = 0
-    
+
     // 3. 通知应用清理所有缓存
     this.emit('emergency-cleanup')
-    
+
     // 4. 等待一段时间后再次检查
     setTimeout(() => {
       const newMetrics = this.getCurrentMetrics()
@@ -212,7 +216,7 @@ export class MemoryOptimizer extends EventEmitter {
         this.emit('restart-recommended')
       }
     }, 5000)
-    
+
     if (this.debugMemory) {
       console.log('✅ 紧急清理完成')
     }
@@ -254,7 +258,7 @@ export class MemoryOptimizer extends EventEmitter {
    */
   getCurrentMetrics(): MemoryMetrics {
     const memoryUsage = process.memoryUsage()
-    
+
     return {
       used: memoryUsage.heapUsed / 1024 / 1024,
       total: memoryUsage.heapTotal / 1024 / 1024,
@@ -262,7 +266,7 @@ export class MemoryOptimizer extends EventEmitter {
       heapUsed: memoryUsage.heapUsed / 1024 / 1024,
       heapTotal: memoryUsage.heapTotal / 1024 / 1024,
       rss: memoryUsage.rss / 1024 / 1024,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     }
   }
 
@@ -275,28 +279,28 @@ export class MemoryOptimizer extends EventEmitter {
     confidence: number // 0-1
   } {
     const cutoffTime = Date.now() - minutes * 60 * 1000
-    const recentMetrics = this.metrics.filter(m => m.timestamp > cutoffTime)
-    
+    const recentMetrics = this.metrics.filter((m) => m.timestamp > cutoffTime)
+
     if (recentMetrics.length < 2) {
       return { trend: 'stable', rate: 0, confidence: 0 }
     }
-    
+
     // 线性回归计算趋势
     const n = recentMetrics.length
     const sumX = recentMetrics.reduce((sum, _, i) => sum + i, 0)
     const sumY = recentMetrics.reduce((sum, m) => sum + m.heapUsed, 0)
     const sumXY = recentMetrics.reduce((sum, m, i) => sum + i * m.heapUsed, 0)
     const sumX2 = recentMetrics.reduce((sum, _, i) => sum + i * i, 0)
-    
+
     const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX)
-    const timeSpanMinutes = (recentMetrics[n-1].timestamp - recentMetrics[0].timestamp) / 60000
-    const ratePerMinute = slope * (n - 1) / timeSpanMinutes
-    
-    const trend = Math.abs(ratePerMinute) < 0.1 ? 'stable' :
-                  ratePerMinute > 0 ? 'increasing' : 'decreasing'
-    
+    const timeSpanMinutes = (recentMetrics[n - 1].timestamp - recentMetrics[0].timestamp) / 60000
+    const ratePerMinute = (slope * (n - 1)) / timeSpanMinutes
+
+    const trend =
+      Math.abs(ratePerMinute) < 0.1 ? 'stable' : ratePerMinute > 0 ? 'increasing' : 'decreasing'
+
     const confidence = Math.min(1, n / 10) // 样本数越多，置信度越高
-    
+
     return { trend, rate: ratePerMinute, confidence }
   }
 
@@ -312,29 +316,29 @@ export class MemoryOptimizer extends EventEmitter {
     const current = this.getCurrentMetrics()
     const trend = this.getMemoryTrend()
     const recommendations: string[] = []
-    
+
     // 生成建议
     if (current.heapUsed > this.thresholds.warning) {
       recommendations.push('内存使用偏高，建议清理缓存')
     }
-    
+
     if (trend.trend === 'increasing' && trend.rate > 1) {
       recommendations.push('内存使用呈上升趋势，建议检查内存泄漏')
     }
-    
+
     if (current.external > 50) {
       recommendations.push('外部内存使用较高，检查大型资源文件')
     }
-    
+
     if (recommendations.length === 0) {
       recommendations.push('内存使用正常')
     }
-    
+
     return {
       current,
       trend,
       thresholds: this.thresholds,
-      recommendations
+      recommendations,
     }
   }
 
