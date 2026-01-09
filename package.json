@@ -13,9 +13,7 @@
     "build:win": "npm run build && electron-builder --win",
     "build:mac": "npm run build && electron-builder --mac",
     "build:linux": "npm run build && electron-builder --linux",
-    "test": "npx playwright test",
     "test:unit": "vitest run --coverage",
-    "test:electron": "npx playwright test tests/electron-*.spec.js",
     "release": "node scripts/release.js",
     "clean": "rm -rf out dist-electron node_modules/.cache",
     "lint": "eslint .",
@@ -90,7 +88,6 @@
     "ws": "^8.19.0"
   },
   "devDependencies": {
-    "@playwright/test": "^1.54.0",
     "@types/eslint": "^9.6.1",
     "@types/node": "^22.9.0",
     "@types/ws": "^8.18.1",
