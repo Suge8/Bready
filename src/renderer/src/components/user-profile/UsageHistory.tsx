@@ -66,45 +66,62 @@ const UsageRecordItem: React.FC<{
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: index * 0.03, duration: 0.2 }}
+      layout
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      whileHover={{
+        scale: 1.005,
+        backgroundColor: isDarkMode ? 'rgba(31, 41, 55, 0.4)' : 'rgba(243, 244, 246, 0.6)',
+      }}
+      transition={{
+        delay: index * 0.05,
+        duration: 0.2,
+        type: 'spring',
+        stiffness: 400,
+        damping: 30,
+      }}
       className={cn(
-        'flex items-center gap-4 p-4 rounded-xl border',
-        'transition-colors duration-200',
+        'flex items-center gap-3 px-3 py-2.5 rounded-lg border group',
+        'transition-colors duration-200 cursor-default',
         isDarkMode
-          ? 'border-gray-800 bg-gray-900/30 hover:bg-gray-900/50'
-          : 'border-gray-200 bg-gray-50/50 hover:bg-gray-100/50',
+          ? 'border-gray-800/50 bg-gray-900/20 hover:border-gray-700'
+          : 'border-gray-200/60 bg-white hover:border-gray-300/80',
       )}
     >
       {/* 图标 */}
       <div
         className={cn(
-          'flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center',
+          'flex-shrink-0 w-8 h-8 rounded-md flex items-center justify-center transition-colors',
           record.session_type === 'collaboration'
-            ? 'bg-blue-500/10 text-blue-500'
-            : 'bg-purple-500/10 text-purple-500',
+            ? 'bg-blue-500/10 text-blue-500 group-hover:bg-blue-500/15'
+            : 'bg-purple-500/10 text-purple-500 group-hover:bg-purple-500/15',
         )}
       >
-        <Icon className="w-5 h-5" />
+        <Icon className="w-4 h-4" />
       </div>
 
-      {/* 主要信息 */}
-      <div className="flex-1 min-w-0">
-        <div className={cn('font-medium truncate', isDarkMode ? 'text-white' : 'text-gray-900')}>
+      <div className="flex-1 min-w-0 flex items-center gap-3">
+        <span
+          className={cn(
+            'font-medium text-sm truncate',
+            isDarkMode ? 'text-gray-200' : 'text-gray-700',
+          )}
+        >
           {sessionTypeLabel}
-        </div>
+        </span>
+
+        <div className={cn('h-1 w-1 rounded-full', isDarkMode ? 'bg-gray-700' : 'bg-gray-300')} />
+
         <div
           className={cn(
-            'text-xs flex items-center gap-2 mt-0.5',
+            'text-xs flex items-center gap-1.5 font-mono',
             isDarkMode ? 'text-gray-500' : 'text-gray-400',
           )}
         >
-          <Clock className="w-3 h-3" />
           <span>{formatTime(record.started_at)}</span>
           {record.ended_at && (
             <>
-              <span>-</span>
+              <span className="text-gray-600">-</span>
               <span>{formatTime(record.ended_at)}</span>
             </>
           )}
@@ -112,12 +129,22 @@ const UsageRecordItem: React.FC<{
       </div>
 
       {/* 使用时长 */}
-      <div className="text-right flex-shrink-0">
-        <div className={cn('font-semibold', isDarkMode ? 'text-white' : 'text-gray-900')}>
-          {record.minutes_used} {t('common.minutes', { count: '' }).replace('{{count}}', '').trim()}
-        </div>
-        <div className={cn('text-xs', isDarkMode ? 'text-gray-500' : 'text-gray-400')}>
-          {t('profile.history.consumed') || '已消耗'}
+      <div className="text-right flex-shrink-0 flex items-center gap-2">
+        <div
+          className={cn(
+            'font-medium text-sm tabular-nums',
+            isDarkMode ? 'text-gray-300' : 'text-gray-700',
+          )}
+        >
+          {record.minutes_used}
+          <span
+            className={cn(
+              'ml-1 text-xs font-normal',
+              isDarkMode ? 'text-gray-600' : 'text-gray-400',
+            )}
+          >
+            {t('common.minutes', { count: '' }).replace('{{count}}', '').trim()}
+          </span>
         </div>
       </div>
     </motion.div>
@@ -171,29 +198,28 @@ export const UsageHistory: React.FC<UsageHistoryProps> = memo(({ isDarkMode = fa
   const groupedRecords = groupByDate(records, locale)
 
   return (
-    <div ref={containerRef} className="space-y-4">
+    <div ref={containerRef} className="space-y-5">
       {/* 按日期分组展示 */}
       {groupedRecords.map((group, groupIndex) => (
         <motion.div
           key={group.key}
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: groupIndex * 0.1 }}
+          transition={{ delay: groupIndex * 0.1, duration: 0.3 }}
         >
           {/* 日期标题 */}
           <div
             className={cn(
-              'flex items-center gap-2 mb-2 text-sm font-medium',
-              isDarkMode ? 'text-gray-400' : 'text-gray-500',
+              'flex items-center gap-2 mb-2 px-1 text-xs font-semibold tracking-wider uppercase opacity-80',
+              isDarkMode ? 'text-gray-500' : 'text-gray-400',
             )}
           >
-            <Calendar className="w-4 h-4" />
+            <Calendar className="w-3 h-3" />
             <span>{group.displayDate}</span>
-            <span className="text-xs">({group.records.length} 条)</span>
           </div>
 
           {/* 记录列表 */}
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {group.records.map((record, index) => (
               <UsageRecordItem
                 key={record.id}
@@ -211,14 +237,16 @@ export const UsageHistory: React.FC<UsageHistoryProps> = memo(({ isDarkMode = fa
         <motion.button
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.99 }}
           onClick={loadMore}
           disabled={loading}
           className={cn(
-            'w-full py-3 rounded-xl border flex items-center justify-center gap-2',
-            'transition-colors',
+            'w-full py-2.5 rounded-lg border text-sm font-medium flex items-center justify-center gap-2',
+            'transition-all duration-200',
             isDarkMode
-              ? 'border-gray-800 text-gray-400 hover:bg-gray-900/50'
-              : 'border-gray-200 text-gray-500 hover:bg-gray-50',
+              ? 'border-gray-800 text-gray-400 hover:bg-gray-800 hover:text-gray-200'
+              : 'border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-700',
           )}
         >
           {loading ? (

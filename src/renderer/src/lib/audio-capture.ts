@@ -797,9 +797,31 @@ class RendererAudioCapture {
     }
   }
 
+  private teardownIpcListeners() {
+    if (!this.ipcListenersInitialized) {
+      return
+    }
+
+    try {
+      const ipcRenderer = (window as any).bready?.ipcRenderer
+      if (ipcRenderer?.removeAllListeners) {
+        ipcRenderer.removeAllListeners('audio-capture-start')
+        ipcRenderer.removeAllListeners('audio-capture-stop')
+        if (debugAudio) {
+          console.log('✅ IPC 监听器已清理')
+        }
+      }
+    } catch (error) {
+      console.error('清理 IPC 监听器失败:', error)
+    }
+
+    this.ipcListenersInitialized = false
+  }
+
   destroy() {
     this.stop()
     this.teardownDeviceChangeListener()
+    this.teardownIpcListeners()
   }
 
   private scheduleDeviceChangeCheck = () => {

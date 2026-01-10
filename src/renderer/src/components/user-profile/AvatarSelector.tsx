@@ -55,16 +55,18 @@ export const AvatarSelector: React.FC<AvatarSelectorProps> = memo(
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50"
+              transition={{ duration: 0.15 }}
+              className="fixed inset-0 bg-black/50 z-50"
               onClick={onClose}
+              style={{ willChange: 'opacity' }}
             />
 
             {/* 选择器弹窗 */}
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              transition={{ duration: 0.15, ease: [0.32, 0.72, 0, 1] }}
               className={cn(
                 'fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50',
                 'w-[90vw] max-w-md p-6 rounded-2xl shadow-2xl',

@@ -26,6 +26,7 @@ export const translations: Record<SupportedLanguage, any> = {
       currentUser: '当前用户',
       none: '无',
       minutes: '{{count}}分钟',
+      remaining: '剩余',
     },
     form: {
       validation: {
@@ -51,6 +52,7 @@ export const translations: Record<SupportedLanguage, any> = {
       createNow: '立即创建',
       viewAll: '查看全部 {{count}} 个',
       analyzing: '分析中',
+      notAnalyzed: '未分析',
     },
     slogans: {
       main: ['面试紧张？放轻松', '面宝协作，胜券在握', '面试？小意思'],
@@ -194,14 +196,15 @@ export const translations: Record<SupportedLanguage, any> = {
         },
       },
       errors: {
-        apiConnectionFailed: 'API连接失败',
-        apiKeyMissing: '未找到 API 密钥，请检查 .env.local 文件中的 VITE_GEMINI_API_KEY 配置',
+        connectionIssue: '连接遇到问题',
+        apiConnectionFailed: '服务连接失败',
+        apiKeyMissing: '未找到服务密钥，请检查配置',
         audioDeviceError: '音频设备错误',
         permissionsNotSet: '权限未设置',
         networkError: '网络错误',
         unknownError: '未知错误',
         permissionsHint: '请在设置中完成所有权限配置',
-        connectFailed: '无法连接 AI 服务，请检查 API 密钥是否有效',
+        connectFailed: '无法连接 AI 服务，请检查配置是否正确',
         reconnectFailed: '重连失败，请检查网络连接后重试',
         notConnected: '当前未连接到 AI 服务，请等待连接完成或点击重连。',
         sendFailed: '抱歉，发送消息失败：{{error}}',
@@ -251,8 +254,8 @@ export const translations: Record<SupportedLanguage, any> = {
         denied: '被拒绝',
         networkConnected: '已连接',
         networkDisconnected: '未连接',
-        networkConnectedDesc: '与 Gemini API 保持连接',
-        networkDisconnectedDesc: '尝试重新连接 AI 服务',
+        networkConnectedDesc: 'AI 服务连接正常',
+        networkDisconnectedDesc: '点击重新连接 AI 服务',
         reconnect: '重新连接',
       },
       toasts: {
@@ -269,6 +272,7 @@ export const translations: Record<SupportedLanguage, any> = {
       tabs: {
         users: '用户管理',
         usage: '使用记录',
+        email: '邮箱设置',
       },
       stats: {
         totalUsers: '用户总数',
@@ -294,6 +298,28 @@ export const translations: Record<SupportedLanguage, any> = {
       actions: {
         previous: '上一页',
         next: '下一页',
+      },
+      email: {
+        title: '邮箱服务配置',
+        subtitle: '配置 SMTP 服务器以发送系统邮件',
+        smtp: {
+          title: 'SMTP 服务器',
+          server: '服务器地址',
+          serverPlaceholder: 'smtp.example.com',
+          port: '端口',
+          ssl: '启用 SSL',
+        },
+        auth: {
+          title: '发件人认证',
+          email: '发件邮箱',
+          emailPlaceholder: 'noreply@example.com',
+          code: '授权码',
+          codePlaceholder: '邮箱授权码',
+        },
+        actions: {
+          test: '测试连接',
+          save: '保存配置',
+        },
       },
     },
     profile: {
@@ -325,6 +351,8 @@ export const translations: Record<SupportedLanguage, any> = {
         history: '历史记录',
         settings: '设置',
       },
+      joined: '加入于',
+      remaining: '剩余',
       editor: {
         title: '编辑资料',
         nickname: '昵称',
@@ -469,6 +497,7 @@ export const translations: Record<SupportedLanguage, any> = {
       count: '共 {{count}} 个准备项',
       empty: '暂无准备项',
       analyzing: '分析中',
+      notAnalyzed: '未分析',
     },
     prepEditor: {
       titleCreate: '创建面试准备',
@@ -563,12 +592,12 @@ export const translations: Record<SupportedLanguage, any> = {
     floating: {
       status: {
         idle: '准备中...',
-        connecting: '正在连接 Gemini API...',
+        connecting: '正在连接 AI 服务...',
         connected: '已连接，正在启动音频捕获...',
         ready: '准备就绪',
         audioFailed: '错误：无法启动音频捕获。请检查系统音频权限',
-        connectFailed: '错误：无法连接 Gemini API。请检查API密钥是否有效',
-        apiKeyMissing: '错误：未找到 API 密钥。请检查 .env.local 文件中的 VITE_GEMINI_API_KEY 配置',
+        connectFailed: '错误：无法连接 AI 服务。请检查配置是否正确',
+        apiKeyMissing: '错误：未找到 API 密钥。请检查配置文件',
         reconnecting: '正在重连...',
         reconnectSuccess: '重连成功',
         reconnectFailed: '重连失败',
@@ -628,9 +657,9 @@ export const translations: Record<SupportedLanguage, any> = {
         openSettings: '打开系统偏好设置',
       },
       apiKey: {
-        title: 'Gemini API 密钥',
+        title: 'AI 服务密钥',
         description: '用于 AI 功能',
-        hint: '请在 .env.local 文件中配置 VITE_GEMINI_API_KEY',
+        hint: '请在配置文件中设置 API 密钥',
       },
       audio: {
         title: '音频设备',
@@ -703,6 +732,7 @@ export const translations: Record<SupportedLanguage, any> = {
       currentUser: 'Current user',
       none: 'None',
       minutes: '{{count}} min',
+      remaining: 'left',
     },
     form: {
       validation: {
@@ -729,6 +759,7 @@ export const translations: Record<SupportedLanguage, any> = {
       createNow: 'Create now',
       viewAll: 'View all {{count}}',
       analyzing: 'Analyzing',
+      notAnalyzed: 'Not analyzed',
     },
     slogans: {
       main: [
@@ -933,8 +964,8 @@ export const translations: Record<SupportedLanguage, any> = {
         denied: 'Denied',
         networkConnected: 'Connected',
         networkDisconnected: 'Disconnected',
-        networkConnectedDesc: 'Connected to Gemini API',
-        networkDisconnectedDesc: 'Try reconnecting to AI service',
+        networkConnectedDesc: 'AI service connected',
+        networkDisconnectedDesc: 'Click to reconnect AI service',
         reconnect: 'Reconnect',
       },
       toasts: {
@@ -951,6 +982,7 @@ export const translations: Record<SupportedLanguage, any> = {
       tabs: {
         users: 'Users',
         usage: 'Usage',
+        email: 'Email',
       },
       stats: {
         totalUsers: 'Total users',
@@ -976,6 +1008,28 @@ export const translations: Record<SupportedLanguage, any> = {
       actions: {
         previous: 'Previous',
         next: 'Next',
+      },
+      email: {
+        title: 'Email Service',
+        subtitle: 'Configure SMTP server for system emails',
+        smtp: {
+          title: 'SMTP Server',
+          server: 'Server',
+          serverPlaceholder: 'smtp.example.com',
+          port: 'Port',
+          ssl: 'SSL',
+        },
+        auth: {
+          title: 'Sender Auth',
+          email: 'Email',
+          emailPlaceholder: 'noreply@example.com',
+          code: 'Auth Code',
+          codePlaceholder: 'Email auth code',
+        },
+        actions: {
+          test: 'Test',
+          save: 'Save',
+        },
       },
     },
     profile: {
@@ -1007,6 +1061,8 @@ export const translations: Record<SupportedLanguage, any> = {
         history: 'History',
         settings: 'Settings',
       },
+      joined: 'Joined',
+      remaining: 'left',
       editor: {
         title: 'Edit Profile',
         nickname: 'Nickname',
@@ -1151,6 +1207,7 @@ export const translations: Record<SupportedLanguage, any> = {
       count: 'Total {{count}} preparations',
       empty: 'No preparations yet',
       analyzing: 'Analyzing',
+      notAnalyzed: 'Not analyzed',
     },
     prepEditor: {
       titleCreate: 'Create Interview Prep',
@@ -1245,12 +1302,12 @@ export const translations: Record<SupportedLanguage, any> = {
     floating: {
       status: {
         idle: 'Preparing...',
-        connecting: 'Connecting to Gemini API...',
+        connecting: 'Connecting to AI service...',
         connected: 'Connected, starting audio capture...',
         ready: 'Ready',
         audioFailed: 'Error: Unable to start audio capture. Check audio permissions.',
-        connectFailed: 'Error: Unable to connect to Gemini API. Check API key.',
-        apiKeyMissing: 'Error: API key not found. Check VITE_GEMINI_API_KEY in .env.local.',
+        connectFailed: 'Error: Unable to connect to AI service. Check configuration.',
+        apiKeyMissing: 'Error: API key not found. Check configuration file.',
         reconnecting: 'Reconnecting...',
         reconnectSuccess: 'Reconnected',
         reconnectFailed: 'Reconnect failed',
@@ -1310,9 +1367,9 @@ export const translations: Record<SupportedLanguage, any> = {
         openSettings: 'Open system settings',
       },
       apiKey: {
-        title: 'Gemini API key',
+        title: 'AI Service Key',
         description: 'For AI features',
-        hint: 'Set VITE_GEMINI_API_KEY in .env.local',
+        hint: 'Set API key in configuration file',
       },
       audio: {
         title: 'Audio device',
@@ -1410,6 +1467,7 @@ export const translations: Record<SupportedLanguage, any> = {
       createNow: '今すぐ作成',
       viewAll: 'すべて表示 {{count}}',
       analyzing: '分析中',
+      notAnalyzed: '未分析',
     },
     slogans: {
       main: ['面接が不安？落ち着いて。', 'Breadyと一緒に自信を。', '面接？大丈夫。'],
@@ -1610,7 +1668,7 @@ export const translations: Record<SupportedLanguage, any> = {
         denied: '拒否されました',
         networkConnected: '接続済み',
         networkDisconnected: '未接続',
-        networkConnectedDesc: 'Gemini APIに接続中',
+        networkConnectedDesc: 'AIサービスに接続中',
         networkDisconnectedDesc: '再接続してください',
         reconnect: '再接続',
       },
@@ -1653,6 +1711,28 @@ export const translations: Record<SupportedLanguage, any> = {
         previous: '前へ',
         next: '次へ',
       },
+      email: {
+        title: 'メール設定',
+        subtitle: 'SMTPサーバーを設定',
+        smtp: {
+          title: 'SMTPサーバー',
+          server: 'サーバー',
+          serverPlaceholder: 'smtp.example.com',
+          port: 'ポート',
+          ssl: 'SSL',
+        },
+        auth: {
+          title: '送信者認証',
+          email: 'メール',
+          emailPlaceholder: 'noreply@example.com',
+          code: '認証コード',
+          codePlaceholder: 'メール認証コード',
+        },
+        actions: {
+          test: 'テスト',
+          save: '保存',
+        },
+      },
     },
     profile: {
       title: 'プロフィール',
@@ -1674,6 +1754,45 @@ export const translations: Record<SupportedLanguage, any> = {
         light: 'ライト',
         dark: 'ダーク',
         auto: 'システム',
+      },
+      tabs: {
+        profile: 'プロフィール',
+        membership: '会員',
+        history: '履歴',
+        settings: '設定',
+      },
+      joined: '登録日',
+      remaining: '残り',
+      editor: {
+        title: 'プロフィール編集',
+        nickname: 'ニックネーム',
+        nicknamePlaceholder: 'ニックネームを入力',
+        notSet: '未設定',
+        email: 'メール',
+        createdAt: '登録日',
+      },
+      avatar: {
+        title: 'アバター選択',
+        label: 'アバター',
+        change: '変更',
+        hint: 'クリックして選択',
+      },
+      history: {
+        usage: '使用履歴',
+        purchase: '購入履歴',
+        collaboration: 'コラボレーション',
+        liveInterview: 'ライブ面接',
+        consumed: '使用済み',
+        noUsage: '使用履歴がありません',
+        noPurchase: '購入履歴がありません',
+        loadMore: 'もっと見る',
+        expiresAt: '有効期限',
+        saved: '節約',
+        status: {
+          completed: '完了',
+          pending: '処理中',
+          cancelled: 'キャンセル',
+        },
       },
       security: {
         title: 'アカウントセキュリティ',
@@ -1788,6 +1907,7 @@ export const translations: Record<SupportedLanguage, any> = {
       count: '合計 {{count}} 件',
       empty: '準備がありません',
       analyzing: '分析中',
+      notAnalyzed: '未分析',
     },
     prepEditor: {
       titleCreate: '面接準備を作成',
@@ -1879,11 +1999,11 @@ export const translations: Record<SupportedLanguage, any> = {
     floating: {
       status: {
         idle: '準備中...',
-        connecting: 'Gemini API に接続中...',
+        connecting: 'AIサービスに接続中...',
         connected: '接続済み、音声を開始中...',
         ready: '準備完了',
         audioFailed: 'エラー: 音声キャプチャを開始できません',
-        connectFailed: 'エラー: Gemini API に接続できません',
+        connectFailed: 'エラー: AIサービスに接続できません',
         apiKeyMissing: 'エラー: APIキーが見つかりません',
         reconnecting: '再接続中...',
         reconnectSuccess: '再接続成功',
@@ -1944,9 +2064,9 @@ export const translations: Record<SupportedLanguage, any> = {
         openSettings: 'システム設定を開く',
       },
       apiKey: {
-        title: 'Gemini API キー',
+        title: 'AIサービスキー',
         description: 'AI 機能に必要',
-        hint: '.env.local に VITE_GEMINI_API_KEY を設定',
+        hint: '設定ファイルにAPIキーを設定',
       },
       audio: {
         title: '音声デバイス',
@@ -2248,7 +2368,7 @@ export const translations: Record<SupportedLanguage, any> = {
         denied: 'Refusé',
         networkConnected: 'Connecté',
         networkDisconnected: 'Déconnecté',
-        networkConnectedDesc: 'Connecté à Gemini API',
+        networkConnectedDesc: 'Service IA connecté',
         networkDisconnectedDesc: 'Essayez de reconnecter le service IA',
         reconnect: 'Reconnecter',
       },
@@ -2291,6 +2411,28 @@ export const translations: Record<SupportedLanguage, any> = {
         previous: 'Précédent',
         next: 'Suivant',
       },
+      email: {
+        title: 'Service Email',
+        subtitle: 'Configurer le serveur SMTP',
+        smtp: {
+          title: 'Serveur SMTP',
+          server: 'Serveur',
+          serverPlaceholder: 'smtp.example.com',
+          port: 'Port',
+          ssl: 'SSL',
+        },
+        auth: {
+          title: 'Authentification',
+          email: 'Email',
+          emailPlaceholder: 'noreply@example.com',
+          code: 'Code',
+          codePlaceholder: 'Code auth',
+        },
+        actions: {
+          test: 'Tester',
+          save: 'Enregistrer',
+        },
+      },
     },
     profile: {
       title: 'Profil',
@@ -2312,6 +2454,45 @@ export const translations: Record<SupportedLanguage, any> = {
         light: 'Clair',
         dark: 'Sombre',
         auto: 'Système',
+      },
+      tabs: {
+        profile: 'Profil',
+        membership: 'Abonnement',
+        history: 'Historique',
+        settings: 'Paramètres',
+      },
+      joined: 'Inscrit le',
+      remaining: 'restant',
+      editor: {
+        title: 'Modifier le profil',
+        nickname: 'Pseudo',
+        nicknamePlaceholder: 'Entrez votre pseudo',
+        notSet: 'Non défini',
+        email: 'Email',
+        createdAt: 'Inscrit le',
+      },
+      avatar: {
+        title: 'Choisir un avatar',
+        label: 'Avatar',
+        change: 'Changer',
+        hint: 'Cliquez pour choisir',
+      },
+      history: {
+        usage: "Historique d'utilisation",
+        purchase: "Historique d'achat",
+        collaboration: 'Collaboration',
+        liveInterview: 'Entretien en direct',
+        consumed: 'Utilisé',
+        noUsage: 'Aucun historique',
+        noPurchase: 'Aucun achat',
+        loadMore: 'Charger plus',
+        expiresAt: "Valide jusqu'au",
+        saved: 'Économisé',
+        status: {
+          completed: 'Terminé',
+          pending: 'En cours',
+          cancelled: 'Annulé',
+        },
       },
       security: {
         title: 'Sécurité du compte',
@@ -2517,7 +2698,7 @@ export const translations: Record<SupportedLanguage, any> = {
     floating: {
       status: {
         idle: 'Préparation...',
-        connecting: "Connexion à l'API Gemini...",
+        connecting: 'Connexion au service IA...',
         connected: 'Connecté, démarrage audio...',
         ready: 'Prêt',
         audioFailed: "Erreur : impossible de démarrer l'audio",
@@ -2582,9 +2763,9 @@ export const translations: Record<SupportedLanguage, any> = {
         openSettings: 'Ouvrir les réglages système',
       },
       apiKey: {
-        title: 'Clé API Gemini',
+        title: 'Clé service IA',
         description: 'Pour les fonctionnalités IA',
-        hint: 'Définissez VITE_GEMINI_API_KEY dans .env.local',
+        hint: 'Définissez la clé API dans le fichier de configuration',
       },
       audio: {
         title: 'Périphérique audio',

@@ -150,39 +150,39 @@ const MicrophoneSelector: React.FC<MicrophoneSelectorProps> = ({
     return (
       <div
         className={cn(
-          'flex items-center gap-2 px-3 py-2 rounded-lg',
+          'flex items-center gap-2 px-2.5 py-1.5 rounded-lg',
           isDarkMode ? 'bg-gray-800/50' : 'bg-gray-100/50',
           className,
         )}
       >
-        <Mic className="w-4 h-4 text-gray-400 animate-pulse" />
-        <span className="text-sm text-gray-400">加载中...</span>
+        <Mic className="w-3.5 h-3.5 text-gray-400 animate-pulse" />
+        <span className="text-xs text-gray-400">加载中...</span>
       </div>
     )
   }
 
   return (
-    <div className={cn('relative', className)}>
-      {/* 选择器按钮 */}
-      <motion.button
+    <div className={cn('', className)}>
+      <button
         onClick={() => setIsOpen(!isOpen)}
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
         className={cn(
-          'flex items-center justify-between gap-3 px-3 py-2 rounded-lg transition-all cursor-pointer min-w-[200px]',
+          'w-full flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg transition-all cursor-pointer',
           isDarkMode
-            ? 'bg-gray-800/80 hover:bg-gray-700/80 border border-gray-700/50'
-            : 'bg-white/80 hover:bg-gray-50/80 border border-gray-200/50',
+            ? 'bg-gray-800/50 hover:bg-gray-700/50'
+            : 'bg-[var(--bready-surface-2)] hover:bg-[var(--bready-surface-3)]',
         )}
       >
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <Mic
-            className={cn('w-4 h-4 flex-shrink-0', isDarkMode ? 'text-gray-400' : 'text-gray-600')}
+            className={cn(
+              'w-3.5 h-3.5 flex-shrink-0',
+              isDarkMode ? 'text-gray-400' : 'text-gray-500',
+            )}
           />
           <span
             className={cn(
-              'text-sm font-medium truncate',
-              isDarkMode ? 'text-gray-200' : 'text-gray-700',
+              'text-xs truncate',
+              isDarkMode ? 'text-gray-200' : 'text-[var(--bready-text)]',
             )}
           >
             {displayLabel}
@@ -190,142 +190,125 @@ const MicrophoneSelector: React.FC<MicrophoneSelectorProps> = ({
         </div>
         <ChevronDown
           className={cn(
-            'w-4 h-4 flex-shrink-0 transition-transform duration-200',
+            'w-3.5 h-3.5 flex-shrink-0 transition-transform duration-200',
             isOpen && 'rotate-180',
-            isDarkMode ? 'text-gray-400' : 'text-gray-600',
+            isDarkMode ? 'text-gray-400' : 'text-gray-500',
           )}
         />
-      </motion.button>
+      </button>
 
-      {/* 下拉列表 */}
       <AnimatePresence>
         {isOpen && (
-          <>
-            {/* 遮罩层 */}
-            <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="pt-1.5 space-y-0.5">
+              {devices.length === 0 ? (
+                <div className="px-3 py-4 text-center">
+                  <Mic
+                    className={cn(
+                      'w-6 h-6 mx-auto mb-2',
+                      isDarkMode ? 'text-gray-600' : 'text-gray-400',
+                    )}
+                  />
+                  <p className={cn('text-xs', isDarkMode ? 'text-gray-400' : 'text-gray-600')}>
+                    未找到可用的麦克风设备
+                  </p>
+                </div>
+              ) : (
+                devices.map((device, index) => {
+                  const isSelected = device.deviceId === selectedDeviceId
 
-            {/* 下拉菜单 */}
-            <motion.div
-              initial={{ opacity: 0, y: -10, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -10, scale: 0.95 }}
-              transition={{ duration: 0.15 }}
-              className={cn(
-                'absolute top-full left-0 right-0 mt-2 rounded-lg shadow-2xl border z-50 overflow-hidden',
-                isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200',
-              )}
-            >
-              <div className="max-h-[280px] overflow-y-auto scrollbar-thin">
-                {devices.length === 0 ? (
-                  <div className="px-4 py-6 text-center">
-                    <Mic
+                  return (
+                    <motion.button
+                      key={device.deviceId}
+                      onClick={() => handleSelectDevice(device)}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      whileHover={{ x: 2 }}
                       className={cn(
-                        'w-8 h-8 mx-auto mb-2',
-                        isDarkMode ? 'text-gray-600' : 'text-gray-400',
+                        'w-full flex items-center justify-between gap-2 px-3 py-2 transition-all cursor-pointer rounded-md',
+                        isSelected
+                          ? isDarkMode
+                            ? 'bg-white/10'
+                            : 'bg-gray-100'
+                          : isDarkMode
+                            ? 'hover:bg-white/5'
+                            : 'hover:bg-gray-50',
                       )}
-                    />
-                    <p className={cn('text-sm', isDarkMode ? 'text-gray-400' : 'text-gray-600')}>
-                      未找到可用的麦克风设备
-                    </p>
-                  </div>
-                ) : (
-                  devices.map((device, index) => {
-                    const isSelected = device.deviceId === selectedDeviceId
-
-                    return (
-                      <motion.button
-                        key={device.deviceId}
-                        onClick={() => handleSelectDevice(device)}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.05 }}
-                        whileHover={{ x: 4 }}
-                        className={cn(
-                          'w-full flex items-center justify-between gap-3 px-4 py-3 transition-all cursor-pointer',
-                          isSelected
-                            ? isDarkMode
-                              ? 'bg-white/10'
-                              : 'bg-gray-100'
-                            : isDarkMode
-                              ? 'hover:bg-white/5'
-                              : 'hover:bg-gray-50',
-                        )}
-                      >
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                          <div
+                    >
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <div
+                          className={cn(
+                            'w-6 h-6 rounded flex items-center justify-center flex-shrink-0',
+                            isSelected
+                              ? isDarkMode
+                                ? 'bg-white/15'
+                                : 'bg-gray-200'
+                              : isDarkMode
+                                ? 'bg-gray-700/50'
+                                : 'bg-gray-100',
+                          )}
+                        >
+                          <Mic
                             className={cn(
-                              'w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0',
+                              'w-3 h-3',
                               isSelected
                                 ? isDarkMode
-                                  ? 'bg-white/15'
-                                  : 'bg-gray-200'
+                                  ? 'text-white'
+                                  : 'text-gray-900'
                                 : isDarkMode
-                                  ? 'bg-gray-700/50'
-                                  : 'bg-gray-100',
+                                  ? 'text-gray-400'
+                                  : 'text-gray-600',
                             )}
-                          >
-                            <Mic
-                              className={cn(
-                                'w-4 h-4',
-                                isSelected
-                                  ? isDarkMode
-                                    ? 'text-white'
-                                    : 'text-gray-900'
-                                  : isDarkMode
-                                    ? 'text-gray-400'
-                                    : 'text-gray-600',
-                              )}
-                            />
-                          </div>
-                          <div className="flex flex-col items-start flex-1 min-w-0">
-                            <span
-                              className={cn(
-                                'text-sm font-medium truncate w-full text-left',
-                                isSelected
-                                  ? isDarkMode
-                                    ? 'text-white'
-                                    : 'text-gray-900'
-                                  : isDarkMode
-                                    ? 'text-gray-200'
-                                    : 'text-gray-700',
-                              )}
-                            >
-                              {device.label}
-                            </span>
-                            {device.isDefault && (
-                              <span
-                                className={cn(
-                                  'text-xs mt-0.5',
-                                  isDarkMode ? 'text-gray-500' : 'text-gray-500',
-                                )}
-                              >
-                                默认设备
-                              </span>
-                            )}
-                          </div>
+                          />
                         </div>
-
-                        {isSelected && (
-                          <motion.div
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
+                        <div className="flex flex-col items-start flex-1 min-w-0">
+                          <span
                             className={cn(
-                              'w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0',
-                              isDarkMode ? 'bg-white' : 'bg-gray-900',
+                              'text-xs font-medium truncate w-full text-left',
+                              isSelected
+                                ? isDarkMode
+                                  ? 'text-white'
+                                  : 'text-gray-900'
+                                : isDarkMode
+                                  ? 'text-gray-200'
+                                  : 'text-gray-700',
                             )}
                           >
-                            <Check
-                              className={cn('w-3 h-3', isDarkMode ? 'text-gray-900' : 'text-white')}
-                            />
-                          </motion.div>
-                        )}
-                      </motion.button>
-                    )
-                  })
-                )}
-              </div>
-            </motion.div>
-          </>
+                            {device.label}
+                          </span>
+                        </div>
+                      </div>
+
+                      {isSelected && (
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          className={cn(
+                            'w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0',
+                            isDarkMode ? 'bg-white' : 'bg-gray-900',
+                          )}
+                        >
+                          <Check
+                            className={cn(
+                              'w-2.5 h-2.5',
+                              isDarkMode ? 'text-gray-900' : 'text-white',
+                            )}
+                          />
+                        </motion.div>
+                      )}
+                    </motion.button>
+                  )
+                })
+              )}
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

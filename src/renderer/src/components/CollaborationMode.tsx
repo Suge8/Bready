@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   Send,
   RefreshCw,
@@ -11,21 +12,157 @@ import {
   Loader2,
   Wifi,
   WifiOff,
-  Copy,
   Check,
+  DoorOpen,
+  User,
 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import rehypeHighlight from 'rehype-highlight'
 import { Button } from './ui/button'
-import { Card, CardContent } from './ui/card'
 import { ToastNotification, ConfirmationDialog } from './ui/notifications'
-import { TouchButton } from './ui/touch-optimized'
+
 import 'highlight.js/styles/github.css'
 import { useI18n } from '../contexts/I18nContext'
 import { Modal } from './ui/Modal'
 import CollaborationHeader from './collaboration/CollaborationHeader'
 import CollaborationSidebar from './collaboration/CollaborationSidebar'
+import { usageRecordService } from '../lib/supabase'
+import { useAuth } from '../contexts/AuthContext'
+
+const getDynamicFontSize = (textLength: number, isInput: boolean = false) => {
+  if (isInput) {
+    if (textLength < 50) return 'text-lg md:text-xl'
+    if (textLength < 150) return 'text-base md:text-lg'
+    return 'text-sm md:text-base'
+  }
+  if (textLength < 50) return 'text-xl md:text-2xl'
+  if (textLength < 150) return 'text-lg md:text-xl'
+  if (textLength < 300) return 'text-base md:text-lg'
+  return 'text-sm md:text-base'
+}
+
+const StreamingText: React.FC<{
+  text: string
+  className?: string
+  isInput?: boolean
+}> = ({ text, className = '', isInput = false }) => {
+  const [renderedChars, setRenderedChars] = useState<{ char: string; id: number }[]>([])
+  const idCounterRef = useRef(0)
+  const prevLengthRef = useRef(0)
+
+  useEffect(() => {
+    const prevLength = prevLengthRef.current
+    const newLength = text.length
+
+    if (
+      newLength > prevLength &&
+      text.slice(0, prevLength) ===
+        renderedChars
+          .map((c) => c.char)
+          .join('')
+          .slice(0, prevLength)
+    ) {
+      const newChars = text
+        .slice(prevLength)
+        .split('')
+        .map((char) => ({
+          char,
+          id: idCounterRef.current++,
+        }))
+      setRenderedChars((prev) => [...prev, ...newChars])
+    } else if (newLength !== prevLength) {
+      idCounterRef.current = 0
+      setRenderedChars(
+        text.split('').map((char) => ({
+          char,
+          id: idCounterRef.current++,
+        })),
+      )
+    }
+    prevLengthRef.current = newLength
+  }, [text])
+
+  const dynamicSize = getDynamicFontSize(text.length, isInput)
+
+  return (
+    <span
+      className={`${className} ${dynamicSize}`}
+      style={{ transition: 'font-size 0.3s ease-out' }}
+    >
+      {renderedChars.map(({ char, id }) => (
+        <span
+          key={id}
+          className="inline-block animate-char-in"
+          style={{ whiteSpace: char === ' ' ? 'pre' : 'normal' }}
+        >
+          {char}
+        </span>
+      ))}
+    </span>
+  )
+}
+
+const StreamingMarkdown: React.FC<{
+  text: string
+  className?: string
+  isStreaming?: boolean
+}> = ({ text, className = '', isStreaming = false }) => {
+  const [chars, setChars] = useState<{ char: string; id: number }[]>([])
+  const idCounterRef = useRef(0)
+  const prevTextRef = useRef('')
+
+  const dynamicSize = getDynamicFontSize(text.length, false)
+
+  useEffect(() => {
+    const prevText = prevTextRef.current
+    const isAppending = text.startsWith(prevText) && text.length > prevText.length
+
+    if (isAppending) {
+      const newChars = text
+        .slice(prevText.length)
+        .split('')
+        .map((char) => ({
+          char,
+          id: idCounterRef.current++,
+        }))
+      setChars((prev) => [...prev, ...newChars])
+    } else if (text !== prevText) {
+      idCounterRef.current = 0
+      setChars(text.split('').map((char) => ({ char, id: idCounterRef.current++ })))
+    }
+
+    prevTextRef.current = text
+  }, [text])
+
+  if (!isStreaming) {
+    return (
+      <div
+        className={`${className} ${dynamicSize} prose dark:prose-invert max-w-none`}
+        style={{ transition: 'font-size 0.3s ease-out' }}
+      >
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
+      </div>
+    )
+  }
+
+  return (
+    <div
+      className={`${className} ${dynamicSize}`}
+      style={{ transition: 'font-size 0.3s ease-out' }}
+    >
+      {chars.map(({ char, id }) => (
+        <span
+          key={id}
+          className="animate-char-fade-in"
+          style={{ whiteSpace: char === ' ' ? 'pre' : 'normal' }}
+        >
+          {char}
+        </span>
+      ))}
+      <span className="typing-cursor">|</span>
+    </div>
+  )
+}
 
 interface CollaborationModeProps {
   onExit: () => void
@@ -33,6 +170,7 @@ interface CollaborationModeProps {
 
 const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
   const { t } = useI18n()
+  const { user } = useAuth()
   const isMac = typeof navigator !== 'undefined' && /mac/i.test(navigator.platform)
   // 状态管理
   const [inputText, setInputText] = useState('')
@@ -46,6 +184,7 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
   const [currentAIResponse, setCurrentAIResponse] = useState('')
   const [isComposing, setIsComposing] = useState(false)
   const [showExitConfirm, setShowExitConfirm] = useState(false)
+  const [isExiting, setIsExiting] = useState(false)
   const [currentAudioMode, setCurrentAudioMode] = useState<'system' | 'microphone'>('system')
   const [showAudioModeDropdown, setShowAudioModeDropdown] = useState(false)
   const [currentError, setCurrentError] = useState<{ type: string; message: string } | null>(null)
@@ -62,6 +201,12 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
   const [showPermissionsModal, setShowPermissionsModal] = useState(false)
   const [copySuccess, setCopySuccess] = useState(false)
   const [currentMicrophoneDeviceId, setCurrentMicrophoneDeviceId] = useState<string>('')
+
+  const sessionRecordIdRef = useRef<string | null>(null)
+  const sessionStartTimeRef = useRef<Date | null>(null)
+
+  const isInitialState =
+    conversationHistory.length === 0 && !currentVoiceInput && !currentAIResponse && !isWaitingForAI
 
   // 复制文本到剪贴板
   const copyToClipboard = async (text: string) => {
@@ -83,7 +228,7 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
   const currentVoiceInputRef = useRef('')
   const currentAIResponseRef = useRef('')
   const lastAIResponseRef = useRef('')
-  const messagesEndRef = useRef<HTMLDivElement>(null)
+
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const rootRef = useRef<HTMLDivElement>(null)
   const currentMicrophoneDeviceIdRef = useRef('')
@@ -112,24 +257,6 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
     },
   ]
 
-  // 错误标题映射
-  const getErrorTitle = (errorType: string) => {
-    switch (errorType) {
-      case 'api-connection-failed':
-        return t('collaboration.errors.apiConnectionFailed')
-      case 'audio-device-error':
-        return t('collaboration.errors.audioDeviceError')
-      case 'permissions-not-set':
-        return t('collaboration.errors.permissionsNotSet')
-      case 'network-error':
-        return t('collaboration.errors.networkError')
-      case 'unknown-error':
-        return t('collaboration.errors.unknownError')
-      default:
-        return t('collaboration.errors.unknownError')
-    }
-  }
-
   // 状态图标
   const getStatusIcon = (status: any) => {
     if (status.granted) {
@@ -141,14 +268,6 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
     }
   }
 
-  // 状态文本
-  const getStatusText = (status: any) => {
-    if (status.granted) return t('collaboration.permissions.granted')
-    if (status.canRequest) return t('collaboration.permissions.needsSetup')
-    return t('collaboration.permissions.denied')
-  }
-
-  // 音频模式切换处理
   const handleAudioModeChange = async (newMode: 'system' | 'microphone') => {
     console.log('🎧 切换音频模式:', currentAudioMode, '->', newMode)
     const modeLabel =
@@ -157,51 +276,38 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
         : t('collaboration.audioMode.microphone.label')
 
     if (newMode === currentAudioMode) {
-      setShowAudioModeDropdown(false)
       return
     }
 
     setCurrentAudioMode(newMode)
-    setShowAudioModeDropdown(false)
 
-    // 在 Electron 环境中更新音频设置
-    if (window.bready && isConnected) {
-      try {
-        setStatus(t('collaboration.status.switchingAudio'))
+    if (!isConnected) return
 
-        // 使用新的 API 直接切换模式
-        const success = await window.bready.switchAudioMode(newMode)
+    try {
+      setStatus(t('collaboration.status.switchingAudio'))
+      const success = await window.bready.switchAudioMode(newMode)
 
-        if (success) {
-          setStatus(t('collaboration.status.switched', { mode: modeLabel }))
-
-          // 2秒后恢复正常状态
-          setTimeout(() => {
-            if (isConnected) {
-              setStatus(t('collaboration.status.ready'))
-            }
-          }, 2000)
-        } else {
-          setStatus(t('collaboration.status.switchFailed'))
-          setCurrentError({
-            type: 'audio-device-error',
-            message: t('collaboration.errors.audioSwitchFailed', { mode: modeLabel }),
-          })
-        }
-      } catch (error) {
-        console.error('音频模式切换失败:', error)
+      if (success) {
+        setStatus(t('collaboration.status.switched', { mode: modeLabel }))
+        setTimeout(() => {
+          if (isConnected) {
+            setStatus(t('collaboration.status.ready'))
+          }
+        }, 2000)
+      } else {
         setStatus(t('collaboration.status.switchFailed'))
         setCurrentError({
           type: 'audio-device-error',
-          message: t('collaboration.errors.audioSwitchError'),
+          message: t('collaboration.errors.audioSwitchFailed', { mode: modeLabel }),
         })
       }
-    } else {
-      // 浏览器模式下的模拟切换
-      setStatus(t('collaboration.status.browserSwitched', { mode: modeLabel }))
-      setTimeout(() => {
-        setStatus(t('collaboration.status.browserPreview'))
-      }, 2000)
+    } catch (error) {
+      console.error('音频模式切换失败:', error)
+      setStatus(t('collaboration.status.switchFailed'))
+      setCurrentError({
+        type: 'audio-device-error',
+        message: t('collaboration.errors.audioSwitchError'),
+      })
     }
   }
 
@@ -253,15 +359,6 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
       console.log('🔍 开始检查系统权限...')
       setStatus(t('collaboration.status.checkingPermissions'))
 
-      // 检查是否在 Electron 环境中
-      if (!window.bready) {
-        console.log('🌐 浏览器模式 - 跳过权限检查')
-        setIsInitializing(false)
-        setStatus(t('collaboration.status.browserPreview'))
-        return
-      }
-
-      // 调用主进程权限检查
       const permissions = await window.bready.checkPermissions()
       console.log('🔍 权限检查结果:', permissions)
 
@@ -451,13 +548,19 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
     }
   }
 
-  // 发送消息处理
+  const openSystemPreferences = async (pane: string) => {
+    try {
+      await window.bready.openSystemPreferences(pane)
+    } catch (error) {
+      console.error('打开系统偏好设置失败:', error)
+    }
+  }
+
   const handleSendMessage = async () => {
     if (!inputText.trim()) return
 
     const messageText = inputText.trim()
 
-    // 添加用户消息到对话记录
     const userMessage = {
       type: 'user' as const,
       content: messageText,
@@ -467,37 +570,15 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
 
     setConversationHistory((prev) => [...prev, userMessage])
 
-    // 设置pending状态，用于AI回复时的历史记录处理
     pendingUserInputRef.current = {
       content: messageText,
       source: 'text',
     }
 
-    // 清空输入框并设置等待AI状态
     setInputText('')
     setIsWaitingForAI(true)
-
-    // 重置AI回复记录
     lastAIResponseRef.current = ''
 
-    // 检查是否在 Electron 环境中
-    if (!window.bready) {
-      // 浏览器环境下的模拟回复
-      setTimeout(() => {
-        const aiMessage = {
-          type: 'ai' as const,
-          content: t('collaboration.previewReply', { message: messageText }),
-          timestamp: new Date(),
-          source: 'text' as const,
-        }
-        setConversationHistory((prev) => [...prev, aiMessage])
-
-        setIsWaitingForAI(false)
-      }, 1000)
-      return
-    }
-
-    // 检查连接状态
     if (!isConnected) {
       const errorMessage = {
         type: 'ai' as const,
@@ -511,7 +592,6 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
     }
 
     try {
-      // 发送文字消息到 AI 模型
       console.log('📤 发送文字消息到 AI:', messageText)
       const result = await window.bready.sendTextMessage(messageText)
 
@@ -544,8 +624,23 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
   }
 
   // 退出确认处理
-  const handleExitConfirm = () => {
+  const handleExitConfirm = async () => {
     setShowExitConfirm(false)
+    setIsExiting(true)
+
+    await new Promise((resolve) => setTimeout(resolve, 400))
+
+    if (sessionRecordIdRef.current && sessionStartTimeRef.current) {
+      try {
+        const minutesUsed = Math.max(
+          1,
+          Math.ceil((Date.now() - sessionStartTimeRef.current.getTime()) / 60000),
+        )
+        await usageRecordService.endSession(sessionRecordIdRef.current, minutesUsed)
+      } catch (err) {
+        console.error('Failed to end usage session:', err)
+      }
+    }
     onExit()
   }
 
@@ -568,14 +663,6 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
     if (!hasInitialized.current) {
       hasInitialized.current = true
       checkPermissions()
-    }
-
-    // 如果不在 Electron 环境中，跳过事件监听器设置
-    if (!window.bready) {
-      console.log('🌐 浏览器模式 - 跳过事件监听器设置')
-      setIsInitializing(false)
-      setStatus(t('collaboration.status.browserPreview'))
-      return
     }
 
     // 设置事件监听器（每次 mount 都需要设置）
@@ -678,10 +765,19 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
       setIsWaitingForAI(false)
     })
     const removeSessionInitializingListener = window.bready.onSessionInitializing(
-      (initializing) => {
+      async (initializing) => {
         if (!initializing) {
           setIsConnected(true)
           setCurrentError(null)
+          if (user?.id && !sessionRecordIdRef.current) {
+            try {
+              sessionStartTimeRef.current = new Date()
+              const record = await usageRecordService.startSession(user.id, 'collaboration')
+              sessionRecordIdRef.current = record.id
+            } catch (err) {
+              console.error('Failed to start usage session:', err)
+            }
+          }
         }
       },
     )
@@ -755,16 +851,33 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
   }, [])
 
   return (
-    <div
+    <motion.div
       ref={rootRef}
-      className="h-screen w-screen overflow-hidden bg-[var(--bready-bg)] text-[var(--bready-text)] flex flex-col relative transition-colors duration-300"
+      initial={{ opacity: 0, scale: 0.95, filter: 'blur(10px)' }}
+      animate={
+        isExiting
+          ? { opacity: 0, x: '-100%', filter: 'blur(10px)' }
+          : { opacity: 1, scale: 1, filter: 'blur(0px)' }
+      }
+      exit={{ opacity: 0, scale: 1.05, filter: 'blur(10px)' }}
+      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+      className="h-screen w-screen overflow-hidden bg-[var(--bready-bg)] text-[var(--bready-text)] flex flex-col relative"
     >
-      {/* 背景光晕效果已移除，确保背景色统一 */}
-      {/* <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[720px] h-[420px] bg-[radial-gradient(circle,_var(--bready-glow)_0%,_transparent_65%)] blur-[120px]" />
-        <div className="absolute bottom-[-120px] right-[-60px] w-[360px] h-[280px] bg-[radial-gradient(circle,_var(--bready-glow)_0%,_transparent_70%)] blur-[120px]" />
-      </div> */}
-      {/* 复制成功提示 */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.2, duration: 0.8 }}
+          className="absolute -top-32 left-1/4 w-96 h-96 bg-gradient-to-br from-amber-500/10 to-orange-500/5 rounded-full blur-3xl"
+        />
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.3, duration: 0.8 }}
+          className="absolute -bottom-32 right-1/4 w-80 h-80 bg-gradient-to-tr from-emerald-500/10 to-teal-500/5 rounded-full blur-3xl"
+        />
+      </div>
+
       {copySuccess && (
         <div className="fixed top-4 right-4 z-[9999] animate-in fade-in slide-in-from-top-2 duration-300">
           <div className="flex items-center gap-2 px-4 py-2 bg-[var(--bready-surface)] border border-[var(--bready-border)] rounded-lg shadow-xl">
@@ -804,217 +917,173 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
       />
 
       {/* 主要内容区域 - 左右分栏布局 */}
-      <div className="flex-1 flex p-4 gap-4 overflow-hidden bg-[var(--bready-bg)]">
-        {/* 左侧主区域 - 实时问答 (约3/4宽度) */}
-        <div className="flex-1 flex flex-col min-w-0">
-          {/* 错误提示 */}
-          {currentError && !isInitializing && (
-            <Card className="mb-4 border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 rounded-xl animate-in fade-in slide-in-from-top-2 duration-300">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
-                    <span className="font-medium text-red-800 dark:text-red-200">
-                      {getErrorTitle(currentError.type)}
-                    </span>
+      <div className="flex-1 flex overflow-hidden bg-[var(--bready-bg)]">
+        <div className="flex-1 flex flex-col min-w-0 relative">
+          <AnimatePresence>
+            {currentError && !isInitializing && (
+              <motion.div
+                initial={{ opacity: 0, y: -20, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -10, scale: 0.98 }}
+                className="absolute top-4 left-4 right-4 z-50"
+              >
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200/50 dark:border-red-800/30 rounded-xl p-4 shadow-sm flex items-center gap-3">
+                  <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-red-800 dark:text-red-300">
+                      {currentError.message}
+                    </p>
                   </div>
                   <button
                     onClick={handleReconnect}
-                    className="px-3 py-1 bg-red-100 dark:bg-red-800/30 hover:bg-red-200 dark:hover:bg-red-700/50 text-red-700 dark:text-red-300 rounded-lg text-sm font-medium transition-colors cursor-pointer"
+                    className="px-3 py-1.5 bg-white dark:bg-red-900/40 border border-red-200 dark:border-red-800 rounded-lg text-xs font-medium text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/60 transition-colors"
                   >
                     {t('collaboration.actions.reconnect')}
                   </button>
                 </div>
-                <p className="text-red-700 dark:text-red-300 text-sm mt-2">
-                  {currentError.message}
-                </p>
-              </CardContent>
-            </Card>
-          )}
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-          {/* 实时问答展示区 - 固定布局，只有内容区域动态变化 */}
-          <div className="flex-1 flex flex-col overflow-hidden relative">
-            {/* 空状态 - 绝对定位居中，有消息时淡出 */}
-            <div
-              className={`absolute inset-0 flex items-center justify-center transition-all duration-500 ${conversationHistory.length === 0 && !currentVoiceInput.trim() && !currentAIResponse.trim() && !isWaitingForAI ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
-            >
-              <div className="text-center text-[var(--bready-text-muted)]">
-                <div className="w-20 h-20 mx-auto mb-6 bg-[var(--bready-surface-2)] rounded-full flex items-center justify-center backdrop-blur-sm animate-pulse">
-                  <Mic className="w-10 h-10 text-[var(--bready-text-muted)]" />
+          <AnimatePresence mode="wait">
+            {isInitialState ? (
+              <motion.div
+                key="initial"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="flex-1 flex flex-col items-center justify-center"
+              >
+                <div className="flex flex-col items-center text-center">
+                  <span className="text-5xl mb-4">🍞</span>
+                  <p className="text-[var(--bready-text-muted)] text-sm">面宝已准备好协助你了</p>
+                  <div className="mt-4 flex items-center gap-2 text-xs text-[var(--bready-text-muted)]">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span>正在聆听...</span>
+                  </div>
                 </div>
-                <p className="text-lg font-medium text-[var(--bready-text)]">
-                  {currentAudioMode === 'system'
-                    ? t('collaboration.empty.system')
-                    : t('collaboration.empty.microphone')}
-                </p>
-                <p className="text-sm mt-2 text-[var(--bready-text-muted)]">
-                  {t('collaboration.empty.helper')}
-                </p>
-              </div>
-            </div>
-
-            {/* 聊天内容区域 - 绝对定位，有消息时显示 */}
-            <div
-              ref={messagesContainerRef}
-              className={`absolute inset-0 flex flex-col items-center justify-start pt-6 overflow-y-auto transition-all duration-500 ${conversationHistory.length > 0 || currentVoiceInput.trim() || currentAIResponse.trim() || isWaitingForAI ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
-            >
-              <div className="w-full max-w-3xl space-y-8 px-4 pb-4">
-                {/* 最新用户提问 - 从历史记录或实时输入中获取 */}
-                {(() => {
-                  // 获取最新的用户消息
-                  const latestUserMessage = [...conversationHistory]
-                    .reverse()
-                    .find((m) => m.type === 'user')
-                  const showUserMessage = currentVoiceInput.trim() || latestUserMessage
-
-                  if (!showUserMessage && !isWaitingForAI) return null
-
-                  const userContent = currentVoiceInput.trim() || latestUserMessage?.content || ''
-                  const isTranscribing = !!currentVoiceInput.trim()
-
-                  if (!userContent) return null
-
-                  return (
-                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-400 via-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/40 ring-2 ring-emerald-400/20">
-                          <Mic className="w-5 h-5 text-white" />
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="text-sm font-semibold text-[var(--bready-text)]">
-                            {isTranscribing
-                              ? t('collaboration.labels.transcribing')
-                              : t('collaboration.labels.input')}
-                          </span>
-                          {isTranscribing && (
-                            <div className="flex gap-1 mt-1">
-                              <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce" />
-                              <div
-                                className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce"
-                                style={{ animationDelay: '0.15s' }}
-                              />
-                              <div
-                                className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce"
-                                style={{ animationDelay: '0.3s' }}
-                              />
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <div className="bg-gradient-to-br from-emerald-500/20 via-emerald-500/10 to-teal-500/15 backdrop-blur-2xl rounded-3xl p-7 border border-emerald-400/40 shadow-2xl shadow-emerald-500/20 relative group/user hover:shadow-emerald-500/30 transition-all duration-300">
-                        <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-emerald-400/5 to-transparent pointer-events-none" />
-                        <p className="text-xl text-[var(--bready-text)] leading-relaxed font-medium relative z-10">
-                          {userContent}
-                        </p>
-                        {/* 复制按钮 */}
-                        <button
-                          onClick={() => copyToClipboard(userContent)}
-                          className="absolute bottom-4 right-4 p-2.5 bg-emerald-500/15 hover:bg-emerald-500/25 rounded-xl opacity-0 group-hover/user:opacity-100 transition-all duration-200 cursor-pointer hover:scale-105"
-                          title={t('collaboration.actions.copy')}
-                        >
-                          <Copy className="w-4 h-4 text-emerald-600 dark:text-emerald-200" />
-                        </button>
-                      </div>
-                    </div>
-                  )
-                })()}
-
-                {/* AI 回复区域 */}
-                {(() => {
-                  // 获取最新的 AI 消息
-                  const latestAIMessage = [...conversationHistory]
-                    .reverse()
-                    .find((m) => m.type === 'ai')
-                  const showAIMessage =
-                    currentAIResponse.trim() || latestAIMessage || isWaitingForAI
-
-                  if (!showAIMessage) return null
-
-                  const aiContent = currentAIResponse.trim() || latestAIMessage?.content || ''
-                  const isResponding = !!currentAIResponse.trim()
-
-                  return (
-                    <div
-                      className="animate-in fade-in slide-in-from-bottom-4 duration-500"
-                      style={{ animationDelay: '0.15s' }}
-                    >
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 via-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/40 ring-2 ring-amber-400/20">
-                          <span className="text-base">🍞</span>
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="text-sm font-semibold text-[var(--bready-text)]">
-                            {isWaitingForAI && !aiContent
-                              ? t('collaboration.labels.thinking')
-                              : isResponding
-                                ? t('collaboration.labels.responding')
-                                : t('collaboration.labels.bready')}
-                          </span>
-                          {(isWaitingForAI || isResponding) && (
-                            <div className="flex gap-1 mt-1">
-                              <div className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-bounce" />
-                              <div
-                                className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-bounce"
-                                style={{ animationDelay: '0.15s' }}
-                              />
-                              <div
-                                className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-bounce"
-                                style={{ animationDelay: '0.3s' }}
-                              />
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <div className="bg-[var(--bready-surface)] backdrop-blur-2xl rounded-3xl p-7 border border-[var(--bready-border)] shadow-2xl shadow-black/10 relative group/ai hover:border-[var(--bready-border)] transition-all duration-300">
-                        <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-black/[0.02] to-transparent pointer-events-none" />
-                        {aiContent ? (
+              </motion.div>
+            ) : (
+              <motion.div
+                key="active"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="flex-1 flex flex-col h-full"
+              >
+                <div className="flex-[0.35] flex flex-col items-center justify-center p-6 overflow-hidden relative group bg-gradient-to-b from-transparent to-[var(--bready-surface)]/10">
+                  <div className="max-w-xl w-full text-center z-10">
+                    <div className="mb-3 flex items-center justify-center opacity-60 transition-opacity group-hover:opacity-100">
+                      <div className="px-3 py-1 bg-[var(--bready-surface-2)]/50 rounded-full border border-[var(--bready-border)]/50 flex items-center gap-2">
+                        {!!currentVoiceInput ? (
                           <>
-                            <div className="prose prose-lg max-w-none text-[var(--bready-text)] prose-p:text-[var(--bready-text)] prose-p:leading-relaxed prose-headings:text-[var(--bready-text)] prose-strong:text-[var(--bready-text)] prose-em:text-[var(--bready-text-muted)] prose-code:text-amber-500 dark:prose-code:text-amber-300 prose-code:bg-black/5 dark:prose-code:bg-white/10 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-lg prose-li:text-[var(--bready-text)] prose-a:text-emerald-600 dark:prose-a:text-emerald-300 prose-a:no-underline hover:prose-a:underline relative z-10 dark:prose-invert">
-                              <ReactMarkdown
-                                remarkPlugins={[remarkGfm]}
-                                rehypePlugins={[rehypeHighlight]}
-                              >
-                                {aiContent}
-                              </ReactMarkdown>
-                            </div>
-                            {/* 复制按钮 */}
-                            <button
-                              onClick={() => copyToClipboard(aiContent)}
-                              className="absolute bottom-4 right-4 p-2.5 bg-[var(--bready-surface-2)] hover:bg-[var(--bready-surface-3)] rounded-xl opacity-0 group-hover/ai:opacity-100 transition-all duration-200 cursor-pointer hover:scale-105"
-                              title={t('collaboration.actions.copy')}
-                            >
-                              <Copy className="w-4 h-4 text-[var(--bready-text-muted)]" />
-                            </button>
+                            <Mic className="w-3.5 h-3.5 text-emerald-500 animate-pulse" />
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--bready-text)]">
+                              Listening
+                            </span>
                           </>
                         ) : (
-                          <div className="flex items-center gap-4 text-[var(--bready-text)]">
-                            <div className="w-6 h-6 border-2 border-[var(--bready-border)] border-t-amber-400 rounded-full animate-spin" />
-                            <span className="text-[var(--bready-text-muted)] font-medium">
-                              {t('collaboration.aiThinking')}
+                          <>
+                            <User className="w-3.5 h-3.5 text-blue-500" />
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-blue-500">
+                              You
                             </span>
-                          </div>
+                          </>
                         )}
                       </div>
                     </div>
-                  )
-                })()}
 
-                {/* 滚动目标元素 */}
-                <div ref={messagesEndRef} />
-              </div>
-            </div>
-          </div>
+                    <div className="min-h-[80px] flex items-center justify-center">
+                      {(() => {
+                        const latestUserMessage = [...conversationHistory]
+                          .reverse()
+                          .find((m) => m.type === 'user')
+                        const content = currentVoiceInput.trim() || latestUserMessage?.content
 
-          {/* 输入区域 */}
-          <div className="pt-4 -mb-2 mt-auto">
-            <div className="flex items-center space-x-3">
-              <div className="flex-1 relative">
+                        if (!content) {
+                          return (
+                            <div className="text-[var(--bready-text-muted)] opacity-20 font-light text-3xl select-none">
+                              ...
+                            </div>
+                          )
+                        }
+
+                        return (
+                          <div className="relative inline-block">
+                            <StreamingText
+                              text={content}
+                              className="font-medium leading-tight text-[var(--bready-text)] tracking-tight"
+                              isInput={true}
+                            />
+                          </div>
+                        )
+                      })()}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex-[0.65] flex flex-col items-center justify-center p-6 overflow-hidden relative">
+                  <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[var(--bready-surface)]/5 to-[var(--bready-surface)]/10 pointer-events-none" />
+                  <div className="max-w-xl w-full z-10 flex flex-col h-full">
+                    <div className="-mb-3 flex items-center justify-center shrink-0">
+                      <div className="w-10 h-10 bg-gradient-to-tr from-amber-100 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/10 rounded-full flex items-center justify-center shadow-sm border border-amber-100/50 dark:border-amber-900/30">
+                        <span className="text-xl">🍞</span>
+                      </div>
+                    </div>
+
+                    <div className="flex-1 flex items-center justify-center overflow-y-auto custom-scrollbar w-full">
+                      {(() => {
+                        const latestAIMessage = [...conversationHistory]
+                          .reverse()
+                          .find((m) => m.type === 'ai')
+                        const content = currentAIResponse.trim() || latestAIMessage?.content
+
+                        if (!content && !isWaitingForAI) {
+                          return (
+                            <div className="flex flex-col items-center justify-center gap-3 text-[var(--bready-text-muted)] opacity-30 select-none">
+                              <div className="w-1.5 h-1.5 rounded-full bg-current" />
+                              <span className="text-xs font-medium tracking-widest uppercase">
+                                Ready
+                              </span>
+                            </div>
+                          )
+                        }
+
+                        if (!content && isWaitingForAI) {
+                          return (
+                            <div className="flex items-center gap-2 text-[var(--bready-text-muted)]">
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              <span className="text-sm font-medium animate-pulse">Thinking...</span>
+                            </div>
+                          )
+                        }
+
+                        return (
+                          <StreamingMarkdown
+                            text={content || ''}
+                            className="w-full text-center leading-relaxed font-medium text-[var(--bready-text)]"
+                            isStreaming={!!currentAIResponse.trim()}
+                          />
+                        )
+                      })()}
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <div className="flex-shrink-0 p-4">
+            <div className="max-w-xl mx-auto w-full relative group">
+              <div className="relative flex items-center bg-[var(--bready-surface-2)]/50 rounded-2xl shadow-sm focus-within:shadow-md focus-within:bg-[var(--bready-surface-2)] transition-all duration-200 hover:bg-[var(--bready-surface-2)]/80 border border-[var(--bready-border)]/20">
                 <input
                   type="text"
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
                   placeholder={t('collaboration.input.placeholder')}
-                  className="w-full px-5 py-4 bg-[var(--bready-surface-2)] backdrop-blur-sm border border-[var(--bready-border)] rounded-2xl focus:outline-none focus:ring-2 focus:ring-black/10 dark:focus:ring-white/20 focus:border-[var(--bready-border)] text-[var(--bready-text)] placeholder:text-[var(--bready-text-muted)] text-base transition-all duration-200"
+                  className="w-full bg-transparent border-none outline-none px-6 py-3.5 text-base focus:ring-0 focus:outline-none placeholder:text-[var(--bready-text-muted)]/60 text-[var(--bready-text)]"
                   onCompositionStart={() => setIsComposing(true)}
                   onCompositionEnd={() => setIsComposing(false)}
                   onKeyDown={(e) => {
@@ -1027,22 +1096,27 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
                 {inputText && (
                   <button
                     onClick={() => setInputText('')}
-                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-[var(--bready-text-muted)] hover:text-[var(--bready-text)] cursor-pointer transition-colors"
+                    className="p-2 text-[var(--bready-text-muted)] hover:text-[var(--bready-text)] transition-colors mr-1"
                   >
                     <X className="w-4 h-4" />
                   </button>
                 )}
+                <div className="pr-1.5">
+                  <Button
+                    onClick={handleSendMessage}
+                    disabled={!inputText.trim() || isWaitingForAI}
+                    size="icon"
+                    className="rounded-full w-9 h-9 bg-[var(--bready-text)] text-[var(--bready-bg)] hover:opacity-90 disabled:opacity-30 transition-all"
+                  >
+                    <Send className="w-4 h-4 ml-0.5" />
+                  </Button>
+                </div>
               </div>
-              <TouchButton
-                onClick={handleSendMessage}
-                disabled={!inputText.trim() || isWaitingForAI}
-                className="w-12 h-12 bg-black hover:opacity-90 text-white dark:bg-white dark:text-black rounded-xl flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 cursor-pointer hover:scale-105"
-              >
-                <Send className="w-5 h-5" />
-              </TouchButton>
-            </div>
-            <div className="flex items-center justify-center mt-2 text-[10px] text-[var(--bready-text-muted)]">
-              <span>{t('collaboration.input.helper')}</span>
+              <div className="text-center mt-2.5 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <span className="text-[10px] uppercase tracking-widest text-[var(--bready-text-muted)]">
+                  {t('collaboration.input.helper')}
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -1074,123 +1148,245 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
         </div>
       )}
 
-      {/* 退出确认对话框 */}
-      {showExitConfirm && (
-        <Modal isOpen onClose={() => setShowExitConfirm(false)} size="sm" className="max-w-sm">
-          <div className="text-center">
-            <div className="w-12 h-12 bg-red-500/15 rounded-full flex items-center justify-center mx-auto mb-4">
-              <AlertCircle className="w-6 h-6 text-red-500" />
-            </div>
-            <h3 className="text-lg font-semibold text-[var(--bready-text)] mb-2">
-              {t('collaboration.exit.title')}
-            </h3>
-            <p className="text-[var(--bready-text-muted)] mb-6">
-              {t('collaboration.exit.description')}
-            </p>
-            <Button onClick={handleExitConfirm} variant="danger" fullWidth>
-              {t('collaboration.exit.confirm')}
-            </Button>
-          </div>
-        </Modal>
-      )}
+      <AnimatePresence>
+        {showExitConfirm && (
+          <Modal isOpen onClose={() => setShowExitConfirm(false)} size="sm" className="max-w-sm">
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10, scale: 0.98 }}
+              transition={{ duration: 0.2 }}
+              className="text-center relative py-2"
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.1, duration: 0.3 }}
+                className="w-12 h-12 mx-auto mb-5 bg-black dark:bg-white rounded-xl flex items-center justify-center"
+              >
+                <DoorOpen className="w-6 h-6 text-white dark:text-black" />
+              </motion.div>
 
-      {/* 权限设置模态框 */}
-      {showPermissionsModal && (
-        <Modal isOpen onClose={() => setShowPermissionsModal(false)} size="sm" className="max-w-md">
-          <div className="mb-6">
-            <h2 className="text-xl font-bold text-[var(--bready-text)]">
-              {t('collaboration.permissions.title')}
-            </h2>
-          </div>
+              <motion.h3
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15, duration: 0.25 }}
+                className="text-lg font-semibold text-[var(--bready-text)] mb-2"
+              >
+                {t('collaboration.exit.title')}
+              </motion.h3>
 
-          <div className="space-y-4">
-            <div className="bg-[var(--bready-surface-2)] rounded-lg p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center space-x-2">
-                  <Volume2 className="w-5 h-5 text-[var(--bready-text-muted)]" />
-                  <span className="font-medium text-[var(--bready-text)]">
-                    {t('collaboration.permissions.systemAudio')}
-                  </span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  {getStatusIcon(systemPermissions.screenRecording)}
-                  <span className="text-sm font-medium text-emerald-600 dark:text-emerald-300">
-                    {getStatusText(systemPermissions.screenRecording)}
-                  </span>
-                </div>
-              </div>
-              <p className="text-sm text-[var(--bready-text-muted)]">
-                {t('collaboration.permissions.systemAudioDesc')}
-              </p>
-            </div>
+              <motion.p
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2, duration: 0.25 }}
+                className="text-sm text-[var(--bready-text-muted)] mb-6 leading-relaxed"
+              >
+                {t('collaboration.exit.description')}
+              </motion.p>
 
-            <div className="bg-[var(--bready-surface-2)] rounded-lg p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center space-x-2">
-                  <Mic className="w-5 h-5 text-[var(--bready-text-muted)]" />
-                  <span className="font-medium text-[var(--bready-text)]">
-                    {t('collaboration.permissions.microphone')}
-                  </span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  {getStatusIcon(systemPermissions.microphone)}
-                  <span className="text-sm font-medium text-emerald-600 dark:text-emerald-300">
-                    {getStatusText(systemPermissions.microphone)}
-                  </span>
-                </div>
-              </div>
-              <p className="text-sm text-[var(--bready-text-muted)]">
-                {t('collaboration.permissions.microphoneDesc')}
-              </p>
-            </div>
-
-            <div className="bg-[var(--bready-surface-2)] rounded-lg p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center space-x-2">
-                  <Wifi className="w-5 h-5 text-[var(--bready-text-muted)]" />
-                  <span className="font-medium text-[var(--bready-text)]">
-                    {t('collaboration.permissions.network')}
-                  </span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  {isConnected ? (
-                    <>
-                      <Wifi className="w-5 h-5 text-emerald-500" />
-                      <span className="text-sm font-medium text-emerald-500">
-                        {t('collaboration.permissions.networkConnected')}
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <WifiOff className="w-5 h-5 text-red-500" />
-                      <span className="text-sm font-medium text-red-500">
-                        {t('collaboration.permissions.networkDisconnected')}
-                      </span>
-                    </>
-                  )}
-                </div>
-              </div>
-              <p className="text-sm text-[var(--bready-text-muted)]">
-                {isConnected
-                  ? t('collaboration.permissions.networkConnectedDesc')
-                  : t('collaboration.permissions.networkDisconnectedDesc')}
-              </p>
-
-              {!isConnected && (
-                <Button
-                  onClick={handleReconnect}
-                  variant="outline"
-                  size="sm"
-                  className="mt-3 w-full"
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.25, duration: 0.25 }}
+                className="flex gap-3"
+              >
+                <button
+                  onClick={() => setShowExitConfirm(false)}
+                  className="flex-1 px-4 py-2.5 bg-[var(--bready-surface-2)] hover:bg-[var(--bready-surface-3)] border border-[var(--bready-border)] rounded-lg text-sm font-medium text-[var(--bready-text)] transition-all duration-200 cursor-pointer"
                 >
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  {t('collaboration.permissions.reconnect')}
-                </Button>
-              )}
-            </div>
-          </div>
-        </Modal>
-      )}
+                  {t('common.cancel')}
+                </button>
+                <button
+                  onClick={handleExitConfirm}
+                  className="flex-1 px-4 py-2.5 bg-red-500 hover:bg-red-600 rounded-lg text-sm font-medium text-white transition-all duration-200 cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <DoorOpen className="w-4 h-4" />
+                  {t('collaboration.exit.confirm')}
+                </button>
+              </motion.div>
+            </motion.div>
+          </Modal>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showPermissionsModal && (
+          <Modal
+            isOpen
+            onClose={() => setShowPermissionsModal(false)}
+            size="sm"
+            className="max-w-md"
+          >
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.05 }}
+                className="mb-6"
+              >
+                <h2 className="text-xl font-bold text-[var(--bready-text)]">
+                  {t('collaboration.permissions.title')}
+                </h2>
+              </motion.div>
+
+              <div className="space-y-3">
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.1 }}
+                  onClick={() =>
+                    !systemPermissions.screenRecording.granted &&
+                    openSystemPreferences('screen-recording')
+                  }
+                  className={`group relative overflow-hidden rounded-xl p-4 transition-all duration-300 ${
+                    !systemPermissions.screenRecording.granted
+                      ? 'cursor-pointer hover:scale-[1.02]'
+                      : ''
+                  } ${
+                    systemPermissions.screenRecording.granted
+                      ? 'bg-emerald-500/10 border border-emerald-500/20'
+                      : 'bg-[var(--bready-surface-2)] border border-[var(--bready-border)] hover:border-amber-500/30'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                        systemPermissions.screenRecording.granted
+                          ? 'bg-emerald-500/20'
+                          : 'bg-[var(--bready-surface-3)]'
+                      }`}
+                    >
+                      <Volume2
+                        className={`w-5 h-5 ${
+                          systemPermissions.screenRecording.granted
+                            ? 'text-emerald-500'
+                            : 'text-[var(--bready-text-muted)]'
+                        }`}
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium text-[var(--bready-text)]">
+                          {t('collaboration.permissions.systemAudio')}
+                        </span>
+                        {getStatusIcon(systemPermissions.screenRecording)}
+                      </div>
+                      <p className="text-xs text-[var(--bready-text-muted)] mt-0.5">
+                        {t('collaboration.permissions.systemAudioDesc')}
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.15 }}
+                  onClick={() =>
+                    !systemPermissions.microphone.granted && openSystemPreferences('microphone')
+                  }
+                  className={`group relative overflow-hidden rounded-xl p-4 transition-all duration-300 ${
+                    !systemPermissions.microphone.granted ? 'cursor-pointer hover:scale-[1.02]' : ''
+                  } ${
+                    systemPermissions.microphone.granted
+                      ? 'bg-emerald-500/10 border border-emerald-500/20'
+                      : 'bg-[var(--bready-surface-2)] border border-[var(--bready-border)] hover:border-amber-500/30'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                        systemPermissions.microphone.granted
+                          ? 'bg-emerald-500/20'
+                          : 'bg-[var(--bready-surface-3)]'
+                      }`}
+                    >
+                      <Mic
+                        className={`w-5 h-5 ${
+                          systemPermissions.microphone.granted
+                            ? 'text-emerald-500'
+                            : 'text-[var(--bready-text-muted)]'
+                        }`}
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium text-[var(--bready-text)]">
+                          {t('collaboration.permissions.microphone')}
+                        </span>
+                        {getStatusIcon(systemPermissions.microphone)}
+                      </div>
+                      <p className="text-xs text-[var(--bready-text-muted)] mt-0.5">
+                        {t('collaboration.permissions.microphoneDesc')}
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className={`group relative overflow-hidden rounded-xl p-4 transition-all duration-300 ${
+                    isConnected
+                      ? 'bg-emerald-500/10 border border-emerald-500/20'
+                      : 'bg-red-500/10 border border-red-500/20'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                        isConnected ? 'bg-emerald-500/20' : 'bg-red-500/20'
+                      }`}
+                    >
+                      {isConnected ? (
+                        <Wifi className="w-5 h-5 text-emerald-500" />
+                      ) : (
+                        <WifiOff className="w-5 h-5 text-red-500" />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium text-[var(--bready-text)]">
+                          {t('collaboration.permissions.network')}
+                        </span>
+                        {isConnected ? (
+                          <CheckCircle className="w-5 h-5 text-emerald-500" />
+                        ) : (
+                          <XCircle className="w-5 h-5 text-red-500" />
+                        )}
+                      </div>
+                      <p className="text-xs text-[var(--bready-text-muted)] mt-0.5">
+                        {isConnected
+                          ? t('collaboration.permissions.networkConnectedDesc')
+                          : t('collaboration.permissions.networkDisconnectedDesc')}
+                      </p>
+                    </div>
+                  </div>
+                  {!isConnected && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      className="mt-3"
+                    >
+                      <Button
+                        onClick={handleReconnect}
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                      >
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        {t('collaboration.permissions.reconnect')}
+                      </Button>
+                    </motion.div>
+                  )}
+                </motion.div>
+              </div>
+            </motion.div>
+          </Modal>
+        )}
+      </AnimatePresence>
 
       {/* Toast通知 */}
       {toast && (
@@ -1210,7 +1406,7 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
           onCancel={() => setShowConfirmationDialog(null)}
         />
       )}
-    </div>
+    </motion.div>
   )
 }
 

@@ -1,4 +1,5 @@
 import React from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft, Settings } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import MicrophoneSelector from './MicrophoneSelector'
@@ -42,32 +43,30 @@ const CollaborationHeader: React.FC<CollaborationHeaderProps> = ({
   currentMicrophoneDeviceId,
   onMicrophoneDeviceChange,
 }) => {
-  const { theme } = useTheme()
-  const isDarkMode =
-    theme === 'dark' ||
-    (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+  const { resolvedTheme } = useTheme()
+  const isDarkMode = resolvedTheme === 'dark'
   return (
-    <div className="w-full bg-[var(--bready-bg)] z-50 flex-shrink-0 app-drag pt-[15px]">
-      <div className="h-8 w-full flex items-center justify-between app-drag">
+    <div className="w-full bg-transparent z-50 flex-shrink-0 app-drag pt-[12px]">
+      <div className="h-10 w-full flex items-center justify-between app-drag px-4">
         <button
           onClick={onExit}
           className={cn(
-            'p-1.5 -mt-7 text-[var(--bready-text-muted)] hover:text-[var(--bready-text)] transition-all duration-200 hover:bg-[var(--bready-surface-2)] rounded-lg cursor-pointer app-no-drag',
-            isMac ? 'ml-[68px]' : 'ml-0',
+            'p-2 text-[var(--bready-text-muted)] hover:text-[var(--bready-text)] transition-all duration-300 hover:bg-[var(--bready-surface)]/80 hover:scale-105 hover:shadow-sm rounded-full cursor-pointer app-no-drag absolute top-[5px]',
+            isMac ? 'left-[76px]' : 'left-4',
           )}
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
 
         <div className="flex-1 flex flex-col items-center pointer-events-none">
-          <h1 className="font-semibold text-[var(--bready-text)]">{title}</h1>
-          <div className="flex items-center justify-center space-x-2 text-xs text-[var(--bready-text-muted)]">
+          <h1 className="text-sm font-medium text-[var(--bready-text)] tracking-wide">{title}</h1>
+          <div className="flex items-center justify-center space-x-1.5 text-[10px] text-[var(--bready-text-muted)]">
             {isConnected ? (
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+              <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
             ) : (
-              <div className="w-2 h-2 bg-red-500 rounded-full" />
+              <div className="w-1.5 h-1.5 bg-red-400 rounded-full" />
             )}
-            <span>{status}</span>
+            <span className="opacity-70">{status}</span>
           </div>
         </div>
 
@@ -75,7 +74,7 @@ const CollaborationHeader: React.FC<CollaborationHeaderProps> = ({
           <div className="relative app-no-drag">
             <button
               onClick={onToggleAudioModeDropdown}
-              className="flex items-center space-x-1 px-2 py-1.5 bg-[var(--bready-surface-2)] text-[var(--bready-text)] rounded-lg text-xs hover:bg-[var(--bready-surface-3)] transition-all duration-200 cursor-pointer"
+              className="flex items-center space-x-1.5 px-2.5 py-1.5 bg-[var(--bready-surface)]/40 hover:bg-[var(--bready-surface)]/70 text-[var(--bready-text-muted)] hover:text-[var(--bready-text)] rounded-full text-[11px] transition-all duration-300 cursor-pointer border border-transparent hover:border-[var(--bready-border)]/50"
             >
               {audioModeOptions.find((option) => option.value === currentAudioMode)?.icon}
               <span className="font-medium whitespace-nowrap">
@@ -83,72 +82,93 @@ const CollaborationHeader: React.FC<CollaborationHeaderProps> = ({
               </span>
             </button>
 
-            {showAudioModeDropdown && (
-              <div className="absolute top-full right-0 mt-1 bg-[var(--bready-surface)] border border-[var(--bready-border)] rounded-xl shadow-lg z-50 min-w-64">
-                {audioModeOptions.map((option) => (
-                  <button
-                    key={option.value}
-                    onClick={() => onAudioModeChange(option.value)}
-                    className={`w-full px-3 py-2.5 text-left hover:bg-[var(--bready-surface-2)] transition-colors duration-150 first:rounded-t-lg last:rounded-b-lg cursor-pointer ${
-                      currentAudioMode === option.value
-                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300'
-                        : 'text-[var(--bready-text)]'
-                    }`}
+            <AnimatePresence>
+              {showAudioModeDropdown && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={onToggleAudioModeDropdown} />
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9, y: -8, filter: 'blur(8px)' }}
+                    animate={{ opacity: 1, scale: 1, y: 0, filter: 'blur(0px)' }}
+                    exit={{ opacity: 0, scale: 0.95, y: -4, filter: 'blur(4px)' }}
+                    transition={{ type: 'spring', duration: 0.35, bounce: 0.15 }}
+                    className="absolute top-full right-0 mt-2 bg-[var(--bready-surface)] border border-[var(--bready-border)] rounded-2xl shadow-2xl z-50 min-w-72 overflow-hidden"
                   >
-                    <div className="flex items-start space-x-3">
-                      <div
-                        className={`mt-0.5 ${
-                          currentAudioMode === option.value
-                            ? 'text-emerald-600 dark:text-emerald-300'
-                            : 'text-[var(--bready-text-muted)]'
-                        }`}
-                      >
-                        {option.icon}
-                      </div>
-                      <div className="flex-1">
-                        <div
-                          className={`text-sm font-medium ${
-                            currentAudioMode === option.value
-                              ? 'text-emerald-600 dark:text-emerald-300'
-                              : 'text-[var(--bready-text)]'
-                          }`}
-                        >
-                          {option.label}
-                        </div>
-                        <div className="text-xs text-[var(--bready-text-muted)] mt-0.5">
-                          {option.description}
-                        </div>
-                      </div>
-                      {currentAudioMode === option.value && (
-                        <div className="w-2 h-2 bg-emerald-400 rounded-full mt-1.5" />
-                      )}
-                    </div>
-                  </button>
-                ))}
+                    <div className="p-1.5 space-y-0.5">
+                      {audioModeOptions.map((option) => (
+                        <div key={option.value} className="relative">
+                          <button
+                            onClick={() => onAudioModeChange(option.value)}
+                            className={cn(
+                              'relative w-full px-3 py-2.5 text-left transition-colors duration-200 cursor-pointer rounded-xl flex items-center gap-3 overflow-hidden group',
+                              currentAudioMode !== option.value &&
+                                'hover:bg-[var(--bready-surface-2)]/50',
+                            )}
+                          >
+                            {currentAudioMode === option.value && (
+                              <motion.div
+                                layoutId="active-audio-mode"
+                                className="absolute inset-0 bg-[var(--bready-surface-2)]"
+                                transition={{ type: 'spring', bounce: 0.2, duration: 0.4 }}
+                              />
+                            )}
+                            <div className="relative z-10 text-[var(--bready-text-muted)] group-hover:text-[var(--bready-text)] transition-colors">
+                              {option.icon}
+                            </div>
+                            <div className="relative z-10 flex-1 min-w-0">
+                              <div className="text-sm font-medium text-[var(--bready-text)]">
+                                {option.label}
+                              </div>
+                              <div className="text-[11px] text-[var(--bready-text-muted)] mt-0.5 leading-tight opacity-80">
+                                {option.description}
+                              </div>
+                            </div>
+                            {currentAudioMode === option.value && (
+                              <motion.div
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                transition={{ type: 'spring', bounce: 0.4 }}
+                                className="relative z-10 w-1.5 h-1.5 bg-emerald-500 rounded-full shrink-0 mr-1"
+                              />
+                            )}
+                          </button>
 
-                {/* 麦克风设备选择器 - 仅在麦克风模式下显示 */}
-                {currentAudioMode === 'microphone' && (
-                  <div className="px-3 py-3 border-t border-[var(--bready-border)]">
-                    <div className="text-xs text-[var(--bready-text-muted)] mb-2 font-medium">
-                      选择麦克风设备
+                          <AnimatePresence>
+                            {option.value === 'microphone' && currentAudioMode === 'microphone' && (
+                              <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.25, ease: 'easeInOut' }}
+                                className="overflow-hidden"
+                              >
+                                <div className="px-2 pb-2 pt-1 ml-9">
+                                  <div className="text-[10px] font-medium text-[var(--bready-text-muted)] mb-1.5 px-1 uppercase tracking-wider opacity-70">
+                                    输入设备
+                                  </div>
+                                  <MicrophoneSelector
+                                    currentDeviceId={currentMicrophoneDeviceId || ''}
+                                    isDarkMode={isDarkMode}
+                                    onDeviceChange={onMicrophoneDeviceChange}
+                                    className="w-full"
+                                  />
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      ))}
                     </div>
-                    <MicrophoneSelector
-                      currentDeviceId={currentMicrophoneDeviceId || ''}
-                      isDarkMode={isDarkMode}
-                      onDeviceChange={onMicrophoneDeviceChange}
-                      className="w-full"
-                    />
-                  </div>
-                )}
-              </div>
-            )}
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
           </div>
 
           <button
             onClick={onOpenPermissions}
-            className="p-2 text-[var(--bready-text-muted)] hover:text-[var(--bready-text)] transition-all duration-200 hover:bg-[var(--bready-surface-2)] rounded-lg cursor-pointer app-no-drag"
+            className="p-2 text-[var(--bready-text-muted)] hover:text-[var(--bready-text)] transition-all duration-300 hover:bg-[var(--bready-surface)]/50 rounded-full cursor-pointer app-no-drag"
           >
-            <Settings className="w-5 h-5" />
+            <Settings className="w-4 h-4" />
           </button>
         </div>
       </div>

@@ -1,0 +1,9 @@
+src/renderer/src/components/collaboration/MicrophoneSelector.tsx
+src/renderer/src/components/EnhancedPerformanceMonitor.tsx
+src/renderer/src/components/MonitoringPanel.tsx
+src/renderer/src/components/PerformanceMonitor.tsx
+src/renderer/src/components/ui/Modal.tsx
+src/renderer/src/components/ui/Select.tsx
+src/renderer/src/components/ui/theme-provider.tsx
+src/renderer/src/hooks/useKeyboardShortcuts.tsx
+src/renderer/src/lib/audio-capture.ts

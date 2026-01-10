@@ -1,12 +1,11 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, motion, useAnimation, type Variants } from 'framer-motion'
 import {
   ArrowRight,
   Plus,
   Sparkles,
   UserCircle,
-  Calendar,
   Trash2,
   FileText,
   Users,
@@ -22,7 +21,9 @@ import EditPreparationModal from './EditPreparationModal'
 import CreatePreparationTypeModal, { type PreparationType } from './CreatePreparationTypeModal'
 import EditSalesPreparationModal from './EditSalesPreparationModal'
 import EditMeetingPreparationModal from './EditMeetingPreparationModal'
-import { preparationService, type Preparation } from '../lib/supabase'
+import { AiConfigAlert } from './AiConfigAlert'
+import { preparationService, settingsService, type Preparation } from '../lib/supabase'
+import { cn } from '../lib/utils'
 import { useAuth } from '../contexts/AuthContext'
 import { useI18n } from '../contexts/I18nContext'
 import { useTheme } from './ui/theme-provider'
@@ -109,8 +110,8 @@ const getCardVisualLayer = (index: number, isDark: boolean) => {
 const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onReloadData }) => {
   const navigate = useNavigate()
   const { profile } = useAuth()
-  const { t, list, locale } = useI18n()
-  const { theme } = useTheme()
+  const { t, list } = useI18n()
+  const { resolvedTheme } = useTheme()
   const [showSelectModal, setShowSelectModal] = useState(false)
   const [showAllPreparationsModal, setShowAllPreparationsModal] = useState(false)
   const [showUserProfileModal, setShowUserProfileModal] = useState(false)
@@ -127,6 +128,27 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
   const [editingMeetingPreparation, setEditingMeetingPreparation] = useState<
     Preparation | null | undefined
   >(undefined)
+  const [showAiConfigAlert, setShowAiConfigAlert] = useState(false)
+
+  const controls = useAnimation()
+
+  useEffect(() => {
+    controls.start('visible')
+  }, [controls])
+
+  useEffect(() => {
+    const checkAiConfig = async () => {
+      try {
+        const status = await settingsService.checkAiConfig()
+        if (!status.configured) {
+          setShowAiConfigAlert(true)
+        }
+      } catch (error) {
+        console.error('Failed to check AI config:', error)
+      }
+    }
+    checkAiConfig()
+  }, [])
 
   const slogans = list('slogans.main')
   const currentSlogan = React.useMemo(() => {
@@ -174,72 +196,100 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
     }
   }
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString(locale, {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    })
-  }
-
   const filteredPreparations = preparations
 
   // 动画变体
-  const containerVariants = {
+  const pageVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { duration: 0.5 } },
+  }
+
+  const logoVariants: Variants = {
+    hidden: { x: -50, opacity: 0 },
+    visible: {
+      x: 0,
+      opacity: 1,
+      transition: { delay: 0.1, type: 'spring', stiffness: 100, damping: 10 },
+    },
+  }
+
+  const avatarVariants: Variants = {
+    hidden: { x: 50, opacity: 0 },
+    visible: {
+      x: 0,
+      opacity: 1,
+      transition: { delay: 0.2, type: 'spring', stiffness: 100, damping: 10 },
+    },
+  }
+
+  const heroVariants: Variants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
       transition: {
         staggerChildren: 0.1,
-        delayChildren: 0.2,
+        delayChildren: 0.3,
       },
     },
   }
 
-  const itemVariants = {
+  const itemVariants: Variants = {
     hidden: { opacity: 0, y: 20 },
     visible: {
       opacity: 1,
       y: 0,
       transition: {
-        type: 'spring' as const,
+        type: 'spring',
         stiffness: 100,
         damping: 15,
       },
     },
   }
 
-  const cardHoverVariants = {
-    rest: { scale: 1, y: 0 },
-    hover: {
-      scale: 1.02,
-      y: -4,
+  const cardsVariants: Variants = {
+    hidden: { y: 100, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
       transition: {
-        type: 'spring' as const,
-        stiffness: 300,
-        damping: 25,
+        delay: 0.5,
+        type: 'spring',
+        stiffness: 80,
+        damping: 15,
       },
     },
   }
 
-  // 动态背景类名，根据当前主题决定 - Vercel 风格纯黑
   const getBackgroundClasses = () => 'bg-[var(--bready-bg)]'
 
-  // 判断是否为深色模式
-  const isDarkMode =
-    theme === 'dark' ||
-    (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+  const isDarkMode = resolvedTheme === 'dark'
 
   return (
-    <div
-      className={`h-screen ${getBackgroundClasses()} text-[var(--bready-text)] flex flex-col transition-colors duration-500 relative overflow-hidden`}
+    <motion.div
+      className={`h-screen ${getBackgroundClasses()} text-[var(--bready-text)] flex flex-col transition-colors duration-500 relative`}
+      initial="hidden"
+      animate={controls}
+      variants={pageVariants}
     >
+      {showAiConfigAlert && (
+        <AiConfigAlert
+          isAdmin={
+            profile?.role === 'admin' ||
+            profile?.user_level === '管理' ||
+            profile?.user_level === '超级'
+          }
+          onClose={() => setShowAiConfigAlert(false)}
+          onGoToSettings={() => {
+            setShowAiConfigAlert(false)
+            setShowAdminPanelModal(true)
+          }}
+        />
+      )}
       {/* 装饰性背景元素 */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         {/* 细微的噪点纹理 */}
         <div
-          className={`absolute inset-0 ${theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'opacity-[0.05]' : 'opacity-[0.02]'}`}
+          className={`absolute inset-0 ${isDarkMode ? 'opacity-[0.05]' : 'opacity-[0.02]'}`}
           style={{
             backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
           }}
@@ -251,12 +301,7 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
         <div className="h-8 w-full app-drag"></div>
         <div className="max-w-6xl mx-auto px-4 -ml-10 flex items-center justify-between pb-3 app-no-drag">
           {/* Logo 区域 - 左侧留出空间给 mac 按钮 */}
-          <motion.div
-            className="flex items-center gap-2.5 ml-16"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, ease: 'easeOut' }}
-          >
+          <motion.div className="flex items-center gap-2.5 ml-16" variants={logoVariants}>
             <div
               className={`w-8 h-8 -my-4 ${isDarkMode ? 'bg-white' : 'bg-black'} rounded-2xl flex items-center justify-center`}
             >
@@ -277,11 +322,7 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
           </motion.div>
 
           {/* 用户头像 */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, ease: 'easeOut' }}
-          >
+          <motion.div variants={avatarVariants}>
             <button
               className={`w-12 h-12 mr-2 mt-2 flex items-center justify-center ${isDarkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'} rounded-full transition-colors duration-200 cursor-pointer`}
               onClick={() => setShowUserProfileModal(true)}
@@ -301,16 +342,11 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
       </header>
 
       {/* 主要内容 */}
-      <main className="flex-1 flex flex-col px-8 overflow-hidden">
-        <div className="flex-1 flex flex-col max-w-5xl w-full mx-auto">
+      <main className="flex-1 flex flex-col overflow-y-auto scrollbar-hide">
+        <div className="flex-1 flex flex-col max-w-5xl w-full mx-auto px-8">
           {/* 上方：Hero 区域 */}
-          <motion.div
-            className="flex-1 flex flex-col justify-center items-center text-center min-h-0"
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-          >
-            <motion.div className="max-w-2xl" variants={itemVariants}>
+          <div className="flex-1 flex flex-col justify-center items-center text-center min-h-0">
+            <motion.div className="max-w-2xl" variants={heroVariants}>
               {/* 主标题 - 更大 */}
               <motion.h1
                 className="text-5xl md:text-6xl font-bold mb-4 leading-[1.1] tracking-tight"
@@ -340,15 +376,10 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
                 </motion.button>
               </motion.div>
             </motion.div>
-          </motion.div>
+          </div>
 
           {/* 下方：我的准备列表 */}
-          <motion.div
-            className="w-full pb-4 flex-shrink-0"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3, ease: 'easeOut' }}
-          >
+          <motion.div className="w-full pb-4 flex-shrink-0" variants={cardsVariants}>
             <div className="space-y-3">
               {/* 标题栏 */}
               <div className="flex items-center justify-between px-1">
@@ -357,24 +388,39 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
                 >
                   {t('home.myPreparations')}
                 </h2>
-                {filteredPreparations.length > 0 && (
-                  <motion.button
-                    onClick={handleCreateNew}
-                    className={`h-8 w-8 flex items-center justify-center ${isDarkMode ? 'text-gray-400 hover:text-gray-300 hover:bg-gray-800' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'} rounded-full transition-all duration-200 cursor-pointer`}
-                    whileHover={{ scale: 1.1, rotate: 90 }}
-                    whileTap={{ scale: 0.95 }}
-                    transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                  >
-                    <Plus className="w-5 h-5" />
-                  </motion.button>
-                )}
+                <div className="flex items-center gap-2">
+                  {filteredPreparations.length > 4 && (
+                    <motion.button
+                      onClick={() => setShowAllPreparationsModal(true)}
+                      className={`h-8 px-3 flex items-center gap-1.5 text-xs font-medium ${isDarkMode ? 'text-gray-400 hover:text-gray-200 bg-zinc-800/60 hover:bg-zinc-700/80' : 'text-gray-500 hover:text-gray-700 bg-gray-100 hover:bg-gray-200'} rounded-full transition-all duration-200 cursor-pointer`}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <span>查看全部</span>
+                      <span className={`${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                        {filteredPreparations.length}
+                      </span>
+                    </motion.button>
+                  )}
+                  {filteredPreparations.length > 0 && (
+                    <motion.button
+                      onClick={handleCreateNew}
+                      className={`h-8 w-8 flex items-center justify-center ${isDarkMode ? 'text-gray-400 hover:text-gray-300 hover:bg-gray-800' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'} rounded-full transition-all duration-200 cursor-pointer`}
+                      whileHover={{ scale: 1.1, rotate: 90 }}
+                      whileTap={{ scale: 0.95 }}
+                      transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                    >
+                      <Plus className="w-5 h-5" />
+                    </motion.button>
+                  )}
+                </div>
               </div>
 
               {/* 准备项列表 */}
               <div>
                 {filteredPreparations.length === 0 ? (
                   <motion.div
-                    className={`p-8 ${isDarkMode ? 'bg-gray-900/40 border-gray-700/40' : 'bg-white/60 border-gray-200/60'} backdrop-blur-xl border rounded-2xl flex flex-col items-center justify-center text-center relative overflow-hidden group shadow-sm`}
+                    className={`p-8 ${isDarkMode ? 'bg-gray-900/60 border-gray-700/40' : 'bg-white/80 border-gray-200/60'} border rounded-2xl flex flex-col items-center justify-center text-center relative overflow-hidden group shadow-sm`}
                     whileHover={{ scale: 1.01 }}
                     transition={{ type: 'spring', stiffness: 300, damping: 25 }}
                   >
@@ -412,87 +458,143 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
                   </motion.div>
                 ) : (
                   <>
-                    {/* 准备项卡片网格 - 横向滚动显示 */}
-                    <div className="flex gap-4 overflow-x-auto scrollbar-hide py-2 px-1">
-                      {filteredPreparations.map((preparation, index) => {
+                    <div className="grid grid-cols-4 gap-3">
+                      {filteredPreparations.slice(0, 4).map((preparation, index) => {
                         const IconComponent = getPreparationIcon(index)
                         const visualLayer = getCardVisualLayer(index, isDarkMode)
+                        const hasScore = preparation.analysis?.matchScore !== undefined
+                        const score = preparation.analysis?.matchScore || 0
 
                         return (
                           <motion.div
                             key={preparation.id}
-                            variants={cardHoverVariants}
-                            initial="rest"
-                            whileHover="hover"
-                            className="group cursor-pointer flex-shrink-0 w-[280px]"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: index * 0.1 }}
+                            whileHover={{ y: -6, scale: 1.02, transition: { duration: 0.2 } }}
+                            className="group cursor-pointer"
                             onClick={() => handleViewPreparation(preparation.id)}
                           >
                             <div
-                              className={`relative h-[180px] ${visualLayer.bg} border ${visualLayer.border} ${visualLayer.shadow} rounded-2xl overflow-hidden transition-all duration-300 group-hover:border-opacity-60`}
+                              className={cn(
+                                'relative h-[145px] border rounded-2xl overflow-hidden transition-all duration-200',
+                                visualLayer.bg,
+                                visualLayer.border,
+                                isDarkMode
+                                  ? 'shadow-sm shadow-black/10 group-hover:border-zinc-600 group-hover:shadow-xl group-hover:shadow-black/30'
+                                  : 'shadow-[0_0_0_0_transparent] group-hover:border-gray-300 group-hover:shadow-lg group-hover:shadow-gray-200/50',
+                              )}
                             >
-                              {/* 微妙的渐变光效 */}
+                              <AnimatePresence mode="wait">
+                                {preparation.is_analyzing && (
+                                  <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/85"
+                                  >
+                                    <motion.div
+                                      className="w-12 h-12 rounded-full border-2 border-emerald-400 border-t-transparent"
+                                      animate={{ rotate: 360 }}
+                                      transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                                    />
+                                    <span className="mt-3 text-xs font-medium text-emerald-400">
+                                      {t('home.analyzing')}
+                                    </span>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+
                               <div
-                                className={`absolute inset-0 bg-gradient-to-br ${visualLayer.accent} to-transparent opacity-60 group-hover:opacity-100 transition-opacity duration-300`}
+                                className={`absolute inset-0 bg-gradient-to-br ${visualLayer.accent} to-transparent opacity-60 group-hover:opacity-100 transition-opacity duration-500`}
                               />
 
-                              <div className="relative h-full p-5 flex flex-col">
-                                {/* 图标 */}
-                                <motion.div
-                                  className={`w-10 h-10 mb-3 ${isDarkMode ? 'bg-zinc-800/80 border-zinc-700/50' : 'bg-white/90 border-gray-100'} border rounded-xl flex items-center justify-center flex-shrink-0`}
-                                  whileHover={{ rotate: [0, -10, 10, 0] }}
-                                  transition={{ duration: 0.5 }}
-                                >
-                                  <IconComponent
-                                    className={`w-4 h-4 ${isDarkMode ? 'text-zinc-300' : 'text-gray-600'}`}
-                                  />
-                                </motion.div>
+                              <motion.div
+                                className={`absolute -top-8 -right-8 w-20 h-20 rounded-full ${isDarkMode ? 'bg-white/5' : 'bg-black/5'} blur-2xl`}
+                                initial={{ scale: 0.8, opacity: 0 }}
+                                whileHover={{ scale: 1.5, opacity: 0.3 }}
+                              />
 
-                                {/* 标题和状态 */}
-                                <div className="flex-1 min-h-0 flex flex-col">
-                                  <h3
-                                    className={`text-[15px] font-semibold ${isDarkMode ? 'text-zinc-100 group-hover:text-white' : 'text-gray-800 group-hover:text-gray-900'} line-clamp-2 leading-snug transition-colors`}
+                              <div className="relative h-full p-3.5 flex flex-col z-10">
+                                <div className="flex items-start justify-between mb-2">
+                                  <motion.div
+                                    className={`w-9 h-9 rounded-xl flex items-center justify-center ${isDarkMode ? 'bg-zinc-800 border-zinc-700/60' : 'bg-white border-gray-200'} border shadow-sm`}
+                                    whileHover={{ rotate: 12, scale: 1.1 }}
+                                    transition={{ type: 'spring', stiffness: 400 }}
                                   >
-                                    {preparation.name}
-                                  </h3>
-                                  {preparation.is_analyzing && (
-                                    <motion.span
-                                      className={`mt-2 inline-flex items-center gap-1.5 px-2 py-1 w-fit ${isDarkMode ? 'bg-emerald-900/30 text-emerald-400 border-emerald-800/30 border' : 'bg-emerald-500/10 text-emerald-600'} rounded-full text-[10px] font-medium`}
-                                      initial={{ opacity: 0, scale: 0.8 }}
-                                      animate={{ opacity: 1, scale: 1 }}
-                                      transition={{ duration: 0.3 }}
-                                    >
-                                      <span className="relative flex h-1.5 w-1.5">
-                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span>
-                                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-600"></span>
-                                      </span>
-                                      {t('home.analyzing')}
-                                    </motion.span>
-                                  )}
+                                    <IconComponent
+                                      className={`w-4 h-4 ${isDarkMode ? 'text-zinc-300' : 'text-gray-600'}`}
+                                    />
+                                  </motion.div>
+
+                                  <motion.button
+                                    className={`w-6 h-6 flex items-center justify-center rounded-lg ${isDarkMode ? 'bg-zinc-800/80 hover:bg-red-900/50 text-zinc-500 hover:text-red-400' : 'bg-gray-100 hover:bg-red-50 text-gray-400 hover:text-red-500'} opacity-0 group-hover:opacity-100 transition-all`}
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleDeletePreparation(preparation.id)
+                                    }}
+                                    whileHover={{ scale: 1.1 }}
+                                    whileTap={{ scale: 0.9 }}
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </motion.button>
                                 </div>
 
-                                {/* 日期 - 固定在底部 */}
-                                <div
-                                  className={`flex items-center text-xs ${isDarkMode ? 'text-zinc-500' : 'text-gray-400'} mt-auto pt-2 flex-shrink-0`}
+                                <h3
+                                  className={`text-sm font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'} line-clamp-1 mb-1`}
                                 >
-                                  <Calendar className="w-3.5 h-3.5 mr-1.5 opacity-70" />
-                                  <span className="font-medium">
-                                    {formatDate(preparation.updated_at)}
+                                  {preparation.name}
+                                </h3>
+
+                                {preparation.job_description && (
+                                  <p
+                                    className={`text-[10px] ${isDarkMode ? 'text-zinc-500' : 'text-gray-500'} line-clamp-1 mb-2`}
+                                  >
+                                    {preparation.job_description.slice(0, 40)}
+                                  </p>
+                                )}
+
+                                <div className="flex-1" />
+
+                                <div className="flex items-end justify-between">
+                                  {hasScore ? (
+                                    <div className="flex items-center gap-2">
+                                      <div
+                                        className={`text-2xl font-black tabular-nums ${score >= 80 ? 'text-emerald-500' : score >= 60 ? 'text-amber-500' : 'text-red-500'}`}
+                                      >
+                                        {score}
+                                      </div>
+                                      <div className="flex flex-col">
+                                        <span
+                                          className={`text-[9px] font-medium ${isDarkMode ? 'text-zinc-500' : 'text-gray-400'}`}
+                                        >
+                                          匹配度
+                                        </span>
+                                        <div className="w-12 h-1 bg-gray-500/20 rounded-full overflow-hidden">
+                                          <motion.div
+                                            className={`h-full rounded-full ${score >= 80 ? 'bg-emerald-500' : score >= 60 ? 'bg-amber-500' : 'bg-red-500'}`}
+                                            initial={{ width: 0 }}
+                                            animate={{ width: `${score}%` }}
+                                            transition={{ duration: 0.8, delay: 0.2 }}
+                                          />
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <span
+                                      className={`text-[10px] ${isDarkMode ? 'text-zinc-600' : 'text-gray-400'}`}
+                                    >
+                                      {t('home.notAnalyzed')}
+                                    </span>
+                                  )}
+
+                                  <span
+                                    className={`text-[8px] px-1.5 py-0.5 rounded ${isDarkMode ? 'bg-zinc-800/80 text-zinc-500' : 'bg-gray-100 text-gray-400'}`}
+                                  >
+                                    {new Date(preparation.updated_at).toLocaleDateString()}
                                   </span>
                                 </div>
                               </div>
-
-                              {/* 删除按钮 */}
-                              <motion.button
-                                className={`absolute top-3 right-3 w-7 h-7 flex items-center justify-center rounded-lg ${isDarkMode ? 'bg-zinc-800/90 hover:bg-red-900/50 border-zinc-700/50 border' : 'bg-white/90 hover:bg-red-50 border border-gray-200/50'} text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all duration-200 cursor-pointer`}
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleDeletePreparation(preparation.id)
-                                }}
-                                whileHover={{ scale: 1.1 }}
-                                whileTap={{ scale: 0.9 }}
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </motion.button>
                             </div>
                           </motion.div>
                         )
@@ -650,7 +752,7 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
           }}
         />
       )}
-    </div>
+    </motion.div>
   )
 }
 

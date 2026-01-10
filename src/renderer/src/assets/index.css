@@ -1,5 +1,4 @@
-/* 导入 Space Grotesk 和 Inter 字体 */
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap');
 
 @import 'tailwindcss';
 
@@ -66,6 +65,20 @@
   --bready-glow: rgba(255, 255, 255, 0.08);
 }
 
+:root,
+.dark {
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
+}
+
+* {
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.15s ease;
+}
+
 .app-drag {
   -webkit-app-region: drag;
 }
@@ -89,8 +102,8 @@ body {
   margin: 0;
   padding: 0;
   font-family:
-    'Inter',
-    'Space Grotesk',
+    'Sora',
+    'Noto Sans SC',
     system-ui,
     -apple-system,
     sans-serif;
@@ -100,7 +113,6 @@ body {
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* Prevent window scrolling globally */
   overflow: hidden;
   height: 100%;
   width: 100%;
@@ -183,9 +195,9 @@ body {
   background: linear-gradient(180deg, rgba(161, 161, 170, 0.7) 0%, rgba(113, 113, 122, 0.7) 100%);
 }
 
-/* 细滚动条样式 - Vercel 黑白风格 */
+/* 细滚动条样式 - 极简风格 */
 .scrollbar-thin::-webkit-scrollbar {
-  width: 4px;
+  width: 3px;
 }
 
 .scrollbar-thin::-webkit-scrollbar-track {
@@ -193,29 +205,30 @@ body {
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  background: rgba(15, 15, 15, 0.2);
-  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
   border: none;
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background: rgba(15, 15, 15, 0.3);
+  background: rgba(0, 0, 0, 0.2);
 }
 
 .dark .scrollbar-thin::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .scrollbar-thin {
-  scrollbar-color: rgba(15, 15, 15, 0.3) transparent;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
 }
 
 .dark .scrollbar-thin {
-  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
 }
 
 /* 隐藏滚动条但保持滚动功能 */
@@ -226,6 +239,182 @@ body {
 
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes charIn {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.95);
+    filter: blur(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+.animate-char-in {
+  animation: charIn 0.35s cubic-bezier(0.25, 1, 0.3, 1) forwards;
+}
+
+@keyframes charFade {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-char-fade {
+  opacity: 0;
+  animation: charFade 0.4s ease-out forwards;
+}
+
+@keyframes blockEnter {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+    filter: blur(2px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+.streaming-markdown > * {
+  animation: blockEnter 0.4s cubic-bezier(0.2, 0.9, 0.2, 1) backwards;
+}
+
+.streaming-text-reveal {
+  animation: textFadeIn 0.4s ease-out forwards;
+}
+
+@keyframes textFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes charPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-char-fade-in {
+  opacity: 0;
+  animation: charPop 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.typing-cursor {
+  animation: blink 0.8s step-end infinite;
+  font-weight: 100;
+  opacity: 0.7;
+}
+
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+.streaming-markdown.is-streaming::after {
+  content: '';
+  display: inline-block;
+  width: 0.5em;
+  height: 1em;
+  background-color: currentColor;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  animation: cursorBlink 1s step-end infinite;
+  opacity: 0.7;
+}
+
+@keyframes cursorBlink {
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+.animate-char-in {
+  animation: charIn 0.35s cubic-bezier(0.25, 1, 0.3, 1) forwards;
+}
+
+/* Markdown 流式块级元素入场动画 */
+@keyframes blockEnter {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+    filter: blur(2px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+.streaming-markdown > * {
+  animation: blockEnter 0.4s cubic-bezier(0.2, 0.9, 0.2, 1) backwards;
+  /* 只有新出现的元素才会播放动画，避免重绘闪烁 */
+}
+
+/* 如果是流式传输中，给容器加一个微妙的末端发光或光标效果 */
+.streaming-markdown.is-streaming::after {
+  content: '';
+  display: inline-block;
+  width: 0.5em;
+  height: 1em;
+  background-color: currentColor;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  animation: cursorBlink 1s step-end infinite;
+  opacity: 0.7;
+}
+
+@keyframes cursorBlink {
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 0;
+  }
 }
 
 /* 现代化按钮悬停效果 */
@@ -361,6 +550,10 @@ body {
 /* 动画类 */
 .animate-fade-in {
   animation: fadeIn 0.5s ease-out;
+}
+
+.animate-fade-in-fast {
+  animation: fadeIn 0.15s ease-out;
 }
 
 .animate-slide-in {

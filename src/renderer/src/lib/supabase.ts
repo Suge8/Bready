@@ -496,6 +496,19 @@ export const membershipService = {
       throw error
     }
   },
+
+  async getTotalPurchasedMinutes(userId: string): Promise<number> {
+    try {
+      const purchases = await invokeIpc('membership:get-user-purchases', userId)
+      if (!purchases || !Array.isArray(purchases)) return 0
+      return purchases
+        .filter((p: PurchaseRecord) => p.status === 'completed')
+        .reduce((sum: number, p: PurchaseRecord) => sum + (p.interview_minutes || 0), 0)
+    } catch (error) {
+      console.error('Error calculating total purchased minutes:', error)
+      return 0
+    }
+  },
 }
 
 // 面试时间使用记录服务
@@ -565,9 +578,20 @@ export const usageRecordService = {
       throw error
     }
   },
+
+  async getAllRecords(): Promise<
+    (InterviewUsageRecord & { full_name?: string; username?: string; email?: string })[]
+  > {
+    try {
+      const records = await invokeIpc('usage:get-all-records')
+      return records || []
+    } catch (error) {
+      console.error('Error fetching all usage records:', error)
+      throw error
+    }
+  },
 }
 
-// 数据库操作函数
 export const preparationService = {
   // 获取当前用户的所有准备项
   async getAll(userId?: string): Promise<Preparation[]> {
@@ -618,7 +642,6 @@ export const preparationService = {
     }
   },
 
-  // 删除准备项
   async delete(id: string): Promise<void> {
     try {
       await invokeIpc('preparation:delete', id)
@@ -626,5 +649,116 @@ export const preparationService = {
       console.error('Error deleting preparation:', error)
       throw error
     }
+  },
+}
+
+export interface AiConfigDisplay {
+  provider: 'gemini' | 'doubao'
+  geminiApiKey: string
+  doubaoChatApiKey: string
+  doubaoAsrAppId: string
+  doubaoAsrAccessKey: string
+  hasGeminiKey: boolean
+  hasDoubaoKey: boolean
+}
+
+export interface PaymentConfigDisplay {
+  provider: 'epay' | 'wechat' | 'alipay' | ''
+  notifyUrl: string
+  epay: { pid: string; key: string; apiUrl: string; hasCredentials: boolean }
+  wechat: {
+    mchid: string
+    appid: string
+    apiKey: string
+    certSerial: string
+    privateKey: string
+    hasCredentials: boolean
+  }
+  alipay: { appId: string; privateKey: string; publicKey: string; hasCredentials: boolean }
+}
+
+export interface PaymentOrder {
+  id: string
+  order_no: string
+  amount: number
+  status: 'pending' | 'paid' | 'failed' | 'expired'
+  payment_provider: string
+  package_name?: string
+  created_at: string
+  paid_at?: string
+}
+
+export const settingsService = {
+  async checkAiConfig(): Promise<{
+    configured: boolean
+    provider: 'gemini' | 'doubao' | ''
+    missingFields: string[]
+  }> {
+    return await invokeIpc('settings:check-ai-config')
+  },
+
+  async getAiConfig(): Promise<AiConfigDisplay> {
+    return await invokeIpc('settings:get-ai-config')
+  },
+
+  async updateAiConfig(
+    config: Partial<{
+      provider: 'gemini' | 'doubao'
+      geminiApiKey: string
+      doubaoChatApiKey: string
+      doubaoAsrAppId: string
+      doubaoAsrAccessKey: string
+    }>,
+  ): Promise<{ success: boolean; error?: string }> {
+    return await invokeIpc('settings:update-ai-config', config)
+  },
+
+  async testAiConnection(
+    provider: 'gemini' | 'doubao',
+  ): Promise<{ success: boolean; error?: string }> {
+    return await invokeIpc('settings:test-ai-connection', provider)
+  },
+
+  async getPaymentConfig(): Promise<PaymentConfigDisplay> {
+    return await invokeIpc('settings:get-payment-config')
+  },
+
+  async updatePaymentConfig(config: any): Promise<{ success: boolean; error?: string }> {
+    return await invokeIpc('settings:update-payment-config', config)
+  },
+}
+
+export const paymentService = {
+  async createOrder(
+    userId: string,
+    packageId: string,
+    channel?: 'alipay' | 'wxpay',
+  ): Promise<{
+    success: boolean
+    orderNo?: string
+    payUrl?: string
+    qrcodeUrl?: string
+    amount?: number
+    error?: string
+  }> {
+    return await invokeIpc('payment:create-order', { userId, packageId, channel })
+  },
+
+  async queryOrder(orderNo: string): Promise<{
+    success: boolean
+    orderNo?: string
+    status?: 'pending' | 'paid' | 'failed' | 'expired'
+    paidAt?: string
+    error?: string
+  }> {
+    return await invokeIpc('payment:query-order', orderNo)
+  },
+
+  async getUserOrders(userId: string): Promise<{
+    success: boolean
+    orders: PaymentOrder[]
+    error?: string
+  }> {
+    return await invokeIpc('payment:get-user-orders', userId)
   },
 }

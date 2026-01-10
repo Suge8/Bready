@@ -1,6 +1,16 @@
 import React, { memo, useState, useCallback, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Lock, Mail, Phone, Eye, EyeOff, Check, AlertCircle, Loader2 } from 'lucide-react'
+import {
+  Lock,
+  Mail,
+  Phone,
+  Eye,
+  EyeOff,
+  Check,
+  AlertCircle,
+  Loader2,
+  ShieldCheck,
+} from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { useI18n } from '../../contexts/I18nContext'
 import { type UserProfile } from '../../lib/supabase'
@@ -22,6 +32,26 @@ interface SecuritySettingsProps {
 
 type SecuritySection = 'password' | 'phone' | 'email' | null
 
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.1,
+    },
+  },
+}
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 15 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { type: 'spring' as const, stiffness: 300, damping: 24 },
+  },
+}
+
 export const SecuritySettings: React.FC<SecuritySettingsProps> = memo(
   ({
     profile: _profile,
@@ -38,7 +68,6 @@ export const SecuritySettings: React.FC<SecuritySettingsProps> = memo(
     const [success, setSuccess] = useState<string | null>(null)
     const countdownTimerRef = useRef<NodeJS.Timeout | null>(null)
 
-    // 组件卸载时清理倒计时
     useEffect(() => {
       return () => {
         if (countdownTimerRef.current) {
@@ -47,19 +76,16 @@ export const SecuritySettings: React.FC<SecuritySettingsProps> = memo(
       }
     }, [])
 
-    // 密码表单状态
     const [oldPassword, setOldPassword] = useState('')
     const [newPassword, setNewPassword] = useState('')
     const [confirmPassword, setConfirmPassword] = useState('')
     const [showOldPassword, setShowOldPassword] = useState(false)
     const [showNewPassword, setShowNewPassword] = useState(false)
 
-    // 手机绑定状态
     const [phone, setPhone] = useState('')
     const [phoneCode, setPhoneCode] = useState('')
     const [codeCountdown, setCodeCountdown] = useState(0)
 
-    // 邮箱绑定状态
     const [email, setEmail] = useState('')
 
     const resetForm = useCallback((options?: { keepStatus?: boolean }) => {
@@ -73,7 +99,6 @@ export const SecuritySettings: React.FC<SecuritySettingsProps> = memo(
       if (!options?.keepStatus) {
         setSuccess(null)
       }
-      // 清理倒计时
       if (countdownTimerRef.current) {
         clearInterval(countdownTimerRef.current)
         countdownTimerRef.current = null
@@ -89,7 +114,6 @@ export const SecuritySettings: React.FC<SecuritySettingsProps> = memo(
       [activeSection, resetForm],
     )
 
-    // 修改密码
     const handleChangePassword = useCallback(async () => {
       if (newPassword !== confirmPassword) {
         setError(t('profile.security.passwordMismatch') || '两次输入的密码不一致')
@@ -119,7 +143,6 @@ export const SecuritySettings: React.FC<SecuritySettingsProps> = memo(
       }
     }, [oldPassword, newPassword, confirmPassword, onChangePassword, resetForm, t])
 
-    // 发送验证码
     const handleSendCode = useCallback(async () => {
       if (!phone || phone.length < 11) {
         setError(t('profile.security.invalidPhone') || '请输入有效的手机号')
@@ -166,7 +189,6 @@ export const SecuritySettings: React.FC<SecuritySettingsProps> = memo(
       startCountdown()
     }, [phone, onSendPhoneCode, t])
 
-    // 绑定手机
     const handleBindPhone = useCallback(async () => {
       if (!phoneCode || phoneCode.length !== 6) {
         setError(t('profile.security.invalidCode') || '请输入6位验证码')
@@ -192,7 +214,6 @@ export const SecuritySettings: React.FC<SecuritySettingsProps> = memo(
       }
     }, [phone, phoneCode, onBindPhone, resetForm, t])
 
-    // 绑定邮箱
     const handleBindEmail = useCallback(async () => {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
       if (!emailRegex.test(email)) {
@@ -220,334 +241,353 @@ export const SecuritySettings: React.FC<SecuritySettingsProps> = memo(
     }, [email, onBindEmail, resetForm, t])
 
     const inputClassName = cn(
-      'w-full px-3 py-2.5 rounded-lg text-sm border',
-      'focus:outline-none focus:ring-2 transition-all',
+      'w-full px-2.5 h-7 rounded-lg text-xs border transition-all duration-200',
+      'focus:outline-none focus:ring-1',
       isDarkMode
-        ? 'bg-gray-900 border-gray-700 text-white placeholder:text-gray-500 focus:ring-white/20 focus:border-gray-600'
-        : 'bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400 focus:ring-black/10 focus:border-gray-300',
+        ? 'bg-gray-900 border-gray-800 text-white placeholder:text-gray-600 focus:ring-gray-500 focus:border-gray-700'
+        : 'bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400 focus:ring-black focus:border-gray-300',
     )
+
+    const sections = [
+      {
+        id: 'password' as const,
+        icon: Lock,
+        label: t('profile.security.changePassword') || '修改密码',
+        desc: '更新账户密码',
+        color: 'text-blue-500',
+      },
+      {
+        id: 'phone' as const,
+        icon: Phone,
+        label: t('profile.security.bindPhone') || '绑定手机',
+        desc: '绑定手机号码',
+        color: 'text-emerald-500',
+      },
+      {
+        id: 'email' as const,
+        icon: Mail,
+        label: t('profile.security.bindEmail') || '绑定邮箱',
+        desc: '绑定邮箱地址',
+        color: 'text-purple-500',
+      },
+    ]
 
     return (
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
         className={cn(
-          'rounded-xl border p-5',
-          isDarkMode ? 'border-gray-800 bg-black' : 'border-gray-200 bg-white',
+          'rounded-xl border overflow-hidden relative transition-all duration-300',
+          isDarkMode ? 'border-gray-800 bg-black' : 'border-gray-200 bg-white shadow-sm',
         )}
       >
-        <h4 className={cn('font-medium mb-4', isDarkMode ? 'text-white' : 'text-gray-900')}>
-          {t('profile.security.title') || '账户安全'}
-        </h4>
-
-        <div className="space-y-3">
-          {/* 修改密码 */}
-          <div
-            className={cn(
-              'rounded-lg border overflow-hidden',
-              isDarkMode ? 'border-gray-800' : 'border-gray-200',
-            )}
-          >
-            <button
-              onClick={() => handleSectionChange('password')}
+        <div className="p-2.5 space-y-2.5">
+          <motion.div variants={itemVariants} className="flex items-center gap-1.5">
+            <ShieldCheck
+              className={cn('w-4 h-4', isDarkMode ? 'text-emerald-400' : 'text-emerald-600')}
+            />
+            <h4
               className={cn(
-                'w-full flex items-center justify-between p-3',
-                'transition-colors',
-                isDarkMode ? 'hover:bg-gray-900/50' : 'hover:bg-gray-50',
+                'text-sm font-semibold tracking-tight',
+                isDarkMode ? 'text-white' : 'text-gray-900',
               )}
             >
-              <div className="flex items-center gap-3">
-                <Lock className={cn('w-5 h-5', isDarkMode ? 'text-gray-400' : 'text-gray-500')} />
-                <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>
-                  {t('profile.security.changePassword') || '修改密码'}
-                </span>
-              </div>
-              <motion.div
-                animate={{ rotate: activeSection === 'password' ? 180 : 0 }}
-                className={isDarkMode ? 'text-gray-500' : 'text-gray-400'}
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
-              </motion.div>
-            </button>
+              {t('profile.security.title')}
+            </h4>
+          </motion.div>
 
-            <AnimatePresence>
-              {activeSection === 'password' && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="overflow-hidden"
+          <motion.div variants={itemVariants} className="grid grid-cols-3 gap-2">
+            {sections.map((section) => {
+              const Icon = section.icon
+              const isActive = activeSection === section.id
+              return (
+                <button
+                  key={section.id}
+                  onClick={() => handleSectionChange(section.id)}
+                  className={cn(
+                    'group relative flex flex-col items-center justify-center gap-1.5 py-2.5 px-1 rounded-lg border transition-all duration-300',
+                    isActive
+                      ? isDarkMode
+                        ? 'bg-gray-800 border-gray-700 shadow-md shadow-black/50'
+                        : 'bg-black border-black text-white shadow-md shadow-gray-200'
+                      : isDarkMode
+                        ? 'bg-gray-900/50 border-gray-800 hover:bg-gray-800'
+                        : 'bg-white border-gray-200 hover:border-gray-300 hover:text-gray-900',
+                  )}
                 >
-                  <div
+                  <Icon
                     className={cn(
-                      'p-4 space-y-3 border-t',
-                      isDarkMode ? 'border-gray-800' : 'border-gray-200',
+                      'w-4 h-4 transition-transform duration-300 group-hover:scale-110',
+                      isActive ? 'text-white scale-110' : section.color,
+                    )}
+                    strokeWidth={isActive ? 2.5 : 2}
+                  />
+                  <span
+                    className={cn(
+                      'text-[10px] font-medium transition-colors',
+                      isActive
+                        ? 'text-white'
+                        : isDarkMode
+                          ? 'text-gray-400 group-hover:text-gray-200'
+                          : 'text-gray-500 group-hover:text-gray-900',
                     )}
                   >
-                    {/* 当前密码 */}
-                    <div className="relative">
-                      <input
-                        type={showOldPassword ? 'text' : 'password'}
-                        value={oldPassword}
-                        onChange={(e) => setOldPassword(e.target.value)}
-                        placeholder={t('profile.security.currentPassword') || '当前密码'}
-                        className={inputClassName}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowOldPassword(!showOldPassword)}
-                        className={cn(
-                          'absolute right-3 top-1/2 -translate-y-1/2',
-                          isDarkMode ? 'text-gray-500' : 'text-gray-400',
-                        )}
-                      >
-                        {showOldPassword ? (
-                          <EyeOff className="w-4 h-4" />
-                        ) : (
-                          <Eye className="w-4 h-4" />
-                        )}
-                      </button>
-                    </div>
-
-                    {/* 新密码 */}
-                    <div className="relative">
-                      <input
-                        type={showNewPassword ? 'text' : 'password'}
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        placeholder={t('profile.security.newPassword') || '新密码'}
-                        className={inputClassName}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowNewPassword(!showNewPassword)}
-                        className={cn(
-                          'absolute right-3 top-1/2 -translate-y-1/2',
-                          isDarkMode ? 'text-gray-500' : 'text-gray-400',
-                        )}
-                      >
-                        {showNewPassword ? (
-                          <EyeOff className="w-4 h-4" />
-                        ) : (
-                          <Eye className="w-4 h-4" />
-                        )}
-                      </button>
-                    </div>
-
-                    {/* 确认密码 */}
-                    <input
-                      type="password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder={t('profile.security.confirmPassword') || '确认新密码'}
-                      className={inputClassName}
+                    {section.desc}
+                  </span>
+                  {isActive && (
+                    <motion.div
+                      layoutId="activeSecurityCheck"
+                      className={cn(
+                        'absolute top-1.5 right-1.5 w-1 h-1 rounded-full',
+                        isDarkMode ? 'bg-white' : 'bg-white',
+                      )}
                     />
+                  )}
+                </button>
+              )
+            })}
+          </motion.div>
 
-                    <Button
-                      onClick={handleChangePassword}
-                      disabled={loading || !oldPassword || !newPassword || !confirmPassword}
-                      className="w-full"
-                    >
-                      {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : t('common.confirm')}
-                    </Button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {/* 绑定手机 */}
-          <div
-            className={cn(
-              'rounded-lg border overflow-hidden',
-              isDarkMode ? 'border-gray-800' : 'border-gray-200',
-            )}
-          >
-            <button
-              onClick={() => handleSectionChange('phone')}
-              className={cn(
-                'w-full flex items-center justify-between p-3',
-                'transition-colors',
-                isDarkMode ? 'hover:bg-gray-900/50' : 'hover:bg-gray-50',
-              )}
-            >
-              <div className="flex items-center gap-3">
-                <Phone className={cn('w-5 h-5', isDarkMode ? 'text-gray-400' : 'text-gray-500')} />
-                <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>
-                  {t('profile.security.bindPhone') || '绑定手机'}
-                </span>
-              </div>
+          <AnimatePresence mode="wait">
+            {activeSection ? (
               <motion.div
-                animate={{ rotate: activeSection === 'phone' ? 180 : 0 }}
-                className={isDarkMode ? 'text-gray-500' : 'text-gray-400'}
+                key={activeSection}
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                className="overflow-hidden"
               >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
-              </motion.div>
-            </button>
-
-            <AnimatePresence>
-              {activeSection === 'phone' && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="overflow-hidden"
+                <div
+                  className={cn(
+                    'rounded-lg border p-2.5 mt-1 space-y-1.5',
+                    isDarkMode ? 'bg-gray-900/30 border-gray-800' : 'bg-gray-50/50 border-gray-100',
+                  )}
                 >
-                  <div
-                    className={cn(
-                      'p-4 space-y-3 border-t',
-                      isDarkMode ? 'border-gray-800' : 'border-gray-200',
-                    )}
-                  >
-                    <input
-                      type="tel"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder={t('profile.security.phonePlaceholder') || '请输入手机号'}
-                      className={inputClassName}
-                    />
+                  {activeSection === 'password' && (
+                    <>
+                      <div className="relative">
+                        <input
+                          type={showOldPassword ? 'text' : 'password'}
+                          value={oldPassword}
+                          onChange={(e) => setOldPassword(e.target.value)}
+                          placeholder={t('profile.security.currentPassword') || '当前密码'}
+                          className={inputClassName}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowOldPassword(!showOldPassword)}
+                          className={cn(
+                            'absolute right-2.5 top-1/2 -translate-y-1/2 transition-colors',
+                            isDarkMode
+                              ? 'text-gray-600 hover:text-gray-400'
+                              : 'text-gray-400 hover:text-gray-600',
+                          )}
+                        >
+                          {showOldPassword ? (
+                            <EyeOff className="w-3.5 h-3.5" />
+                          ) : (
+                            <Eye className="w-3.5 h-3.5" />
+                          )}
+                        </button>
+                      </div>
 
+                      <div className="relative">
+                        <input
+                          type={showNewPassword ? 'text' : 'password'}
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          placeholder={t('profile.security.newPassword') || '新密码'}
+                          className={inputClassName}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowNewPassword(!showNewPassword)}
+                          className={cn(
+                            'absolute right-2.5 top-1/2 -translate-y-1/2 transition-colors',
+                            isDarkMode
+                              ? 'text-gray-600 hover:text-gray-400'
+                              : 'text-gray-400 hover:text-gray-600',
+                          )}
+                        >
+                          {showNewPassword ? (
+                            <EyeOff className="w-3.5 h-3.5" />
+                          ) : (
+                            <Eye className="w-3.5 h-3.5" />
+                          )}
+                        </button>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <input
+                          type="password"
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          placeholder={t('profile.security.confirmPassword') || '确认新密码'}
+                          className={cn(inputClassName, 'flex-1')}
+                        />
+                        <Button
+                          onClick={handleChangePassword}
+                          disabled={loading || !oldPassword || !newPassword || !confirmPassword}
+                          className={cn(
+                            'h-7 px-4 rounded-lg text-[10px] font-medium transition-all duration-200 shrink-0',
+                            isDarkMode
+                              ? 'bg-white text-black hover:bg-blue-500 hover:text-white disabled:bg-gray-800 disabled:text-gray-600'
+                              : 'bg-black text-white hover:bg-blue-500 hover:text-white disabled:bg-gray-100 disabled:text-gray-400',
+                          )}
+                        >
+                          {loading ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            t('common.confirm')
+                          )}
+                        </Button>
+                      </div>
+                    </>
+                  )}
+
+                  {activeSection === 'phone' && (
+                    <>
+                      <input
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder={t('profile.security.phonePlaceholder') || '请输入手机号'}
+                        className={inputClassName}
+                      />
+
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          onClick={handleSendCode}
+                          disabled={loading || codeCountdown > 0}
+                          className={cn(
+                            'h-7 px-3 rounded-lg text-[10px] font-medium border transition-all duration-200 shrink-0',
+                            isDarkMode
+                              ? 'border-gray-700 text-gray-300 hover:bg-emerald-500 hover:text-white hover:border-emerald-500 disabled:border-gray-800 disabled:text-gray-600'
+                              : 'border-gray-200 text-gray-700 hover:bg-emerald-500 hover:text-white hover:border-emerald-500 disabled:border-gray-100 disabled:text-gray-400',
+                          )}
+                        >
+                          {codeCountdown > 0
+                            ? `${codeCountdown}s`
+                            : t('profile.security.sendCode') || '发送验证码'}
+                        </Button>
+
+                        <input
+                          type="text"
+                          value={phoneCode}
+                          onChange={(e) => setPhoneCode(e.target.value)}
+                          placeholder={t('profile.security.codePlaceholder') || '验证码'}
+                          maxLength={6}
+                          className={cn(inputClassName, 'flex-1 text-center')}
+                        />
+
+                        <Button
+                          onClick={handleBindPhone}
+                          disabled={loading || !phone || !phoneCode}
+                          className={cn(
+                            'h-7 px-4 rounded-lg text-[10px] font-medium transition-all duration-200 shrink-0',
+                            isDarkMode
+                              ? 'bg-white text-black hover:bg-blue-500 hover:text-white disabled:bg-gray-800 disabled:text-gray-600'
+                              : 'bg-black text-white hover:bg-blue-500 hover:text-white disabled:bg-gray-100 disabled:text-gray-400',
+                          )}
+                        >
+                          {loading ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            t('common.confirm')
+                          )}
+                        </Button>
+                      </div>
+                    </>
+                  )}
+
+                  {activeSection === 'email' && (
                     <div className="flex gap-2">
                       <input
-                        type="text"
-                        value={phoneCode}
-                        onChange={(e) => setPhoneCode(e.target.value)}
-                        placeholder={t('profile.security.codePlaceholder') || '验证码'}
-                        maxLength={6}
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder={t('profile.security.emailPlaceholder') || '请输入邮箱地址'}
                         className={cn(inputClassName, 'flex-1')}
                       />
                       <Button
-                        variant="outline"
-                        onClick={handleSendCode}
-                        disabled={loading || codeCountdown > 0}
-                        className="whitespace-nowrap"
+                        onClick={handleBindEmail}
+                        disabled={loading || !email}
+                        className={cn(
+                          'h-7 px-4 rounded-lg text-[10px] font-medium transition-all duration-200 shrink-0',
+                          isDarkMode
+                            ? 'bg-white text-black hover:bg-blue-500 hover:text-white disabled:bg-gray-800 disabled:text-gray-600'
+                            : 'bg-black text-white hover:bg-blue-500 hover:text-white disabled:bg-gray-100 disabled:text-gray-400',
+                        )}
                       >
-                        {codeCountdown > 0
-                          ? `${codeCountdown}s`
-                          : t('profile.security.sendCode') || '发送验证码'}
+                        {loading ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          t('common.confirm')
+                        )}
                       </Button>
                     </div>
-
-                    <Button
-                      onClick={handleBindPhone}
-                      disabled={loading || !phone || !phoneCode}
-                      className="w-full"
-                    >
-                      {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : t('common.confirm')}
-                    </Button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {/* 绑定邮箱 */}
-          <div
-            className={cn(
-              'rounded-lg border overflow-hidden',
-              isDarkMode ? 'border-gray-800' : 'border-gray-200',
-            )}
-          >
-            <button
-              onClick={() => handleSectionChange('email')}
-              className={cn(
-                'w-full flex items-center justify-between p-3',
-                'transition-colors',
-                isDarkMode ? 'hover:bg-gray-900/50' : 'hover:bg-gray-50',
-              )}
-            >
-              <div className="flex items-center gap-3">
-                <Mail className={cn('w-5 h-5', isDarkMode ? 'text-gray-400' : 'text-gray-500')} />
-                <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>
-                  {t('profile.security.bindEmail') || '绑定邮箱'}
-                </span>
-              </div>
-              <motion.div
-                animate={{ rotate: activeSection === 'email' ? 180 : 0 }}
-                className={isDarkMode ? 'text-gray-500' : 'text-gray-400'}
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
+                  )}
+                </div>
               </motion.div>
-            </button>
-
-            <AnimatePresence>
-              {activeSection === 'email' && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="overflow-hidden"
+            ) : (
+              <motion.div
+                key="empty"
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden"
+              >
+                <div
+                  className={cn(
+                    'mt-2 py-3 rounded-lg border border-dashed flex items-center justify-center',
+                    isDarkMode
+                      ? 'border-gray-800 bg-gray-900/20 text-gray-500'
+                      : 'border-gray-200 bg-gray-50/50 text-gray-400',
+                  )}
                 >
-                  <div
-                    className={cn(
-                      'p-4 space-y-3 border-t',
-                      isDarkMode ? 'border-gray-800' : 'border-gray-200',
-                    )}
-                  >
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder={t('profile.security.emailPlaceholder') || '请输入邮箱地址'}
-                      className={inputClassName}
-                    />
+                  <span className="text-[10px] font-medium flex items-center gap-1.5">
+                    <ShieldCheck className="w-3 h-3" />
+                    点击上方选项管理安全设置
+                  </span>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-                    <Button
-                      onClick={handleBindEmail}
-                      disabled={loading || !email}
-                      className="w-full"
-                    >
-                      {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : t('common.confirm')}
-                    </Button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+          <AnimatePresence>
+            {(error || success) && (
+              <motion.div
+                initial={{ opacity: 0, height: 0, scale: 0.9 }}
+                animate={{ opacity: 1, height: 'auto', scale: 1 }}
+                exit={{ opacity: 0, height: 0, scale: 0.9 }}
+                className="overflow-hidden"
+              >
+                <div
+                  className={cn(
+                    'mt-1 p-2 rounded-lg flex items-center gap-2 text-[10px] font-medium border',
+                    error
+                      ? isDarkMode
+                        ? 'bg-red-500/10 border-red-500/20 text-red-400'
+                        : 'bg-red-50 border-red-100 text-red-600'
+                      : isDarkMode
+                        ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                        : 'bg-emerald-50 border-emerald-100 text-emerald-600',
+                  )}
+                >
+                  {error ? (
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  ) : (
+                    <Check className="w-3.5 h-3.5 shrink-0" />
+                  )}
+                  <span>{error || success}</span>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
-
-        {/* 错误/成功提示 */}
-        <AnimatePresence>
-          {(error || success) && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className={cn(
-                'mt-4 p-3 rounded-lg flex items-center gap-2 text-sm',
-                error ? 'bg-red-500/10 text-red-500' : 'bg-emerald-500/10 text-emerald-500',
-              )}
-            >
-              {error ? <AlertCircle className="w-4 h-4" /> : <Check className="w-4 h-4" />}
-              <span>{error || success}</span>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </motion.div>
     )
   },

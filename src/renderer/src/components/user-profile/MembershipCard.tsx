@@ -3,7 +3,7 @@ import { motion, useSpring, useTransform } from 'framer-motion'
 import { Clock, Calendar, TrendingUp } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { useI18n } from '../../contexts/I18nContext'
-import { type UserProfile } from '../../lib/supabase'
+import { membershipService, type UserProfile } from '../../lib/supabase'
 import { MembershipSkeleton } from './SkeletonLoaders'
 
 interface MembershipCardProps {
@@ -12,7 +12,6 @@ interface MembershipCardProps {
   isDarkMode?: boolean
 }
 
-// 数字计数动画组件
 const AnimatedNumber: React.FC<{
   value: number
   duration?: number
@@ -41,6 +40,13 @@ AnimatedNumber.displayName = 'AnimatedNumber'
 export const MembershipCard: React.FC<MembershipCardProps> = memo(
   ({ profile, loading = false, isDarkMode = false }) => {
     const { t, locale } = useI18n()
+    const [calculatedTotal, setCalculatedTotal] = useState<number | null>(null)
+
+    useEffect(() => {
+      if (profile?.id) {
+        membershipService.getTotalPurchasedMinutes(profile.id).then(setCalculatedTotal)
+      }
+    }, [profile?.id])
 
     const formatDate = (dateString?: string) => {
       if (!dateString) return t('common.none')
@@ -51,166 +57,125 @@ export const MembershipCard: React.FC<MembershipCardProps> = memo(
       profile?.membership_expires_at && new Date(profile.membership_expires_at) < new Date()
 
     const remainingMinutes = profile?.remaining_interview_minutes || 0
-    const totalMinutes = profile?.total_purchased_minutes || 0
+    const totalMinutes = calculatedTotal ?? profile?.total_purchased_minutes ?? 0
 
     if (loading) {
       return (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.15 }}
+        <div
           className={cn(
-            'rounded-xl border p-5',
-            isDarkMode ? 'border-gray-800 bg-black' : 'border-gray-200 bg-white',
+            'rounded-xl border p-3',
+            isDarkMode ? 'border-neutral-800 bg-neutral-900/50' : 'border-neutral-200 bg-white',
           )}
         >
           <MembershipSkeleton isDarkMode={isDarkMode} />
-        </motion.div>
+        </div>
       )
     }
 
     return (
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, delay: 0.15 }}
         className={cn(
-          'rounded-xl border p-5',
-          isDarkMode ? 'border-gray-800 bg-black' : 'border-gray-200 bg-white',
+          'rounded-xl border p-3 relative overflow-hidden',
+          isDarkMode ? 'border-neutral-800 bg-neutral-900/50' : 'border-neutral-200 bg-white',
         )}
       >
-        <h4 className={cn('font-medium mb-4', isDarkMode ? 'text-white' : 'text-gray-900')}>
-          {t('profile.membership')}
-        </h4>
-
-        <div className="space-y-3 text-sm">
-          {/* 剩余面试时间 - 带数字动画 */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.2 }}
-            className="flex items-center justify-between"
-          >
+        <div className="flex items-center justify-between mb-3">
+          <h4 className={cn('font-medium text-xs', isDarkMode ? 'text-gray-400' : 'text-gray-500')}>
+            {t('profile.membership')}
+          </h4>
+          {totalMinutes > 0 && remainingMinutes > 0 && (
             <div
               className={cn(
-                'flex items-center gap-2',
-                isDarkMode ? 'text-gray-400' : 'text-gray-500',
+                'text-[10px] font-medium px-2 py-0.5 rounded-full',
+                isDarkMode ? 'bg-neutral-800 text-gray-400' : 'bg-neutral-100 text-gray-500',
               )}
             >
-              <Clock className="w-4 h-4" />
+              {Math.round((remainingMinutes / totalMinutes) * 100)}%{' '}
+              {t('profile.remaining') || t('common.remaining')}
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-3 gap-3">
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-1 text-[10px] text-gray-500">
+              <Clock className="w-3 h-3" />
               <span>{t('profile.remainingTime')}</span>
             </div>
             <div
               className={cn(
-                'font-medium',
-                remainingMinutes > 0
-                  ? isDarkMode
-                    ? 'text-white'
-                    : 'text-gray-900'
-                  : 'text-red-500',
+                'text-base font-bold',
+                remainingMinutes > 0 ? (isDarkMode ? 'text-white' : 'text-black') : 'text-red-500',
               )}
             >
               <AnimatedNumber value={remainingMinutes} duration={0.8} />
-              <span className="ml-1">
-                {t('common.minutes', { count: '' }).replace('{{count}}', '').trim()}
-              </span>
+              <span className="text-[10px] font-normal text-gray-500 ml-0.5">min</span>
             </div>
-          </motion.div>
+          </div>
 
-          {/* 会员到期时间 */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.25 }}
-            className="flex items-center justify-between"
+          <div
+            className={cn(
+              'space-y-0.5 border-l pl-3',
+              isDarkMode ? 'border-neutral-800' : 'border-neutral-200',
+            )}
           >
-            <div
-              className={cn(
-                'flex items-center gap-2',
-                isDarkMode ? 'text-gray-400' : 'text-gray-500',
-              )}
-            >
-              <Calendar className="w-4 h-4" />
+            <div className="flex items-center gap-1 text-[10px] text-gray-500">
+              <Calendar className="w-3 h-3" />
               <span>{t('profile.expiry')}</span>
             </div>
             <div
               className={cn(
-                'font-medium',
-                isExpired ? 'text-red-500' : isDarkMode ? 'text-white' : 'text-gray-900',
+                'text-sm font-semibold',
+                isExpired ? 'text-red-500' : isDarkMode ? 'text-white' : 'text-black',
               )}
             >
               {formatDate(profile?.membership_expires_at)}
-              {isExpired && (
-                <span className="ml-1 text-xs">({t('profile.expired') || '已过期'})</span>
-              )}
             </div>
-          </motion.div>
+          </div>
 
-          {/* 累计购买时间 - 带数字动画 */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.3 }}
-            className="flex items-center justify-between"
+          <div
+            className={cn(
+              'space-y-0.5 border-l pl-3',
+              isDarkMode ? 'border-neutral-800' : 'border-neutral-200',
+            )}
           >
-            <div
-              className={cn(
-                'flex items-center gap-2',
-                isDarkMode ? 'text-gray-400' : 'text-gray-500',
-              )}
-            >
-              <TrendingUp className="w-4 h-4" />
+            <div className="flex items-center gap-1 text-[10px] text-gray-500">
+              <TrendingUp className="w-3 h-3" />
               <span>{t('profile.totalPurchased')}</span>
             </div>
-            <div className={cn('font-medium', isDarkMode ? 'text-white' : 'text-gray-900')}>
+            <div className={cn('text-base font-bold', isDarkMode ? 'text-white' : 'text-black')}>
               <AnimatedNumber value={totalMinutes} duration={1} />
-              <span className="ml-1">
-                {t('common.minutes', { count: '' }).replace('{{count}}', '').trim()}
-              </span>
+              <span className="text-[10px] font-normal text-gray-500 ml-0.5">min</span>
             </div>
-          </motion.div>
-
-          {/* 使用进度条 */}
-          {totalMinutes > 0 && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.35 }}
-              className="pt-2"
-            >
-              <div className="flex justify-between text-xs mb-1">
-                <span className={isDarkMode ? 'text-gray-500' : 'text-gray-400'}>
-                  {t('profile.usageProgress') || '使用进度'}
-                </span>
-                <span className={isDarkMode ? 'text-gray-400' : 'text-gray-500'}>
-                  {Math.round((1 - remainingMinutes / totalMinutes) * 100)}%
-                </span>
-              </div>
-              <div
-                className={cn(
-                  'h-2 rounded-full overflow-hidden',
-                  isDarkMode ? 'bg-gray-800' : 'bg-gray-200',
-                )}
-              >
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{
-                    width: `${Math.max(0, Math.min(100, (1 - remainingMinutes / totalMinutes) * 100))}%`,
-                  }}
-                  transition={{ duration: 1, delay: 0.4, ease: 'easeOut' }}
-                  className={cn(
-                    'h-full rounded-full',
-                    remainingMinutes > totalMinutes * 0.2
-                      ? 'bg-gradient-to-r from-emerald-500 to-teal-500'
-                      : remainingMinutes > totalMinutes * 0.1
-                        ? 'bg-gradient-to-r from-amber-500 to-orange-500'
-                        : 'bg-gradient-to-r from-red-500 to-rose-500',
-                  )}
-                />
-              </div>
-            </motion.div>
-          )}
+          </div>
         </div>
+
+        {totalMinutes > 0 && (
+          <div
+            className={cn(
+              'absolute bottom-0 left-0 right-0 h-0.5',
+              isDarkMode ? 'bg-neutral-800' : 'bg-neutral-200',
+            )}
+          >
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{
+                width: `${Math.max(0, Math.min(100, (remainingMinutes / totalMinutes) * 100))}%`,
+              }}
+              transition={{ duration: 1, delay: 0.4, ease: 'easeOut' }}
+              className={cn(
+                'h-full',
+                remainingMinutes > totalMinutes * 0.2
+                  ? 'bg-emerald-500'
+                  : remainingMinutes > totalMinutes * 0.1
+                    ? 'bg-amber-500'
+                    : 'bg-red-500',
+              )}
+            />
+          </div>
+        )}
       </motion.div>
     )
   },

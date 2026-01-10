@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 
 interface ThemeContextType {
   theme: 'light' | 'dark' | 'auto'
+  resolvedTheme: 'light' | 'dark'
   setTheme: (theme: 'light' | 'dark' | 'auto') => void
 }
 
@@ -14,27 +15,35 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     return savedTheme || 'auto'
   })
 
+  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>(() => {
+    const saved = localStorage.getItem('bready-theme') as 'light' | 'dark' | 'auto' | null
+    const initial = saved || 'auto'
+    if (initial === 'auto') {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+    }
+    return initial
+  })
+
   useEffect(() => {
-    // 根据当前主题设置应用样式
-    const updateTheme = (currentTheme: 'light' | 'dark' | 'auto') => {
-      const resolvedTheme =
+    const applyTheme = (currentTheme: 'light' | 'dark' | 'auto') => {
+      const resolved =
         currentTheme === 'auto'
           ? window.matchMedia('(prefers-color-scheme: dark)').matches
             ? 'dark'
             : 'light'
           : currentTheme
 
+      setResolvedTheme(resolved)
       document.documentElement.classList.remove('light', 'dark')
-      document.documentElement.classList.add(resolvedTheme)
+      document.documentElement.classList.add(resolved)
     }
 
-    updateTheme(theme)
+    applyTheme(theme)
 
-    // 监听系统主题变化
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
     const handleChange = () => {
       if (theme === 'auto') {
-        updateTheme(theme)
+        applyTheme(theme)
       }
     }
 
@@ -46,20 +55,20 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     setTheme(newTheme)
     localStorage.setItem('bready-theme', newTheme)
 
-    // 立即应用主题
-    const currentTheme =
+    const resolved =
       newTheme === 'auto'
         ? window.matchMedia('(prefers-color-scheme: dark)').matches
           ? 'dark'
           : 'light'
         : newTheme
 
+    setResolvedTheme(resolved)
     document.documentElement.classList.remove('light', 'dark')
-    document.documentElement.classList.add(currentTheme)
+    document.documentElement.classList.add(resolved)
   }
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme: handleSetTheme }}>
+    <ThemeContext.Provider value={{ theme, resolvedTheme, setTheme: handleSetTheme }}>
       {children}
     </ThemeContext.Provider>
   )

@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react'
-import { Upload, Loader2, Check, FileText } from 'lucide-react'
+import React, { useState, useEffect, useMemo } from 'react'
+import { Upload, Loader2, Check, FileText, Briefcase } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from './ui/button'
 import { ToastNotification } from './ui/notifications'
 import { Modal } from './ui/Modal'
@@ -15,6 +16,32 @@ interface EditPreparationModalProps {
   onReloadData: () => Promise<void>
   onClose: () => void
   onSaved: (savedPreparation: Preparation) => void
+}
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.1,
+    },
+  },
+}
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20, scale: 0.98 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      type: 'spring' as const,
+      stiffness: 350,
+      damping: 25,
+      mass: 1,
+    },
+  },
 }
 
 const EditPreparationModal: React.FC<EditPreparationModalProps> = ({
@@ -40,6 +67,17 @@ const EditPreparationModal: React.FC<EditPreparationModalProps> = ({
   } | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [isExtracting, setIsExtracting] = useState(false)
+
+  const hasChanges = useMemo(() => {
+    if (!preparation) {
+      return name.trim() !== '' || jobDescription.trim() !== '' || resume.trim() !== ''
+    }
+    return (
+      name !== preparation.name ||
+      jobDescription !== preparation.job_description ||
+      (resume || '') !== (preparation.resume || '')
+    )
+  }, [name, jobDescription, resume, preparation])
 
   useEffect(() => {
     if (isEditing && preparation) {
@@ -180,128 +218,174 @@ const EditPreparationModal: React.FC<EditPreparationModalProps> = ({
       isOpen
       onClose={onClose}
       size="xl"
-      className="w-[85vw] max-w-[900px] max-h-[80vh] p-0 flex flex-col"
+      className="w-[75vw] max-w-[750px] h-[75vh] p-0 flex flex-col bg-[var(--bready-surface)] border border-[var(--bready-border)] shadow-2xl overflow-hidden rounded-2xl ring-1 ring-black/5 dark:ring-white/10"
     >
-      <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--bready-border)]">
-        <h1 className="text-base font-semibold text-[var(--bready-text)]">
-          {isEditing ? t('prepEditor.titleEdit') : t('prepEditor.titleCreate')}
-        </h1>
-
-        <Button
-          onClick={handleSave}
-          disabled={isSaving || !name.trim() || !jobDescription.trim()}
-          className="h-8 px-4 text-sm"
-        >
-          {isSaving ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
-              {t('prepEditor.actions.saving')}
-            </>
-          ) : (
-            <>
-              <Check className="w-4 h-4 mr-1.5" />
-              {t('prepEditor.actions.save')}
-            </>
-          )}
-        </Button>
-      </div>
-
-      <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-6 scrollbar-thin">
-        <div className="space-y-4 pt-4">
-          <div>
-            <label className="block text-sm font-medium mb-2 text-[var(--bready-text)]">
-              {t('prepEditor.name.title')}
-              <span className="text-red-500 ml-0.5">*</span>
-            </label>
+      <div className="flex-shrink-0 relative z-10 grid grid-cols-[100px_1fr_100px] items-center gap-4 px-6 py-4 border-b border-[var(--bready-border)] bg-[var(--bready-surface)]/80 backdrop-blur-md">
+        <div />
+        <div className="flex flex-col gap-1 w-full max-w-[240px] mx-auto">
+          <div className="text-xs text-center text-[var(--bready-text-muted)] font-medium">
+            {t('prepEditor.name.title')}
+          </div>
+          <div className="relative group text-center">
             <Input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder={t('prepEditor.name.placeholder')}
               maxLength={50}
+              className="h-8 p-0 text-lg font-semibold border-none bg-transparent shadow-none focus-visible:ring-0 placeholder:text-[var(--bready-text-muted)]/50 px-0 rounded-none w-full text-center transition-colors"
             />
-            <div className="mt-1 text-xs text-[var(--bready-text-muted)]">{name.length}/50</div>
+            <div className="absolute bottom-0 left-0 w-full h-[1px] bg-[var(--bready-border)] group-hover:bg-[var(--bready-text-muted)] transition-colors origin-center scale-x-50 group-hover:scale-x-100" />
           </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col">
-              <label className="block text-sm font-medium mb-2 text-[var(--bready-text)]">
-                {t('prepEditor.job.title')}
-                <span className="text-red-500 ml-0.5">*</span>
-              </label>
-              <Textarea
-                value={jobDescription}
-                onChange={(e) => setJobDescription(e.target.value)}
-                placeholder={t('prepEditor.job.placeholder')}
-                className="flex-1 min-h-[280px] resize-none"
-              />
-            </div>
-
-            <div className="flex flex-col">
-              <label className="block text-sm font-medium mb-2 text-[var(--bready-text)]">
-                {t('prepEditor.resume.title')}
-              </label>
-              <Textarea
-                value={resume}
-                onChange={(e) => setResume(e.target.value)}
-                placeholder={t('prepEditor.resume.pastePlaceholder')}
-                className="flex-1 min-h-[280px] resize-none"
-                disabled={isExtracting}
-              />
-            </div>
-          </div>
-
-          <label className="cursor-pointer block">
-            <div
-              className={`border-2 border-dashed border-[var(--bready-border)] hover:border-black/20 dark:hover:border-white/20 bg-[var(--bready-surface-2)] rounded-xl p-6 transition-all ${
-                isExtracting ? 'opacity-50 pointer-events-none' : ''
-              }`}
-            >
-              <div className="flex flex-col items-center justify-center gap-3">
-                <div className="w-12 h-12 bg-[var(--bready-surface)] rounded-xl flex items-center justify-center">
-                  {isExtracting ? (
-                    <Loader2 className="w-6 h-6 text-[var(--bready-text-muted)] animate-spin" />
-                  ) : (
-                    <Upload className="w-6 h-6 text-[var(--bready-text-muted)]" />
-                  )}
-                </div>
-                <div className="text-center">
-                  <p className="text-sm font-medium text-[var(--bready-text)]">
-                    {isExtracting
-                      ? t('prepEditor.resume.extracting')
-                      : t('prepEditor.resume.upload.title')}
-                  </p>
-                  <p className="text-xs mt-1 text-[var(--bready-text-muted)]">
-                    {t('prepEditor.resume.upload.hint')}
-                  </p>
-                </div>
-                {uploadedFile && !isExtracting && (
-                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--bready-surface-3)]">
-                    <FileText className="w-4 h-4 text-[var(--bready-text-muted)]" />
-                    <span className="text-sm text-[var(--bready-text)]">{uploadedFile.name}</span>
-                    <Check className="w-4 h-4 text-emerald-500" />
-                  </div>
-                )}
-              </div>
-            </div>
-            <input
-              type="file"
-              accept=".txt,.pdf,.doc,.docx,.png,.jpg,.jpeg,image/*"
-              onChange={handleFileUpload}
-              className="hidden"
-              disabled={isExtracting}
-            />
-          </label>
+        </div>
+        <div className="flex items-center justify-end">
+          <Button
+            onClick={handleSave}
+            disabled={isSaving || !name.trim() || !jobDescription.trim()}
+            className={`h-8 px-4 text-xs font-medium transition-all duration-300 shadow-md ${
+              hasChanges
+                ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-500/20 scale-105'
+                : 'bg-[var(--bready-text)] text-[var(--bready-surface)] hover:opacity-90 opacity-80'
+            }`}
+          >
+            {isSaving ? (
+              <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
+            ) : (
+              <Check className={`w-3.5 h-3.5 mr-2 ${hasChanges ? 'animate-bounce' : ''}`} />
+            )}
+            {t('prepEditor.actions.save')}
+          </Button>
         </div>
       </div>
 
-      {toast && (
-        <ToastNotification
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(null)}
-        />
-      )}
+      <motion.div
+        className="flex-1 grid grid-cols-1 md:grid-cols-2 min-h-0 gap-6 p-6"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        <motion.div
+          variants={itemVariants}
+          className="flex flex-col h-full min-h-0 bg-[var(--bready-surface-2)]/30 rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300 group relative overflow-hidden"
+        >
+          <div className="flex items-center justify-between px-6 py-4 bg-transparent sticky top-0 z-10">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                <Briefcase className="w-4 h-4" />
+              </div>
+              <h3 className="text-sm font-semibold text-[var(--bready-text)] tracking-tight">
+                {t('prepEditor.job.title')}
+              </h3>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]" />
+            </div>
+          </div>
+
+          <div className="flex-1 relative overflow-hidden">
+            <Textarea
+              value={jobDescription}
+              onChange={(e) => setJobDescription(e.target.value)}
+              placeholder={t('prepEditor.job.placeholder')}
+              className="absolute inset-0 w-full h-full resize-none border-none bg-transparent p-6 pt-0 text-sm leading-7 text-[var(--bready-text)] placeholder:text-[var(--bready-text-muted)]/50 focus-visible:ring-0 selection:bg-amber-500/10 scrollbar-thin scrollbar-thumb-[var(--bready-border)] hover:scrollbar-thumb-[var(--bready-text-muted)]/50"
+            />
+          </div>
+        </motion.div>
+
+        <motion.div
+          variants={itemVariants}
+          className="flex flex-col h-full min-h-0 bg-[var(--bready-surface-2)]/30 rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300 group relative overflow-hidden"
+        >
+          <div className="flex items-center justify-between px-6 py-4 bg-transparent sticky top-0 z-10">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                <FileText className="w-4 h-4" />
+              </div>
+              <h3 className="text-sm font-semibold text-[var(--bready-text)] tracking-tight">
+                {t('prepEditor.resume.title')}
+              </h3>
+            </div>
+
+            <label className="cursor-pointer group/upload">
+              <div
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-md transition-colors duration-200 ${
+                  uploadedFile
+                    ? 'border border-solid border-[var(--bready-text)] text-[var(--bready-text)]'
+                    : 'border border-dashed border-[var(--bready-border)] hover:border-[var(--bready-text)] text-[var(--bready-text-muted)] hover:text-[var(--bready-text)]'
+                } ${isExtracting ? 'opacity-50 cursor-wait' : ''}`}
+              >
+                {isExtracting ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : uploadedFile ? (
+                  <Check className="w-3.5 h-3.5" />
+                ) : (
+                  <Upload className="w-3.5 h-3.5" />
+                )}
+                <span className="text-xs font-medium">
+                  {isExtracting
+                    ? 'Parsing...'
+                    : uploadedFile
+                      ? 'Uploaded'
+                      : t('prepEditor.resume.upload.title')}
+                </span>
+              </div>
+              <input
+                type="file"
+                accept=".txt,.pdf,.doc,.docx,.png,.jpg,.jpeg,image/*"
+                onChange={handleFileUpload}
+                className="hidden"
+                disabled={isExtracting}
+              />
+            </label>
+          </div>
+
+          <div className="flex-1 relative overflow-hidden">
+            <Textarea
+              value={resume}
+              onChange={(e) => setResume(e.target.value)}
+              placeholder={t('prepEditor.resume.pastePlaceholder')}
+              className="absolute inset-0 w-full h-full resize-none border-none bg-transparent p-6 pt-0 text-sm leading-7 text-[var(--bready-text)] placeholder:text-[var(--bready-text-muted)]/50 focus-visible:ring-0 selection:bg-blue-500/10 scrollbar-thin scrollbar-thumb-[var(--bready-border)] hover:scrollbar-thumb-[var(--bready-text-muted)]/50"
+              disabled={isExtracting}
+            />
+
+            <AnimatePresence>
+              {isExtracting && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[var(--bready-surface)]/80 backdrop-blur-sm rounded-2xl"
+                >
+                  <div className="p-4 rounded-full bg-[var(--bready-surface)] border border-[var(--bready-border)] shadow-xl mb-4 relative overflow-hidden">
+                    <motion.div
+                      className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20"
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+                    />
+                    <Loader2 className="w-8 h-8 text-blue-500 relative z-10 animate-pulse" />
+                  </div>
+                  <p className="text-sm font-medium text-[var(--bready-text)]">
+                    Analyzing document...
+                  </p>
+                  <p className="text-xs text-[var(--bready-text-muted)] mt-1">
+                    Extracting text and structure
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </motion.div>
+      </motion.div>
+
+      <AnimatePresence>
+        {toast && (
+          <ToastNotification
+            message={toast.message}
+            type={toast.type}
+            onClose={() => setToast(null)}
+          />
+        )}
+      </AnimatePresence>
     </Modal>
   )
 }

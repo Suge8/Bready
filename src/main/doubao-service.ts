@@ -3,7 +3,7 @@ import { randomUUID } from 'crypto'
 import WebSocket from 'ws'
 import { getSystemPrompt } from './prompts'
 import { buildInterviewAnalysisPrompt } from './analysis-prompts'
-import { log, logRateLimited, logSampled } from './utils/logging'
+import { log, logSampled } from './utils/logging'
 import { recordMetric } from './utils/metrics'
 import type {
   AnalyzePreparationRequest,
@@ -11,6 +11,18 @@ import type {
   ExtractFileContentRequest,
   ExtractFileContentResponse,
 } from '../shared/ipc'
+
+const SERVER_URL = process.env.SERVER_URL || 'http://localhost:3001'
+
+async function getAiConfigFromServer() {
+  const response = await fetch(`${SERVER_URL}/api/ai/config-full`, {
+    signal: AbortSignal.timeout(10000),
+  })
+  if (!response.ok) {
+    throw new Error(`获取 AI 配置失败: ${response.status}`)
+  }
+  return response.json()
+}
 
 interface ChatMessage {
   role: 'system' | 'user' | 'assistant'
@@ -69,25 +81,32 @@ class DoubaoService {
     return this.sessionReady
   }
 
-  private loadConfig(apiKeyFromUi: string): { ok: boolean; error?: string } {
-    this.asrAppId = process.env.DOUBAO_ASR_APP_ID || ''
-    this.asrAccessKey = process.env.DOUBAO_ASR_ACCESS_KEY || ''
-    this.asrResourceId = process.env.DOUBAO_ASR_RESOURCE_ID || 'volc.bigasr.sauc.duration'
-    this.asrEndpoint = DEFAULT_ASR_ENDPOINT
-    this.asrSampleRate = DEFAULT_ASR_SAMPLE_RATE
+  private async loadConfig(): Promise<{ ok: boolean; error?: string }> {
+    try {
+      const config = await getAiConfigFromServer()
 
-    this.chatApiKey = process.env.DOUBAO_CHAT_API_KEY || apiKeyFromUi || ''
-    this.chatEndpoint = DEFAULT_CHAT_ENDPOINT
-    this.chatModel = process.env.DOUBAO_CHAT_MODEL || DEFAULT_CHAT_MODEL
+      this.asrAppId = config.doubaoAsrAppId || ''
+      this.asrAccessKey = config.doubaoAsrAccessKey || ''
+      this.asrResourceId = process.env.DOUBAO_ASR_RESOURCE_ID || 'volc.bigasr.sauc.duration'
+      this.asrEndpoint = DEFAULT_ASR_ENDPOINT
+      this.asrSampleRate = DEFAULT_ASR_SAMPLE_RATE
 
-    if (!this.asrAppId || !this.asrAccessKey || !this.asrResourceId) {
-      return { ok: false, error: '豆包语音识别配置缺失，请检查 DOUBAO_ASR_* 环境变量' }
+      this.chatApiKey = config.doubaoChatApiKey || ''
+      this.chatEndpoint = DEFAULT_CHAT_ENDPOINT
+      this.chatModel = process.env.DOUBAO_CHAT_MODEL || DEFAULT_CHAT_MODEL
+
+      if (!this.asrAppId || !this.asrAccessKey) {
+        return { ok: false, error: '豆包语音识别配置缺失，请在管理后台配置 ASR 凭证' }
+      }
+      if (!this.chatApiKey) {
+        return { ok: false, error: '豆包文本模型 API Key 未配置，请在管理后台配置' }
+      }
+
+      return { ok: true }
+    } catch (error) {
+      log('error', '加载豆包配置失败:', error)
+      return { ok: false, error: '加载 AI 配置失败，请检查数据库连接' }
     }
-    if (!this.chatApiKey) {
-      return { ok: false, error: '豆包文本模型 API Key 未配置，请检查 DOUBAO_CHAT_API_KEY' }
-    }
-
-    return { ok: true }
   }
 
   private mapLanguage(language: string): string {
@@ -743,11 +762,12 @@ class DoubaoService {
     profile = 'interview',
     language = 'cmn-CN',
   ): Promise<boolean> {
+    void apiKey
     if (this.isInitializingSession) {
       return false
     }
 
-    const config = this.loadConfig(apiKey)
+    const config = await this.loadConfig()
     if (!config.ok) {
       this.onMessageToRenderer('session-error', config.error)
       return false
@@ -1112,17 +1132,21 @@ class DoubaoService {
     preparationData: AnalyzePreparationRequest,
   ): Promise<AnalyzePreparationResponse> {
     try {
-      // 直接从环境变量读取配置，不依赖 loadConfig
-      const chatApiKey = process.env.DOUBAO_CHAT_API_KEY || ''
+      const config = await getAiConfigFromServer()
+      const chatApiKey = config.doubaoChatApiKey || ''
       const chatEndpoint = DEFAULT_CHAT_ENDPOINT
       const chatModel = process.env.DOUBAO_ANALYSIS_MODEL || ANALYSIS_MODEL
 
-      log('info', '豆包 AI 分析 - API密钥状态:', chatApiKey ? `存在，长度: ${chatApiKey.length}` : '未找到')
+      log(
+        'info',
+        '豆包 AI 分析 - API密钥状态:',
+        chatApiKey ? `存在，长度: ${chatApiKey.length}` : '未找到',
+      )
       log('info', '豆包 AI 分析 - 使用模型:', chatModel)
 
       if (!chatApiKey) {
         log('error', '豆包 AI 分析失败: API密钥未配置')
-        return { success: false, error: '豆包 API 密钥未配置，请检查 DOUBAO_CHAT_API_KEY' }
+        return { success: false, error: '豆包 API 密钥未配置，请在管理后台配置' }
       }
 
       const analysisPrompt = buildInterviewAnalysisPrompt(preparationData)

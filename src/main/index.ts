@@ -2,7 +2,6 @@ import { app, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { electronApp } from '@electron-toolkit/utils'
 import { config } from 'dotenv'
-import { initializeDatabase } from './database'
 import { setupAllHandlers } from './ipc-handlers'
 import { createWindow, setMainWindow, broadcastToAllWindows } from './window-manager'
 import { initializeAiService } from './ai-service'
@@ -14,9 +13,9 @@ import { registerCleanup, runCleanup } from './utils/cleanup'
 
 // 加载环境变量（支持开发和生产环境）
 const envPaths = [
-  join(__dirname, '../../.env.local'),              // 生产环境：打包后的应用资源目录
-  join(process.cwd(), '.env.local'),                // 开发环境：项目根目录
-  join(app.getPath('userData'), '.env.local'),      // 备用：用户数据目录
+  join(__dirname, '../../.env.local'), // 生产环境：打包后的应用资源目录
+  join(process.cwd(), '.env.local'), // 开发环境：项目根目录
+  join(app.getPath('userData'), '.env.local'), // 备用：用户数据目录
 ]
 
 for (const envPath of envPaths) {
@@ -146,16 +145,6 @@ app.whenReady().then(async () => {
     registerCleanup(cleanupMemoryOptimizer)
   } catch (error) {
     console.error('❌ 优化启动失败，回退到标准启动:', error)
-
-    // 回退到原始启动流程
-    try {
-      await initializeDatabase()
-      if (debugStartup) {
-        console.log('数据库初始化成功')
-      }
-    } catch (dbError) {
-      console.error('数据库初始化失败:', dbError)
-    }
 
     // 创建主窗口
     const mainWindow = createWindow()

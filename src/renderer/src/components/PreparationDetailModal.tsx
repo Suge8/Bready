@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   Target,
   TrendingUp,
@@ -36,8 +37,8 @@ const PreparationDetailModal: React.FC<PreparationDetailModalProps> = ({
   onEdit,
 }) => {
   const { t, list } = useI18n()
-  const { theme } = useTheme()
-  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const { resolvedTheme } = useTheme()
+  const [isAnalyzing, setIsAnalyzing] = useState(preparation.is_analyzing || false)
   const [currentPreparation, setCurrentPreparation] = useState(preparation)
   const [toast, setToast] = useState<{
     message: string
@@ -50,9 +51,7 @@ const PreparationDetailModal: React.FC<PreparationDetailModalProps> = ({
   const mockWeaknesses = list('prepEditor.mockAnalysis.weaknesses')
   const mockSuggestions = list('prepEditor.mockAnalysis.suggestions')
 
-  const isDarkMode =
-    theme === 'dark' ||
-    (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+  const isDarkMode = resolvedTheme === 'dark'
 
   useEffect(() => {
     if (currentPreparation?.analysis?.matchScore && !isAnalyzing) {
@@ -127,7 +126,18 @@ const PreparationDetailModal: React.FC<PreparationDetailModalProps> = ({
   }
 
   const handleAnalyze = async () => {
+    const analyzingState = {
+      ...currentPreparation,
+      analysis: undefined,
+      is_analyzing: true,
+    }
+
     setIsAnalyzing(true)
+    setCurrentPreparation(analyzingState)
+    setPreparations((prev) =>
+      prev.map((p) => (p.id === currentPreparation.id ? analyzingState : p)),
+    )
+
     try {
       await preparationService.update(currentPreparation.id, { is_analyzing: true })
 
@@ -330,112 +340,137 @@ const PreparationDetailModal: React.FC<PreparationDetailModalProps> = ({
 
         {/* Content */}
         <div className="relative flex-1 min-h-0 overflow-y-auto px-6 pb-6 scrollbar-thin">
-          {isAnalyzing ? (
-            <div className="h-full min-h-[280px] flex items-center justify-center">
-              <div className="flex flex-col items-center text-center">
-                <div className="relative mb-5">
-                  <div
-                    className={`w-16 h-16 rounded-2xl ${isDarkMode ? 'bg-zinc-800' : 'bg-gray-100'} flex items-center justify-center`}
+          <AnimatePresence mode="wait">
+            {isAnalyzing ? (
+              <motion.div
+                key="analyzing"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9, y: -20 }}
+                transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+                className="h-full min-h-[280px] flex items-center justify-center"
+              >
+                <div className="flex flex-col items-center text-center">
+                  <div className="relative mb-5">
+                    {/* 外圈脉冲动画 */}
+                    <motion.div
+                      className={`absolute inset-0 w-20 h-20 -m-2 rounded-2xl ${isDarkMode ? 'bg-blue-500/20' : 'bg-blue-500/10'}`}
+                      animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.2, 0.5] }}
+                      transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                    />
+                    <motion.div
+                      className={`w-16 h-16 rounded-2xl ${isDarkMode ? 'bg-zinc-800' : 'bg-gray-100'} flex items-center justify-center relative z-10`}
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+                    >
+                      <Loader2
+                        className={`w-8 h-8 ${isDarkMode ? 'text-white' : 'text-gray-700'} animate-spin`}
+                      />
+                    </motion.div>
+                    <motion.div
+                      animate={{ scale: [1, 1.3, 1], rotate: [0, 15, 0] }}
+                      transition={{ duration: 1.5, repeat: Infinity }}
+                    >
+                      <Sparkles className={`w-4 h-4 text-amber-400 absolute -top-1 -right-1`} />
+                    </motion.div>
+                  </div>
+                  <motion.h3
+                    className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-1.5`}
+                    animate={{ opacity: [0.7, 1, 0.7] }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
                   >
-                    <Loader2
-                      className={`w-8 h-8 ${isDarkMode ? 'text-white' : 'text-gray-700'} animate-spin`}
+                    AI 正在分析中...
+                  </motion.h3>
+                  <p className={`${isDarkMode ? 'text-zinc-500' : 'text-gray-500'} text-xs`}>
+                    正在根据岗位描述和简历生成分析报告
+                  </p>
+                </div>
+              </motion.div>
+            ) : hasAnalysis ? (
+              <div className="grid grid-cols-2 gap-4 pt-1">
+                {cardConfigs.map((config, index) => (
+                  <div
+                    key={config.key}
+                    className={`rounded-xl bg-gradient-to-br ${config.gradient} p-4 flex flex-col transition-all duration-500 hover:scale-[1.01] min-h-[160px] ${
+                      cardsVisible[index] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-2.5 flex-shrink-0">
+                      <div className={`p-1.5 rounded-lg ${config.iconBg}`}>
+                        <config.icon className={`w-3.5 h-3.5 ${config.iconColor}`} />
+                      </div>
+                      <span
+                        className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}
+                      >
+                        {config.title}
+                      </span>
+                      <span
+                        className={`ml-auto text-[10px] px-1.5 py-0.5 rounded-full ${isDarkMode ? 'bg-zinc-800/80 text-zinc-400' : 'bg-white/80 text-gray-500'}`}
+                      >
+                        {config.data.length} 项
+                      </span>
+                    </div>
+                    <ul className="space-y-2 flex-1 overflow-y-auto">
+                      {config.data.length > 0 ? (
+                        config.data.map((item: string, idx: number) => (
+                          <li
+                            key={idx}
+                            className="flex items-start text-[13px] animate-fadeIn"
+                            style={{ animationDelay: `${idx * 50 + index * 60}ms` }}
+                          >
+                            <div
+                              className={`w-1.5 h-1.5 rounded-full ${config.dotColor} mt-1.5 mr-2 flex-shrink-0`}
+                            />
+                            <span
+                              className={`${isDarkMode ? 'text-zinc-300' : 'text-gray-700'} leading-relaxed`}
+                            >
+                              {item}
+                            </span>
+                          </li>
+                        ))
+                      ) : (
+                        <li
+                          className={`text-[13px] ${isDarkMode ? 'text-zinc-500' : 'text-gray-400'} italic`}
+                        >
+                          {!currentPreparation.resume &&
+                          ['strengths', 'weaknesses', 'suggestions'].includes(config.key)
+                            ? '未提供简历'
+                            : '点击"重新分析"生成内容'}
+                        </li>
+                      )}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="h-full min-h-[250px] flex items-center justify-center">
+                <div className="flex flex-col items-center text-center max-w-xs">
+                  <div
+                    className={`w-14 h-14 ${isDarkMode ? 'bg-zinc-800' : 'bg-gray-100'} rounded-xl flex items-center justify-center mb-3 relative`}
+                  >
+                    <Brain
+                      className={`w-7 h-7 ${isDarkMode ? 'text-zinc-600' : 'text-gray-400'}`}
+                    />
+                    <Sparkles
+                      className={`w-3.5 h-3.5 ${isDarkMode ? 'text-amber-400' : 'text-amber-500'} absolute -top-1 -right-1 animate-pulse`}
                     />
                   </div>
-                  <Sparkles
-                    className={`w-4 h-4 text-amber-400 absolute -top-1 -right-1 animate-pulse`}
-                  />
+                  <h3
+                    className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-1.5`}
+                  >
+                    {t('prep.noAnalysisTitle')}
+                  </h3>
+                  <p className={`${isDarkMode ? 'text-zinc-500' : 'text-gray-500'} text-xs mb-4`}>
+                    {t('prep.report.completeInfo')}
+                  </p>
+                  <Button onClick={handleAnalyze} size="sm" className="h-8 px-4 text-xs">
+                    <Brain className="w-3.5 h-3.5 mr-1.5" />
+                    {t('prep.actions.startAnalysis')}
+                  </Button>
                 </div>
-                <h3
-                  className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-1.5`}
-                >
-                  AI 正在分析中...
-                </h3>
-                <p className={`${isDarkMode ? 'text-zinc-500' : 'text-gray-500'} text-xs`}>
-                  正在根据岗位描述和简历生成分析报告
-                </p>
               </div>
-            </div>
-          ) : hasAnalysis ? (
-            <div className="grid grid-cols-2 gap-4 pt-1">
-              {cardConfigs.map((config, index) => (
-                <div
-                  key={config.key}
-                  className={`rounded-xl bg-gradient-to-br ${config.gradient} p-4 flex flex-col transition-all duration-500 hover:scale-[1.01] min-h-[160px] ${
-                    cardsVisible[index] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 mb-2.5 flex-shrink-0">
-                    <div className={`p-1.5 rounded-lg ${config.iconBg}`}>
-                      <config.icon className={`w-3.5 h-3.5 ${config.iconColor}`} />
-                    </div>
-                    <span
-                      className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}
-                    >
-                      {config.title}
-                    </span>
-                    <span
-                      className={`ml-auto text-[10px] px-1.5 py-0.5 rounded-full ${isDarkMode ? 'bg-zinc-800/80 text-zinc-400' : 'bg-white/80 text-gray-500'}`}
-                    >
-                      {config.data.length} 项
-                    </span>
-                  </div>
-                  <ul className="space-y-2 flex-1 overflow-y-auto">
-                    {config.data.length > 0 ? (
-                      config.data.map((item: string, idx: number) => (
-                        <li
-                          key={idx}
-                          className="flex items-start text-[13px] animate-fadeIn"
-                          style={{ animationDelay: `${idx * 50 + index * 60}ms` }}
-                        >
-                          <div
-                            className={`w-1.5 h-1.5 rounded-full ${config.dotColor} mt-1.5 mr-2 flex-shrink-0`}
-                          />
-                          <span
-                            className={`${isDarkMode ? 'text-zinc-300' : 'text-gray-700'} leading-relaxed`}
-                          >
-                            {item}
-                          </span>
-                        </li>
-                      ))
-                    ) : (
-                      <li
-                        className={`text-[13px] ${isDarkMode ? 'text-zinc-500' : 'text-gray-400'} italic`}
-                      >
-                        {!currentPreparation.resume && ['strengths', 'weaknesses', 'suggestions'].includes(config.key)
-                          ? '未提供简历'
-                          : '点击"重新分析"生成内容'}
-                      </li>
-                    )}
-                  </ul>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="h-full min-h-[250px] flex items-center justify-center">
-              <div className="flex flex-col items-center text-center max-w-xs">
-                <div
-                  className={`w-14 h-14 ${isDarkMode ? 'bg-zinc-800' : 'bg-gray-100'} rounded-xl flex items-center justify-center mb-3 relative`}
-                >
-                  <Brain className={`w-7 h-7 ${isDarkMode ? 'text-zinc-600' : 'text-gray-400'}`} />
-                  <Sparkles
-                    className={`w-3.5 h-3.5 ${isDarkMode ? 'text-amber-400' : 'text-amber-500'} absolute -top-1 -right-1 animate-pulse`}
-                  />
-                </div>
-                <h3
-                  className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-1.5`}
-                >
-                  {t('prep.noAnalysisTitle')}
-                </h3>
-                <p className={`${isDarkMode ? 'text-zinc-500' : 'text-gray-500'} text-xs mb-4`}>
-                  {t('prep.report.completeInfo')}
-                </p>
-                <Button onClick={handleAnalyze} size="sm" className="h-8 px-4 text-xs">
-                  <Brain className="w-3.5 h-3.5 mr-1.5" />
-                  {t('prep.actions.startAnalysis')}
-                </Button>
-              </div>
-            </div>
-          )}
+            )}
+          </AnimatePresence>
         </div>
 
         <style>{`

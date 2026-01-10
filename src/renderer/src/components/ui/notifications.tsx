@@ -1,14 +1,18 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X } from 'lucide-react'
+import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react'
 import { Button } from './button'
 import { Modal } from './Modal'
+import { cn } from '../../lib/utils'
 
-interface ToastNotificationProps {
+export interface ToastNotificationProps {
   message: string
   type: 'success' | 'info' | 'warning' | 'error'
   duration?: number
   onClose?: () => void
+  attachToBody?: boolean
+  className?: string
 }
 
 export const ToastNotification: React.FC<ToastNotificationProps> = ({
@@ -16,61 +20,89 @@ export const ToastNotification: React.FC<ToastNotificationProps> = ({
   type,
   duration = 3000,
   onClose,
+  attachToBody = true,
+  className,
 }) => {
   const [visible, setVisible] = useState(true)
+  const [mounted, setMounted] = useState(false)
 
-  const typeStyles = {
-    success: 'bg-green-500 text-white',
-    info: 'bg-blue-500 text-white',
-    warning: 'bg-yellow-500 text-white',
-    error: 'bg-red-500 text-white',
-  }
+  useEffect(() => {
+    setMounted(true)
+    return () => setMounted(false)
+  }, [])
 
-  const typeIcons = {
-    success: '✓',
-    info: 'ℹ',
-    warning: '⚠',
-    error: '✗',
-  }
-
-  React.useEffect(() => {
+  useEffect(() => {
     const timer = setTimeout(() => {
       setVisible(false)
-      setTimeout(() => onClose?.(), 300)
     }, duration)
 
     return () => clearTimeout(timer)
-  }, [duration, onClose])
+  }, [duration])
 
-  if (!visible) return null
+  const handleAnimationComplete = () => {
+    if (!visible) {
+      onClose?.()
+    }
+  }
 
-  return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0, y: 50, scale: 0.3 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.2 } }}
-        className={`
-          fixed bottom-4 right-4 px-4 py-3 rounded-xl shadow-xl
-          ${typeStyles[type]}
-          z-50 flex items-center space-x-2
-          max-w-sm
-        `}
-      >
-        <span className="text-lg font-bold">{typeIcons[type]}</span>
-        <span className="flex-1 text-sm">{message}</span>
-        <button
-          onClick={() => {
-            setVisible(false)
-            setTimeout(() => onClose?.(), 300)
-          }}
-          className="ml-2 hover:opacity-75"
+  const typeStyles = {
+    success: 'text-emerald-500',
+    info: 'text-blue-500',
+    warning: 'text-amber-500',
+    error: 'text-red-500',
+  }
+
+  const TypeIcon = {
+    success: CheckCircle,
+    info: Info,
+    warning: AlertTriangle,
+    error: AlertCircle,
+  }[type]
+
+  if (!mounted) return null
+
+  const content = (
+    <AnimatePresence onExitComplete={onClose}>
+      {visible && (
+        <motion.div
+          initial={{ opacity: 0, y: -20, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -20, scale: 0.95 }}
+          transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+          onAnimationComplete={handleAnimationComplete}
+          className={cn(
+            'fixed top-6 left-1/2 -translate-x-1/2 px-4 py-3 rounded-xl shadow-2xl',
+            'bg-white/90 dark:bg-neutral-900/90 backdrop-blur-md',
+            'border border-neutral-200 dark:border-neutral-800',
+            'z-[9999] flex items-start gap-3',
+            'w-auto max-w-sm md:max-w-md min-w-[300px]',
+            className,
+          )}
         >
-          <X className="w-4 h-4" />
-        </button>
-      </motion.div>
+          <div className={`mt-0.5 ${typeStyles[type]}`}>
+            <TypeIcon className="w-5 h-5" />
+          </div>
+          <div className="flex-1 flex flex-col gap-1">
+            <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100 leading-snug break-words">
+              {message}
+            </span>
+          </div>
+          <button
+            onClick={() => setVisible(false)}
+            className="p-1 -mr-1 -mt-1 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors cursor-pointer"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </motion.div>
+      )}
     </AnimatePresence>
   )
+
+  if (attachToBody) {
+    return createPortal(content, document.body)
+  }
+
+  return content
 }
 
 interface ConfirmationDialogProps {

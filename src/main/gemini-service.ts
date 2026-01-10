@@ -5,6 +5,18 @@ import { electronAudioCapture } from './audio/electron-native-capture'
 import { log, logRateLimited, logSampled } from './utils/logging'
 import { recordMetric } from './utils/metrics'
 
+const SERVER_URL = process.env.SERVER_URL || 'http://localhost:3001'
+
+async function getAiConfigFromServer() {
+  const response = await fetch(`${SERVER_URL}/api/ai/config-full`, {
+    signal: AbortSignal.timeout(10000),
+  })
+  if (!response.ok) {
+    throw new Error(`获取 AI 配置失败: ${response.status}`)
+  }
+  return response.json()
+}
+
 interface ChatMessage {
   role: 'user' | 'model'
   parts: { text: string }[]
@@ -858,14 +870,15 @@ class GeminiService {
     error?: string
   }> {
     try {
-      const apiKey = process.env.VITE_GEMINI_API_KEY
+      const config = await getAiConfigFromServer()
+      const apiKey = config.geminiApiKey
       log('info', 'AI分析 - API密钥状态:', apiKey ? `存在，长度: ${apiKey.length}` : '未找到')
 
       if (!apiKey) {
         log('error', 'AI分析失败: API密钥未配置')
         return {
           success: false,
-          error: 'Gemini API 密钥未配置',
+          error: 'Gemini API 密钥未配置，请在管理后台配置',
         }
       }
 
@@ -955,14 +968,15 @@ class GeminiService {
     error?: string
   }> {
     try {
-      const apiKey = process.env.VITE_GEMINI_API_KEY
+      const config = await getAiConfigFromServer()
+      const apiKey = config.geminiApiKey
       log('info', '文件内容提取 - API密钥状态:', apiKey ? `存在，长度: ${apiKey.length}` : '未找到')
 
       if (!apiKey) {
         log('error', '文件内容提取失败: API密钥未配置')
         return {
           success: false,
-          error: 'Gemini API 密钥未配置',
+          error: 'Gemini API 密钥未配置，请在管理后台配置',
         }
       }
 

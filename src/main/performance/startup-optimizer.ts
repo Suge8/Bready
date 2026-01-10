@@ -35,28 +35,7 @@ export class StartupOptimizer {
    */
   async initializeDatabaseAsync() {
     const startTime = Date.now()
-    try {
-      // 动态导入数据库模块，减少初始加载时间
-      const { initializeDatabase, testConnection } = await import('../database')
-
-      // 先测试连接，如果失败则跳过初始化
-      const isConnected = await testConnection()
-      if (isConnected) {
-        await initializeDatabase()
-        if (debugStartup) {
-          console.log('✅ 数据库异步初始化成功')
-        }
-      } else {
-        if (debugStartup) {
-          console.warn('⚠️ 数据库连接失败，跳过初始化')
-        }
-      }
-    } catch (error) {
-      console.error('❌ 数据库异步初始化失败:', error)
-      // 不阻塞应用启动
-    } finally {
-      this.recordMetric('databaseInitTime', Date.now() - startTime)
-    }
+    this.recordMetric('databaseInitTime', Date.now() - startTime)
   }
 
   /**
