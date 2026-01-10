@@ -401,7 +401,9 @@ const PreparationDetailModal: React.FC<PreparationDetailModalProps> = ({
                       <li
                         className={`text-[13px] ${isDarkMode ? 'text-zinc-500' : 'text-gray-400'} italic`}
                       >
-                        点击"重新分析"生成内容
+                        {!currentPreparation.resume && ['strengths', 'weaknesses', 'suggestions'].includes(config.key)
+                          ? '未提供简历'
+                          : '点击"重新分析"生成内容'}
                       </li>
                     )}
                   </ul>

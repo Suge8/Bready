@@ -1,0 +1,71 @@
+appId: com.bready.app
+productName: 面宝
+copyright: Copyright © 2026 Bready Team
+
+# 文件配置
+files:
+  - out/**/*
+  - assets/**/*
+  - package.json
+  - .env.local  # 打包环境变量文件（仅个人使用）
+  - "!**/*.map"
+  - "!**/node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}"
+  - "!**/{.DS_Store,.git,.hg,.svn,CVS,RCS,SCCS,__pycache__,thumbs.db,.gitignore,.gitattributes}"
+  - "!.env"
+  - "!.env.production"
+
+# macOS 配置
+mac:
+  category: public.app-category.productivity
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+    - target: zip
+      arch: [arm64, x64]
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  # macOS 权限配置
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  # 扩展 Info.plist
+  extendInfo:
+    NSMicrophoneUsageDescription: "面宝需要访问麦克风以进行语音面试对话和实时反馈。"
+    NSCameraUsageDescription: "面宝需要访问摄像头以进行模拟面试（可选功能）。"
+    NSScreenCaptureUsageDescription: "面宝需要访问屏幕录制权限以捕获系统音频进行实时语音分析。"
+    NSAppleEventsUsageDescription: "面宝需要此权限以实现更好的系统集成。"
+    LSMinimumSystemVersion: "10.15.0"
+
+dmg:
+  title: "${productName} ${version}"
+  contents:
+    - x: 410
+      y: 150
+      type: link
+      path: /Applications
+    - x: 130
+      y: 150
+      type: file
+
+# Windows 配置
+win:
+  target:
+    - nsis
+
+# Linux 配置
+linux:
+  target:
+    - AppImage
+  category: Utility
+
+# 发布配置
+publish:
+  provider: generic
+  url: https://your-update-server.com
+
+# 压缩配置
+compression: normal
+artifactName: "${productName}-${version}-${arch}.${ext}"
+
+# 目录配置
+directories:
+  output: dist

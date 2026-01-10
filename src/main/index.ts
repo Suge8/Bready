@@ -12,8 +12,26 @@ import {
 } from './audio-manager'
 import { registerCleanup, runCleanup } from './utils/cleanup'
 
-// 加载环境变量（静默模式）
-config({ path: join(process.cwd(), '.env.local'), quiet: true })
+// 加载环境变量（支持开发和生产环境）
+const envPaths = [
+  join(__dirname, '../../.env.local'),              // 生产环境：打包后的应用资源目录
+  join(process.cwd(), '.env.local'),                // 开发环境：项目根目录
+  join(app.getPath('userData'), '.env.local'),      // 备用：用户数据目录
+]
+
+for (const envPath of envPaths) {
+  const result = config({ path: envPath, override: false })
+  if (result.parsed) {
+    console.log('✅ 成功加载环境变量:', envPath)
+    break // 找到第一个就停止
+  }
+}
+
+// 调试：输出环境变量加载状态
+console.log('🔧 环境变量状态:')
+console.log('  - AI_PROVIDER:', process.env.AI_PROVIDER || '(未设置)')
+console.log('  - 应用已打包:', app.isPackaged)
+console.log('  - __dirname:', __dirname)
 
 // 调试标志
 const debugStartup = process.env.DEBUG_STARTUP === '1'

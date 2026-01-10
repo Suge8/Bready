@@ -35,9 +35,23 @@ function createWindow(): BrowserWindow {
   mainWindow.on('ready-to-show', () => {
     mainWindow?.show()
 
-    // 开发模式下按需打开开发者工具
+    // 开发模式或设置了 DEBUG_DEVTOOLS 环境变量时打开开发者工具
     if (is.dev && process.env.DEBUG_DEVTOOLS === '1') {
       mainWindow?.webContents.openDevTools()
+    }
+
+    // 生产环境调试：按 Cmd/Ctrl + Shift + D 打开 DevTools
+    if (!is.dev) {
+      mainWindow?.webContents.on('before-input-event', (event, input) => {
+        if (
+          input.type === 'keyDown' &&
+          input.key === 'D' &&
+          (input.meta || input.control) &&
+          input.shift
+        ) {
+          mainWindow?.webContents.toggleDevTools()
+        }
+      })
     }
   })
 

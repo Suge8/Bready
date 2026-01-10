@@ -23,7 +23,8 @@ interface DoubaoServiceOptions {
 
 const DEFAULT_ASR_ENDPOINT = 'wss://openspeech.bytedance.com/api/v3/sauc/bigmodel_async'
 const DEFAULT_CHAT_ENDPOINT = 'https://ark.cn-beijing.volces.com/api/v3/chat/completions'
-const DEFAULT_CHAT_MODEL = 'doubao-seed-1-6-flash-250828'
+const DEFAULT_CHAT_MODEL = 'doubao-seed-1-6-lite-251015'
+const ANALYSIS_MODEL = 'doubao-seed-1-8-251228'
 const DEFAULT_ASR_SAMPLE_RATE = 16000
 const MAX_CHAT_HISTORY = 20
 const FINAL_DEBOUNCE_MS = 1000 // definite: true 后的防抖，防止豆包语义判停太早
@@ -1111,19 +1112,28 @@ class DoubaoService {
     preparationData: AnalyzePreparationRequest,
   ): Promise<AnalyzePreparationResponse> {
     try {
-      if (!this.chatApiKey) {
-        return { success: false, error: '豆包文本模型未配置' }
+      // 直接从环境变量读取配置，不依赖 loadConfig
+      const chatApiKey = process.env.DOUBAO_CHAT_API_KEY || ''
+      const chatEndpoint = DEFAULT_CHAT_ENDPOINT
+      const chatModel = process.env.DOUBAO_ANALYSIS_MODEL || ANALYSIS_MODEL
+
+      log('info', '豆包 AI 分析 - API密钥状态:', chatApiKey ? `存在，长度: ${chatApiKey.length}` : '未找到')
+      log('info', '豆包 AI 分析 - 使用模型:', chatModel)
+
+      if (!chatApiKey) {
+        log('error', '豆包 AI 分析失败: API密钥未配置')
+        return { success: false, error: '豆包 API 密钥未配置，请检查 DOUBAO_CHAT_API_KEY' }
       }
 
       const analysisPrompt = buildInterviewAnalysisPrompt(preparationData)
-      const response = await fetch(this.chatEndpoint, {
+      const response = await fetch(chatEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${this.chatApiKey}`,
+          Authorization: `Bearer ${chatApiKey}`,
         },
         body: JSON.stringify({
-          model: this.chatModel,
+          model: chatModel,
           messages: [{ role: 'user', content: analysisPrompt }],
           stream: false,
           thinking: CHAT_THINKING,
