@@ -1,6 +1,6 @@
 import React, { useState, useEffect, lazy, Suspense, useCallback, memo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { CreditCard, History, Settings, LogOut } from 'lucide-react'
+import { CreditCard, History, Settings, LogOut, Shield } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { useI18n } from '../../contexts/I18nContext'
 import { useAuth } from '../../contexts/AuthContext'
@@ -10,7 +10,7 @@ import {
   membershipService,
   paymentService,
   type MembershipPackage,
-} from '../../lib/supabase'
+} from '../../lib/api-client'
 import { Modal } from '../ui/Modal'
 import { PaymentModal } from '../PaymentModal'
 import { useUserProfile } from './hooks/useUserProfile'
@@ -28,6 +28,7 @@ type TabId = 'membership' | 'history' | 'settings'
 type HistorySubTab = 'usage' | 'purchase'
 
 interface UserProfileModalProps {
+  isOpen: boolean
   onClose: () => void
   onOpenAdminPanel?: () => void
 }
@@ -130,7 +131,11 @@ const HistorySubTabs: React.FC<{
 
 HistorySubTabs.displayName = 'HistorySubTabs'
 
-const UserProfileModal: React.FC<UserProfileModalProps> = ({ onClose, onOpenAdminPanel }) => {
+const UserProfileModal: React.FC<UserProfileModalProps> = ({
+  isOpen,
+  onClose,
+  onOpenAdminPanel,
+}) => {
   const { user, signOut } = useAuth()
   const { resolvedTheme } = useTheme()
   const { t } = useI18n()
@@ -141,6 +146,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ onClose, onOpenAdmi
   const [packages, setPackages] = useState<MembershipPackage[]>([])
   const [packagesLoading, setPackagesLoading] = useState(true)
   const [signingOut, setSigningOut] = useState(false)
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [paymentModal, setPaymentModal] = useState<{
     isOpen: boolean
     orderNo: string
@@ -166,7 +172,11 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ onClose, onOpenAdmi
     loadPackages()
   }, [])
 
-  const handleSignOut = useCallback(async () => {
+  const handleSignOutClick = useCallback(() => {
+    setShowLogoutConfirm(true)
+  }, [])
+
+  const executeSignOut = useCallback(async () => {
     setSigningOut(true)
     try {
       await signOut()
@@ -175,6 +185,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ onClose, onOpenAdmi
       console.error('Error signing out:', error)
     } finally {
       setSigningOut(false)
+      setShowLogoutConfirm(false)
     }
   }, [signOut, onClose])
 
@@ -252,9 +263,10 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ onClose, onOpenAdmi
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -8 }}
           transition={{ duration: 0.15 }}
+          className="h-full flex flex-col"
         >
           {activeTab === 'membership' && (
-            <div className="h-full flex flex-col gap-3">
+            <div className="h-full flex flex-col gap-2">
               <ProfileHeader
                 profile={profile}
                 loading={profileLoading}
@@ -268,7 +280,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ onClose, onOpenAdmi
                 editable={true}
               />
               <MembershipCard profile={profile} loading={profileLoading} isDarkMode={isDarkMode} />
-              <div className="flex-1">
+              <div className="flex-1 min-h-0">
                 <PackageList
                   packages={packages}
                   userLevel={profile?.user_level || '小白'}
@@ -281,24 +293,26 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ onClose, onOpenAdmi
           )}
 
           {activeTab === 'history' && (
-            <div>
+            <div className="h-full flex flex-col">
               <HistorySubTabs
                 activeSubTab={historySubTab}
                 onSubTabChange={setHistorySubTab}
                 isDarkMode={isDarkMode}
               />
-              <Suspense fallback={<HistoryListSkeleton isDarkMode={isDarkMode} count={3} />}>
-                {historySubTab === 'usage' ? (
-                  <UsageHistory isDarkMode={isDarkMode} />
-                ) : (
-                  <PurchaseHistory isDarkMode={isDarkMode} />
-                )}
-              </Suspense>
+              <div className="flex-1 overflow-y-auto overflow-x-hidden pr-1 -mr-1">
+                <Suspense fallback={<HistoryListSkeleton isDarkMode={isDarkMode} count={5} />}>
+                  {historySubTab === 'usage' ? (
+                    <UsageHistory isDarkMode={isDarkMode} />
+                  ) : (
+                    <PurchaseHistory isDarkMode={isDarkMode} />
+                  )}
+                </Suspense>
+              </div>
             </div>
           )}
 
           {activeTab === 'settings' && (
-            <div className="space-y-3">
+            <div className="h-full flex flex-col gap-2">
               <AppearanceSettings loading={false} isDarkMode={isDarkMode} />
               <SecuritySettings
                 profile={profile}
@@ -317,10 +331,10 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ onClose, onOpenAdmi
 
   return (
     <Modal
-      isOpen
+      isOpen={isOpen}
       onClose={onClose}
       size="xl"
-      className="p-0 w-full max-w-[560px] h-auto max-h-[90vh] flex flex-col overflow-hidden"
+      className="p-0 w-full max-w-[560px] h-[520px] flex flex-col overflow-hidden"
     >
       <div className={cn('h-full flex flex-col', isDarkMode ? 'bg-black' : 'bg-white')}>
         <div
@@ -337,16 +351,16 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ onClose, onOpenAdmi
                 className={cn(
                   'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer',
                   isDarkMode
-                    ? 'text-gray-400 hover:text-white hover:bg-white/5 border border-neutral-800'
-                    : 'text-gray-500 hover:text-black hover:bg-black/5 border border-neutral-200',
+                    ? 'text-violet-400 hover:text-violet-300 hover:bg-violet-500/10 border border-violet-500/30'
+                    : 'text-violet-600 hover:text-violet-700 hover:bg-violet-50 border border-violet-200',
                 )}
               >
-                <Settings className="w-3.5 h-3.5" />
+                <Shield className="w-3.5 h-3.5" />
                 {t('profile.admin')}
               </button>
             )}
             <button
-              onClick={handleSignOut}
+              onClick={handleSignOutClick}
               disabled={signingOut}
               className={cn(
                 'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer',
@@ -366,7 +380,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ onClose, onOpenAdmi
           </div>
         </div>
 
-        <div className="flex-1 overflow-hidden p-4">{renderTabContent()}</div>
+        <div className="flex-1 overflow-hidden p-4 flex flex-col">{renderTabContent()}</div>
       </div>
 
       {paymentModal && (
@@ -383,6 +397,170 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ onClose, onOpenAdmi
           }}
         />
       )}
+
+      <AnimatePresence>
+        {showLogoutConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="absolute inset-0 z-[100] flex items-center justify-center bg-black/50"
+            onClick={() => setShowLogoutConfirm(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              transition={{
+                type: 'spring',
+                stiffness: 500,
+                damping: 32,
+                mass: 0.8,
+              }}
+              className={cn(
+                'w-[340px] rounded-2xl overflow-hidden relative',
+                isDarkMode ? 'bg-[#0a0a0a] text-white' : 'bg-white text-black',
+              )}
+              style={{
+                boxShadow: isDarkMode
+                  ? '0 0 0 1px rgba(255,255,255,0.08), 0 24px 48px -12px rgba(0,0,0,0.8)'
+                  : '0 0 0 1px rgba(0,0,0,0.06), 0 24px 48px -12px rgba(0,0,0,0.25)',
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <motion.div
+                className={cn(
+                  'h-1 w-full',
+                  isDarkMode
+                    ? 'bg-gradient-to-r from-red-500/80 via-orange-500/80 to-red-500/80'
+                    : 'bg-gradient-to-r from-red-400 via-orange-400 to-red-400',
+                )}
+                initial={{ scaleX: 0 }}
+                animate={{ scaleX: 1 }}
+                transition={{ delay: 0.1, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+              />
+
+              <div className="p-6 flex flex-col gap-5">
+                <motion.div
+                  className="flex justify-center"
+                  initial={{ scale: 0, rotate: -180 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{
+                    type: 'spring',
+                    stiffness: 400,
+                    damping: 20,
+                    delay: 0.15,
+                  }}
+                >
+                  <div
+                    className={cn(
+                      'w-14 h-14 rounded-full flex items-center justify-center',
+                      isDarkMode ? 'bg-red-500/10' : 'bg-red-50',
+                    )}
+                  >
+                    <LogOut
+                      className={cn('w-6 h-6', isDarkMode ? 'text-red-400' : 'text-red-500')}
+                    />
+                  </div>
+                </motion.div>
+
+                <motion.div
+                  className="flex flex-col gap-2 text-center"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2, duration: 0.3 }}
+                >
+                  <h3 className="font-semibold text-lg tracking-tight">
+                    {t('profile.signOutConfirm.title')}
+                  </h3>
+                  <p
+                    className={cn(
+                      'text-sm leading-relaxed',
+                      isDarkMode ? 'text-neutral-400' : 'text-neutral-500',
+                    )}
+                  >
+                    {t('profile.signOutConfirm.description')}
+                  </p>
+                </motion.div>
+
+                <motion.div
+                  className="flex gap-3 pt-1"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.25, duration: 0.3 }}
+                >
+                  <motion.button
+                    onClick={() => setShowLogoutConfirm(false)}
+                    className={cn(
+                      'flex-1 px-4 py-3 rounded-xl text-sm font-medium cursor-pointer relative overflow-hidden group',
+                      isDarkMode
+                        ? 'bg-neutral-900 text-neutral-300'
+                        : 'bg-neutral-100 text-neutral-600',
+                    )}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                  >
+                    <span
+                      className={cn(
+                        'absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300',
+                        isDarkMode ? 'bg-neutral-800' : 'bg-neutral-200',
+                      )}
+                    />
+                    <span className="relative z-10 group-hover:text-current transition-colors duration-200">
+                      {t('profile.signOutConfirm.cancel')}
+                    </span>
+                  </motion.button>
+
+                  <motion.button
+                    onClick={executeSignOut}
+                    disabled={signingOut}
+                    className={cn(
+                      'flex-1 px-4 py-3 rounded-xl text-sm font-medium cursor-pointer flex items-center justify-center gap-2 relative overflow-hidden group',
+                      isDarkMode ? 'bg-white text-black' : 'bg-black text-white',
+                      signingOut && 'opacity-70 cursor-not-allowed',
+                    )}
+                    whileHover={signingOut ? {} : { scale: 1.02, y: -2 }}
+                    whileTap={signingOut ? {} : { scale: 0.98 }}
+                    transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                    style={{
+                      boxShadow: isDarkMode
+                        ? '0 4px 12px rgba(255,255,255,0.15)'
+                        : '0 4px 12px rgba(0,0,0,0.2)',
+                    }}
+                  >
+                    <motion.span
+                      className={cn(
+                        'absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300',
+                        isDarkMode
+                          ? 'bg-gradient-to-r from-neutral-200 to-white'
+                          : 'bg-gradient-to-r from-neutral-800 to-black',
+                      )}
+                    />
+                    <span className="relative z-10 flex items-center gap-2">
+                      {signingOut ? (
+                        <motion.span
+                          className="w-4 h-4 border-2 border-current border-t-transparent rounded-full"
+                          animate={{ rotate: 360 }}
+                          transition={{
+                            duration: 0.8,
+                            repeat: Infinity,
+                            ease: 'linear',
+                          }}
+                        />
+                      ) : (
+                        <LogOut className="w-4 h-4" />
+                      )}
+                      {t('profile.signOutConfirm.confirm')}
+                    </span>
+                  </motion.button>
+                </motion.div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </Modal>
   )
 }

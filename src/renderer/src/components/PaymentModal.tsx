@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Modal } from './ui/Modal'
 import { Button } from './ui/button'
-import { paymentService } from '../lib/supabase'
+import { paymentService } from '../lib/api-client'
 import { useTheme } from './ui/theme-provider'
 import { cn } from '../lib/utils'
 import { CheckCircle, XCircle, Loader2, ExternalLink, Clock } from 'lucide-react'

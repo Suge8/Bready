@@ -1,5 +1,5 @@
 /// <reference types="vitest" />
-import { membershipService } from '@renderer/lib/supabase'
+import { membershipService } from '@renderer/lib/api-client'
 
 describe.skip('membershipService.calculatePrice', () => {
   it('小白无折扣', () => {

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { userProfileService, type UserProfile } from '../../../lib/supabase'
+import { userProfileService, type UserProfile } from '../../../lib/api-client'
 import { useAuth } from '../../../contexts/AuthContext'
 
 interface UseUserProfileReturn {

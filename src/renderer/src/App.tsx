@@ -1,7 +1,7 @@
 // 更新 App.tsx 以支持主题提供者
 import React, { useState, useEffect } from 'react'
 import { HashRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
-import WelcomePage from './components/WelcomePage'
+import { OnboardingTour } from './components/onboarding/OnboardingTour'
 import MainPage from './components/MainPage'
 import FloatingWindow from './components/FloatingWindow'
 import CollaborationMode from './components/CollaborationMode'
@@ -9,8 +9,8 @@ import LoginPage from './components/LoginPage'
 import ErrorBoundary from './components/ErrorBoundary'
 
 import { AuthProvider, useAuth } from './contexts/AuthContext'
-import { preparationService, type Preparation } from './lib/supabase'
-import { Loader2, Volume2, Mic, CheckCircle } from 'lucide-react'
+import { preparationService, type Preparation } from './lib/api-client'
+import { Volume2, Mic, CheckCircle } from 'lucide-react'
 import { ThemeProvider } from './components/ui/theme-provider'
 import { Button } from './components/ui/button'
 import { I18nProvider, useI18n } from './contexts/I18nContext'
@@ -26,6 +26,7 @@ declare global {
       exitCollaborationMode: () => Promise<boolean>
 
       // AI API（通用）
+      checkAiReady: () => Promise<{ ready: boolean; provider: string; missingFields: string[] }>
       initializeAI: (
         apiKey: string,
         customPrompt?: string,
@@ -132,28 +133,15 @@ const CollaborationModeWrapper: React.FC = () => {
 // 受保护的路由组件
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth()
-  const { t } = useI18n()
-
-  console.log('ProtectedRoute: user =', user, 'loading =', loading)
-
-  if (loading) {
-    console.log('ProtectedRoute: Showing loading state')
-    return (
-      <div className="h-screen w-screen overflow-hidden bg-[var(--bready-bg)] flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-gray-600 dark:text-gray-400" />
-          <p className="text-gray-600 dark:text-gray-400">{t('common.loading')}</p>
-        </div>
-      </div>
-    )
-  }
 
   if (!user) {
-    console.log('ProtectedRoute: No user, showing LoginPage')
     return <LoginPage />
   }
 
-  console.log('ProtectedRoute: User authenticated, showing children')
+  if (loading) {
+    return <div className="h-screen w-screen bg-[var(--bready-bg)]" />
+  }
+
   return <>{children}</>
 }
 
@@ -249,18 +237,6 @@ function AppContent() {
     return <FloatingWindow />
   }
 
-  // 如果正在加载，显示加载状态
-  if (isLoading) {
-    return (
-      <div className="h-screen w-screen overflow-hidden bg-[var(--bready-bg)] flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-8 h-8 border-2 border-black dark:border-white border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">{t('common.loadingShort')}</p>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <ErrorBoundary>
       <Router>
@@ -271,12 +247,13 @@ function AppContent() {
               element={
                 <ProtectedRoute>
                   {isFirstTime ? (
-                    <WelcomePage onComplete={handleWelcomeComplete} />
+                    <OnboardingTour onComplete={handleWelcomeComplete} />
                   ) : (
                     <MainPage
                       preparations={preparations}
                       setPreparations={setPreparations}
                       onReloadData={loadPreparations}
+                      isLoading={isLoading}
                     />
                   )}
                 </ProtectedRoute>

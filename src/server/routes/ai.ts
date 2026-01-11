@@ -5,7 +5,8 @@ import { query } from '../services/database'
 
 const router = Router()
 
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || process.env.JWT_SECRET || 'default-key'
+const ENCRYPTION_KEY =
+  process.env.ENCRYPTION_KEY || process.env.JWT_SECRET || 'default-key-32chars-long-here!!'
 
 function encrypt(text: string): string {
   if (!text) return ''
@@ -74,8 +75,28 @@ async function getAiConfigFromDb() {
 
 router.post('/test-connection', async (req, res) => {
   try {
-    const { provider } = req.body as { provider: 'gemini' | 'doubao' }
-    const config = await getAiConfigFromDb()
+    const {
+      provider,
+      testType,
+      config: inputConfig,
+    } = req.body as {
+      provider: 'gemini' | 'doubao'
+      testType?: 'chat' | 'asr'
+      config?: {
+        geminiApiKey?: string
+        doubaoChatApiKey?: string
+        doubaoAsrAppId?: string
+        doubaoAsrAccessKey?: string
+      }
+    }
+    const dbConfig = await getAiConfigFromDb()
+    const config = {
+      ...dbConfig,
+      geminiApiKey: inputConfig?.geminiApiKey || dbConfig.geminiApiKey,
+      doubaoChatApiKey: inputConfig?.doubaoChatApiKey || dbConfig.doubaoChatApiKey,
+      doubaoAsrAppId: inputConfig?.doubaoAsrAppId || dbConfig.doubaoAsrAppId,
+      doubaoAsrAccessKey: inputConfig?.doubaoAsrAccessKey || dbConfig.doubaoAsrAccessKey,
+    }
 
     if (provider === 'gemini') {
       if (!config.geminiApiKey) {
@@ -93,21 +114,29 @@ router.post('/test-connection', async (req, res) => {
       }
       res.json({ success: true })
     } else {
-      if (!config.doubaoChatApiKey) {
-        res.json({ success: false, error: '豆包 API Key 未配置' })
-        return
+      if (testType === 'asr') {
+        if (!config.doubaoAsrAppId || !config.doubaoAsrAccessKey) {
+          res.json({ success: false, error: 'ASR App ID 或 Access Token 未配置' })
+          return
+        }
+        res.json({ success: true })
+      } else {
+        if (!config.doubaoChatApiKey) {
+          res.json({ success: false, error: '豆包 Chat API Key 未配置' })
+          return
+        }
+        const response = await fetch('https://ark.cn-beijing.volces.com/api/v3/models', {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${config.doubaoChatApiKey}` },
+          signal: AbortSignal.timeout(10000),
+        })
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}))
+          res.json({ success: false, error: data.error?.message || `HTTP ${response.status}` })
+          return
+        }
+        res.json({ success: true })
       }
-      const response = await fetch('https://ark.cn-beijing.volces.com/api/v3/models', {
-        method: 'GET',
-        headers: { Authorization: `Bearer ${config.doubaoChatApiKey}` },
-        signal: AbortSignal.timeout(10000),
-      })
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}))
-        res.json({ success: false, error: data.error?.message || `HTTP ${response.status}` })
-        return
-      }
-      res.json({ success: true })
     }
   } catch (error: any) {
     res.json({ success: false, error: error.message || '连接失败' })

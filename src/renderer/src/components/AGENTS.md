@@ -27,18 +27,17 @@ components/
 ## 模式
 
 - **领域驱动**: 复杂组件有自己的 `hooks/` 子目录
-- **IPC 调用**: 通过 `lib/supabase.ts` (实为 IPC 客户端)
+- **IPC 调用**: 通过 `lib/api-client.ts`
 - **动效**: 使用 Framer Motion `motion.*` 组件
 
 ## 反模式
 
-| 禁止                             | 原因                   |
-| -------------------------------- | ---------------------- |
-| `dangerouslySetInnerHTML` 无过滤 | XSS 风险               |
-| 组件内直接 `ipcRenderer`         | 使用 `lib/supabase.ts` |
-| 超过 15 个 useState              | 拆分为 Hook            |
+| 禁止                             | 原因                     |
+| -------------------------------- | ------------------------ |
+| `dangerouslySetInnerHTML` 无过滤 | XSS 风险                 |
+| 组件内直接 `ipcRenderer`         | 使用 `lib/api-client.ts` |
+| 超过 15 个 useState              | 拆分为 Hook              |
 
 ## 技术债务
 
 - `CollaborationMode.tsx`: 1351 行，25+ useState，需拆分
-- `supabase.ts`: 命名误导，应重命名为 `ipc-client.ts`

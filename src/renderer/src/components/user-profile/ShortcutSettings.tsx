@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Keyboard, Check, X, Loader2 } from 'lucide-react'
+import { Check, X, Loader2, Eye } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { useI18n } from '../../contexts/I18nContext'
 
@@ -11,7 +11,6 @@ interface BreadyWindowAPI {
 
 interface ShortcutSettingsProps {
   isDarkMode: boolean
-  variants?: any
 }
 
 const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform)
@@ -44,23 +43,24 @@ const formatShortcut = (shortcut: string): string[] => {
   })
 }
 
-export const ShortcutSettings: React.FC<ShortcutSettingsProps> = ({ isDarkMode, variants }) => {
+export const ShortcutSettings: React.FC<ShortcutSettingsProps> = ({ isDarkMode }) => {
   const { t } = useI18n()
   const [currentShortcut, setCurrentShortcut] = useState<string>('CommandOrControl+G')
   const [isRecording, setIsRecording] = useState(false)
   const [tempShortcut, setTempShortcut] = useState<string[]>([])
   const [pendingElectronString, setPendingElectronString] = useState<string>('')
   const [isLoading, setIsLoading] = useState(false)
-
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const fetchShortcut = async () => {
       try {
         const api = (window as unknown as { bready: BreadyWindowAPI }).bready
-        const result = await api.getShortcut()
-        if (result && result.toggleWindow) {
-          setCurrentShortcut(result.toggleWindow)
+        if (api?.getShortcut) {
+          const result = await api.getShortcut()
+          if (result?.toggleWindow) {
+            setCurrentShortcut(result.toggleWindow)
+          }
         }
       } catch (error) {
         console.error('Failed to get shortcut:', error)
@@ -70,17 +70,16 @@ export const ShortcutSettings: React.FC<ShortcutSettingsProps> = ({ isDarkMode, 
   }, [])
 
   useEffect(() => {
+    if (!isRecording) return
+
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(event.target as Node) &&
-        isRecording
-      ) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setIsRecording(false)
         setTempShortcut([])
         setPendingElectronString('')
       }
     }
+
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [isRecording])
@@ -95,16 +94,15 @@ export const ShortcutSettings: React.FC<ShortcutSettingsProps> = ({ isDarkMode, 
       const parts: string[] = []
 
       if (e.metaKey) parts.push('Command')
-      if (e.ctrlKey) parts.push('Control')
+      if (e.ctrlKey && !e.metaKey) parts.push('Control')
       if (e.altKey) parts.push('Alt')
       if (e.shiftKey) parts.push('Shift')
 
       const key = e.key.toUpperCase()
       const code = e.code
-
       const isModifier = ['META', 'CONTROL', 'ALT', 'SHIFT'].includes(key)
 
-      if (!isModifier) {
+      if (!isModifier && parts.length > 0) {
         let cleanKey = key
         if (code.startsWith('Key')) cleanKey = code.replace('Key', '')
         else if (code.startsWith('Digit')) cleanKey = code.replace('Digit', '')
@@ -113,189 +111,187 @@ export const ShortcutSettings: React.FC<ShortcutSettingsProps> = ({ isDarkMode, 
         else cleanKey = code
 
         parts.push(cleanKey)
-      }
 
-      const accelerator = parts.join('+')
-      setPendingElectronString(accelerator)
-      setTempShortcut(formatShortcut(accelerator))
+        const accelerator = parts.join('+')
+        setPendingElectronString(accelerator)
+        setTempShortcut(formatShortcut(accelerator))
+      }
     }
 
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
+    window.addEventListener('keydown', handleKeyDown, true)
+    return () => window.removeEventListener('keydown', handleKeyDown, true)
   }, [isRecording])
 
-  const saveShortcut = async () => {
-    if (!pendingElectronString) {
+  const saveShortcut = useCallback(async () => {
+    if (!pendingElectronString || tempShortcut.length === 0) {
       setIsRecording(false)
-      return
-    }
-
-    const hasModifier =
-      pendingElectronString.includes('Command') ||
-      pendingElectronString.includes('Control') ||
-      pendingElectronString.includes('Alt') ||
-      pendingElectronString.includes('Shift')
-
-    if (!hasModifier && !pendingElectronString.startsWith('F')) {
       return
     }
 
     setIsLoading(true)
     try {
       const api = (window as unknown as { bready: BreadyWindowAPI }).bready
-      const res = await api.setShortcut(pendingElectronString)
-      if (res.success) {
-        setCurrentShortcut(pendingElectronString)
-        setIsRecording(false)
-      } else {
-        console.error('Failed to set shortcut')
+      if (api?.setShortcut) {
+        const res = await api.setShortcut(pendingElectronString)
+        if (res.success) {
+          setCurrentShortcut(pendingElectronString)
+          setIsRecording(false)
+          setTempShortcut([])
+          setPendingElectronString('')
+        } else {
+          console.error('Failed to set shortcut:', res.error)
+        }
       }
     } catch (e) {
-      console.error(e)
+      console.error('Failed to save shortcut:', e)
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [pendingElectronString, tempShortcut.length])
 
-  const cancelRecording = () => {
+  const cancelRecording = useCallback(() => {
     setIsRecording(false)
     setTempShortcut([])
     setPendingElectronString('')
+  }, [])
+
+  const startRecording = useCallback(() => {
+    setIsRecording(true)
+    setTempShortcut([])
+    setPendingElectronString('')
+  }, [])
+
+  const canSave = tempShortcut.length > 0 && !isLoading
+
+  const handleSave = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    await saveShortcut()
+  }
+
+  const handleCancel = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    cancelRecording()
   }
 
   return (
-    <motion.div variants={variants} className="flex items-center justify-between">
-      <div className="space-y-0.5">
-        <div className="flex items-center gap-2">
-          <Keyboard className={cn('w-3.5 h-3.5', isDarkMode ? 'text-gray-400' : 'text-gray-500')} />
-          <span
-            className={cn('text-xs font-medium', isDarkMode ? 'text-gray-200' : 'text-gray-700')}
+    <div ref={containerRef} className="relative h-10 flex items-center">
+      <AnimatePresence mode="wait">
+        {!isRecording ? (
+          <motion.button
+            key="display"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={startRecording}
+            className={cn(
+              'h-full w-full flex items-center justify-between gap-2 px-2.5 rounded-lg border text-xs transition-all duration-200 cursor-pointer',
+              isDarkMode
+                ? 'bg-gray-900/50 border-gray-800 text-gray-300 hover:bg-gray-800 hover:border-gray-700'
+                : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300',
+            )}
           >
-            {t('profile.shortcut.title')}
-          </span>
-        </div>
-        <p className={cn('text-[10px]', isDarkMode ? 'text-gray-500' : 'text-gray-400')}>
-          {t('profile.shortcut.toggleWindow')}
-        </p>
-      </div>
-
-      <div className="relative" ref={containerRef}>
-        <AnimatePresence mode="wait">
-          {!isRecording ? (
-            <motion.button
-              key="display"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              onClick={() => setIsRecording(true)}
+            <div className="flex items-center gap-1.5">
+              <Eye className={cn('w-3.5 h-3.5', isDarkMode ? 'text-gray-400' : 'text-gray-500')} />
+              <span
+                className={cn(
+                  'text-xs font-medium',
+                  isDarkMode ? 'text-gray-200' : 'text-gray-700',
+                )}
+              >
+                {t('profile.shortcut.toggleWindow')}
+              </span>
+            </div>
+            <span
               className={cn(
-                'flex items-center gap-1 px-2 py-1.5 rounded-md border text-xs font-mono transition-all duration-200',
-                isDarkMode
-                  ? 'bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700 hover:border-gray-600'
-                  : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300 shadow-sm',
+                'flex items-center gap-1 font-mono text-sm font-semibold px-2.5 py-0.5 rounded-lg',
+                isDarkMode ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-100 text-blue-700',
               )}
             >
               {formatShortcut(currentShortcut).map((key, i) => (
                 <span key={i} className="flex items-center">
                   {key}
                   {i < formatShortcut(currentShortcut).length - 1 && (
-                    <span className="mx-0.5 opacity-30">+</span>
+                    <span className="mx-0.5 opacity-40">+</span>
                   )}
                 </span>
               ))}
-            </motion.button>
-          ) : (
-            <motion.div
-              key="recording"
-              initial={{ opacity: 0, y: 5 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 5 }}
-              className={cn(
-                'absolute right-0 top-0 z-50 flex flex-col items-center gap-2 p-3 rounded-xl border shadow-xl min-w-[200px]',
-                isDarkMode
-                  ? 'bg-gray-900 border-gray-700 shadow-black/50'
-                  : 'bg-white border-gray-200 shadow-xl',
-              )}
-            >
-              <span
-                className={cn(
-                  'text-[10px] font-medium uppercase tracking-wider mb-1',
-                  isDarkMode ? 'text-blue-400' : 'text-blue-600',
-                )}
-              >
-                {t('profile.shortcut.recording')}
-              </span>
-
-              <div
-                className={cn(
-                  'flex items-center justify-center gap-1.5 h-8 w-full rounded-lg border bg-opacity-50 px-2',
-                  isDarkMode ? 'bg-black border-gray-700' : 'bg-gray-50 border-gray-200',
-                )}
-              >
-                {tempShortcut.length > 0 ? (
-                  tempShortcut.map((k, i) => (
-                    <span
-                      key={i}
-                      className={cn(
-                        'text-xs font-bold px-1.5 py-0.5 rounded shadow-sm border',
-                        isDarkMode
-                          ? 'bg-gray-800 border-gray-600 text-white'
-                          : 'bg-white border-gray-300 text-gray-800',
-                      )}
-                    >
-                      {k}
-                    </span>
-                  ))
-                ) : (
+            </span>
+          </motion.button>
+        ) : (
+          <motion.div
+            key="recording"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className={cn(
+              'h-full w-full flex items-center gap-2 px-2 rounded-lg border',
+              isDarkMode ? 'bg-gray-900 border-blue-500/50' : 'bg-white border-blue-500/50',
+            )}
+          >
+            <div className="flex-1 flex items-center justify-center gap-1 min-w-0">
+              {tempShortcut.length > 0 ? (
+                tempShortcut.map((k, i) => (
                   <span
+                    key={i}
                     className={cn(
-                      'text-[10px] italic',
-                      isDarkMode ? 'text-gray-600' : 'text-gray-400',
+                      'text-[10px] font-bold px-1 py-0.5 rounded border',
+                      isDarkMode
+                        ? 'bg-gray-800 border-gray-600 text-white'
+                        : 'bg-gray-100 border-gray-300 text-gray-800',
                     )}
                   >
-                    {t('profile.shortcut.current')}...
+                    {k}
                   </span>
+                ))
+              ) : (
+                <span
+                  className={cn(
+                    'text-[10px] animate-pulse',
+                    isDarkMode ? 'text-blue-400' : 'text-blue-600',
+                  )}
+                >
+                  {t('profile.shortcut.recording')}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-1 flex-shrink-0">
+              <button
+                onClick={handleCancel}
+                className={cn(
+                  'p-1 rounded transition-colors cursor-pointer',
+                  isDarkMode
+                    ? 'hover:bg-gray-800 text-gray-400 hover:text-white'
+                    : 'hover:bg-gray-100 text-gray-500 hover:text-gray-900',
                 )}
-              </div>
-
-              <div className="flex w-full items-center gap-2 mt-1">
-                <button
-                  onClick={cancelRecording}
-                  className={cn(
-                    'flex-1 flex items-center justify-center gap-1 py-1 rounded text-[10px] font-medium transition-colors',
-                    isDarkMode
-                      ? 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900',
-                  )}
-                >
-                  <X className="w-3 h-3" />
-                  {t('profile.shortcut.cancel')}
-                </button>
-                <button
-                  onClick={saveShortcut}
-                  disabled={tempShortcut.length === 0 || isLoading}
-                  className={cn(
-                    'flex-1 flex items-center justify-center gap-1 py-1 rounded text-[10px] font-medium transition-colors',
-                    tempShortcut.length > 0
-                      ? isDarkMode
-                        ? 'bg-blue-600 text-white hover:bg-blue-500'
-                        : 'bg-black text-white hover:bg-gray-800'
-                      : 'opacity-50 cursor-not-allowed',
-                    isDarkMode ? 'bg-gray-800 text-gray-500' : 'bg-gray-200 text-gray-400',
-                  )}
-                >
-                  {isLoading ? (
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                  ) : (
-                    <Check className="w-3 h-3" />
-                  )}
-                  {t('profile.shortcut.save')}
-                </button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-    </motion.div>
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={!canSave}
+                className={cn(
+                  'p-1 rounded transition-colors cursor-pointer',
+                  canSave
+                    ? isDarkMode
+                      ? 'bg-blue-600 text-white hover:bg-blue-500'
+                      : 'bg-black text-white hover:bg-gray-800'
+                    : isDarkMode
+                      ? 'bg-gray-800 text-gray-600 cursor-not-allowed'
+                      : 'bg-gray-200 text-gray-400 cursor-not-allowed',
+                )}
+              >
+                {isLoading ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Check className="w-3.5 h-3.5" />
+                )}
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   )
 }

@@ -107,7 +107,7 @@ body {
     system-ui,
     -apple-system,
     sans-serif;
-  background-color: var(--bready-bg);
+  background-color: transparent;
   color: var(--bready-text);
   font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   text-rendering: optimizeLegibility;

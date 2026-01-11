@@ -17,7 +17,7 @@ import {
   TrendingUp,
   Users,
 } from 'lucide-react'
-import { type Preparation } from '../lib/supabase'
+import { type Preparation } from '../lib/api-client'
 import { useI18n } from '../contexts/I18nContext'
 import { Modal } from './ui/Modal'
 

@@ -72,7 +72,7 @@ export const FEATURE_DEFAULTS = {
 export const AI_DEFAULTS = {
   provider: 'doubao' as 'gemini' | 'doubao',
   doubao: {
-    chatModel: 'doubao-seed-1-6-flash-250828',
+    chatModel: 'doubao-seed-1-6-lite-251015',
     asrResourceId: 'volc.seedasr.sauc.duration',
   },
 }

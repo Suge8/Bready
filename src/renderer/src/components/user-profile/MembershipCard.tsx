@@ -3,7 +3,7 @@ import { motion, useSpring, useTransform } from 'framer-motion'
 import { Clock, Calendar, TrendingUp } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { useI18n } from '../../contexts/I18nContext'
-import { membershipService, type UserProfile } from '../../lib/supabase'
+import { membershipService, type UserProfile } from '../../lib/api-client'
 import { MembershipSkeleton } from './SkeletonLoaders'
 
 interface MembershipCardProps {

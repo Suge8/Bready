@@ -323,6 +323,69 @@ export class AuthService {
       client.release()
     }
   }
+
+  static async signInOrCreateByGoogle(
+    googleId: string,
+    email: string,
+    name: string,
+    avatarUrl: string,
+  ): Promise<{ user: UserProfile; token: string }> {
+    const client = await pool.connect()
+    try {
+      await client.query('BEGIN')
+
+      let result = await client.query('SELECT * FROM user_profiles WHERE google_id = $1', [
+        googleId,
+      ])
+      let user: any
+
+      if (result.rows.length === 0) {
+        const existingEmail = await client.query('SELECT * FROM user_profiles WHERE email = $1', [
+          email,
+        ])
+        if (existingEmail.rows.length > 0) {
+          user = existingEmail.rows[0]
+          await client.query(
+            `UPDATE user_profiles SET google_id = $2, avatar_url = $3, updated_at = NOW() WHERE id = $1`,
+            [user.id, googleId, avatarUrl || user.avatar_url],
+          )
+          user.google_id = googleId
+        } else {
+          const insertResult = await client.query(
+            `INSERT INTO user_profiles (google_id, email, full_name, avatar_url, password_hash) 
+             VALUES ($1, $2, $3, $4, '') 
+             RETURNING *`,
+            [googleId, email, name, avatarUrl],
+          )
+          user = insertResult.rows[0]
+        }
+      } else {
+        user = result.rows[0]
+        await client.query(
+          `UPDATE user_profiles SET full_name = $2, avatar_url = $3, updated_at = NOW() WHERE id = $1`,
+          [user.id, name, avatarUrl],
+        )
+        user.full_name = name
+        user.avatar_url = avatarUrl
+      }
+
+      await client.query('DELETE FROM user_sessions WHERE user_id = $1', [user.id])
+      const token = this.generateToken(user.id)
+      await client.query(
+        'INSERT INTO user_sessions (user_id, token, expires_at) VALUES ($1, $2, $3)',
+        [user.id, token, new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)],
+      )
+
+      await client.query('COMMIT')
+      delete user.password_hash
+      return { user, token }
+    } catch (error) {
+      await client.query('ROLLBACK')
+      throw error
+    } finally {
+      client.release()
+    }
+  }
 }
 
 export async function initializeDatabase(): Promise<void> {

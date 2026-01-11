@@ -5,7 +5,7 @@ import {
   ArrowRight,
   Plus,
   Sparkles,
-  UserCircle,
+  UserRound,
   Trash2,
   FileText,
   Users,
@@ -13,6 +13,9 @@ import {
   Briefcase,
 } from 'lucide-react'
 import logoImage from '../assets/logo.png'
+import oppoSansFont from '../assets/fonts/OPPOSans-Regular.woff2'
+import dingTalkJinBuTiFont from '../assets/fonts/DingTalk-JinBuTi.woff2'
+import dingTalkSansFont from '../assets/fonts/DingTalk-Sans.woff2'
 import SelectPreparationModal from './SelectPreparationModal'
 import AllPreparationsModal from './AllPreparationsModal'
 import UserProfileModal from './user-profile/UserProfileModal'
@@ -22,17 +25,21 @@ import EditPreparationModal from './EditPreparationModal'
 import CreatePreparationTypeModal, { type PreparationType } from './CreatePreparationTypeModal'
 import EditSalesPreparationModal from './EditSalesPreparationModal'
 import EditMeetingPreparationModal from './EditMeetingPreparationModal'
-import { AiConfigAlert } from './AiConfigAlert'
-import { preparationService, settingsService, type Preparation } from '../lib/supabase'
+
+import PermissionsSetup from './PermissionsSetup'
+import { PreparationCardSkeleton } from './ui/skeleton'
+import { preparationService, type Preparation } from '../lib/api-client'
 import { cn } from '../lib/utils'
 import { useAuth } from '../contexts/AuthContext'
 import { useI18n } from '../contexts/I18nContext'
 import { useTheme } from './ui/theme-provider'
+import { useToast } from '../contexts/ToastContext'
 
 interface MainPageProps {
   preparations: Preparation[]
   setPreparations: React.Dispatch<React.SetStateAction<Preparation[]>>
   onReloadData: () => Promise<void>
+  isLoading?: boolean
 }
 
 // 准备项卡片图标映射
@@ -108,11 +115,48 @@ const getCardVisualLayer = (index: number, isDark: boolean) => {
   return layers[index % layers.length]
 }
 
-const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onReloadData }) => {
+const FontStyles = () => {
+  return (
+    <style>{`
+      @font-face {
+        font-family: 'OPPOSans';
+        src: url('${oppoSansFont}') format('woff2');
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'DingTalkJinBuTi';
+        src: url('${dingTalkJinBuTiFont}') format('woff2');
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'DingTalkSans';
+        src: url('${dingTalkSansFont}') format('woff2');
+        font-display: swap;
+      }
+      .font-cn {
+        font-family: 'OPPOSans', 'Inter', system-ui, sans-serif !important;
+      }
+      .font-logo {
+        font-family: 'DingTalkJinBuTi', 'OPPOSans', sans-serif !important;
+      }
+      .font-logo-en {
+        font-family: 'DingTalkSans', 'Inter', sans-serif !important;
+      }
+    `}</style>
+  )
+}
+
+const MainPage: React.FC<MainPageProps> = ({
+  preparations,
+  setPreparations,
+  onReloadData,
+  isLoading = false,
+}) => {
   const navigate = useNavigate()
   const { profile } = useAuth()
   const { t, list } = useI18n()
   const { resolvedTheme } = useTheme()
+  const { showToast } = useToast()
   const [showSelectModal, setShowSelectModal] = useState(false)
   const [showAllPreparationsModal, setShowAllPreparationsModal] = useState(false)
   const [showUserProfileModal, setShowUserProfileModal] = useState(false)
@@ -129,27 +173,18 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
   const [editingMeetingPreparation, setEditingMeetingPreparation] = useState<
     Preparation | null | undefined
   >(undefined)
-  const [showAiConfigAlert, setShowAiConfigAlert] = useState(false)
+  const [showPermissionsSetup, setShowPermissionsSetup] = useState(false)
+  const [pendingCollaboration, setPendingCollaboration] = useState<{
+    preparation: Preparation | null
+    language: string
+    purpose: string
+  } | null>(null)
 
   const controls = useAnimation()
 
   useEffect(() => {
     controls.start('visible')
   }, [controls])
-
-  useEffect(() => {
-    const checkAiConfig = async () => {
-      try {
-        const status = await settingsService.checkAiConfig()
-        if (!status.configured) {
-          setShowAiConfigAlert(true)
-        }
-      } catch (error) {
-        console.error('Failed to check AI config:', error)
-      }
-    }
-    checkAiConfig()
-  }, [])
 
   const slogans = list('slogans.main')
   const currentSlogan = React.useMemo(() => {
@@ -267,25 +302,12 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
 
   return (
     <motion.div
-      className={`h-screen ${getBackgroundClasses()} text-[var(--bready-text)] flex flex-col transition-colors duration-500 relative`}
+      className={`h-screen font-cn ${getBackgroundClasses()} text-[var(--bready-text)] flex flex-col transition-colors duration-500 relative`}
       initial="hidden"
       animate={controls}
       variants={pageVariants}
     >
-      {showAiConfigAlert && (
-        <AiConfigAlert
-          isAdmin={
-            profile?.role === 'admin' ||
-            profile?.user_level === '管理' ||
-            profile?.user_level === '超级'
-          }
-          onClose={() => setShowAiConfigAlert(false)}
-          onGoToSettings={() => {
-            setShowAiConfigAlert(false)
-            setShowAdminPanelModal(true)
-          }}
-        />
-      )}
+      <FontStyles />
       {/* 装饰性背景元素 */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         {/* 细微的噪点纹理 */}
@@ -309,8 +331,7 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
               className="w-9 h-9 -my-4 rounded-xl object-contain"
             />
             <h1
-              className={`text-xl font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-gray-900'}`}
-              style={{ fontFamily: '"PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif' }}
+              className={`text-xl font-bold tracking-tight font-logo ${isDarkMode ? 'text-white' : 'text-gray-900'}`}
             >
               面宝
             </h1>
@@ -329,7 +350,7 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
                   className="w-8 h-8 object-cover rounded-full"
                 />
               ) : (
-                <UserCircle className={`w-7 h-7 ${isDarkMode ? 'text-gray-500' : 'text-black'}`} />
+                <UserRound className={`w-7 h-7 ${isDarkMode ? 'text-gray-500' : 'text-black'}`} />
               )}
             </button>
           </motion.div>
@@ -413,7 +434,13 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
 
               {/* 准备项列表 */}
               <div>
-                {filteredPreparations.length === 0 ? (
+                {isLoading ? (
+                  <div className="grid grid-cols-4 gap-3">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                      <PreparationCardSkeleton key={i} />
+                    ))}
+                  </div>
+                ) : filteredPreparations.length === 0 ? (
                   <motion.div
                     className={`p-8 ${isDarkMode ? 'bg-gray-900/60 border-gray-700/40' : 'bg-white/80 border-gray-200/60'} border rounded-2xl flex flex-col items-center justify-center text-center relative overflow-hidden group shadow-sm`}
                     whileHover={{ scale: 1.01 }}
@@ -623,6 +650,32 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
 
               try {
                 if (window.bready) {
+                  const permissions = await window.bready.checkPermissions()
+                  const corePermissionsGranted =
+                    permissions.screenRecording.granted && permissions.microphone.granted
+
+                  if (!corePermissionsGranted) {
+                    setPendingCollaboration({ preparation, language, purpose })
+                    setShowPermissionsSetup(true)
+                    setShowSelectModal(false)
+                    setIsEnteringMode(false)
+                    return
+                  }
+
+                  const aiStatus = await window.bready.checkAiReady()
+                  if (!aiStatus.ready) {
+                    const isAdmin =
+                      profile?.role === 'admin' ||
+                      profile?.user_level === '管理' ||
+                      profile?.user_level === '超级'
+                    showToast(
+                      isAdmin ? t('alerts.aiNotConfigured') : t('alerts.serverError'),
+                      'error',
+                    )
+                    setIsEnteringMode(false)
+                    return
+                  }
+
                   const success = await window.bready.enterCollaborationMode()
                   console.log('Enter collaboration mode result:', success)
                   if (!success) {
@@ -659,15 +712,44 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
       )}
 
       {/* 个人中心模态窗 */}
-      {showUserProfileModal && (
-        <UserProfileModal
-          onClose={() => setShowUserProfileModal(false)}
-          onOpenAdminPanel={() => {
-            setShowUserProfileModal(false)
-            setShowAdminPanelModal(true)
-          }}
-        />
-      )}
+      <UserProfileModal
+        isOpen={showUserProfileModal}
+        onClose={() => setShowUserProfileModal(false)}
+        onOpenAdminPanel={() => {
+          setShowUserProfileModal(false)
+          setShowAdminPanelModal(true)
+        }}
+      />
+
+      {/* 权限设置模态窗 */}
+      <PermissionsSetup
+        isOpen={showPermissionsSetup}
+        onClose={() => {
+          setShowPermissionsSetup(false)
+          setPendingCollaboration(null)
+        }}
+        onComplete={async () => {
+          setShowPermissionsSetup(false)
+          if (pendingCollaboration && window.bready) {
+            setIsEnteringMode(true)
+            try {
+              const success = await window.bready.enterCollaborationMode()
+              if (success) {
+                await new Promise((resolve) => setTimeout(resolve, 300))
+                navigate('/collaboration')
+              } else {
+                showToast(t('alerts.startCollabFailed'), 'error')
+              }
+            } catch (error) {
+              console.error('Failed to enter collaboration mode:', error)
+              showToast(t('alerts.startCollabFailed'), 'error')
+            } finally {
+              setIsEnteringMode(false)
+              setPendingCollaboration(null)
+            }
+          }
+        }}
+      />
 
       {/* 后台模态窗 */}
       {showAdminPanelModal && (

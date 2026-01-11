@@ -4,6 +4,12 @@ module.exports = {
   content: ['./src/renderer/src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['OPPOSans', 'Inter', 'system-ui', 'sans-serif'],
+        cn: ['OPPOSans', 'Inter', 'system-ui', 'sans-serif'],
+        logo: ['DingTalkJinBuTi', 'OPPOSans', 'sans-serif'],
+        'logo-en': ['DingTalkSans', 'Inter', 'sans-serif'],
+      },
       colors: {
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',

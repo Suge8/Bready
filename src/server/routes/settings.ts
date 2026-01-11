@@ -375,5 +375,138 @@ router.put(
   },
 )
 
-export { getSetting }
+router.get(
+  '/login-config',
+  authMiddleware,
+  adminMiddleware,
+  async (_req: AuthenticatedRequest, res) => {
+    try {
+      const [emailEnabled, phoneEnabled, wechatEnabled, googleEnabled] = await Promise.all([
+        getSetting('login_email_enabled'),
+        getSetting('login_phone_enabled'),
+        getSetting('login_wechat_enabled'),
+        getSetting('login_google_enabled'),
+      ])
+
+      const [googleClientId, googleClientSecret, googleRedirectUri] = await Promise.all([
+        getSetting('google_login_client_id'),
+        getSetting('google_login_client_secret'),
+        getSetting('google_login_redirect_uri'),
+      ])
+
+      const [wechatAppId, wechatAppSecret, wechatRedirectUri] = await Promise.all([
+        getSetting('wechat_login_app_id'),
+        getSetting('wechat_login_app_secret'),
+        getSetting('wechat_login_redirect_uri'),
+      ])
+
+      res.json({
+        data: {
+          email: { enabled: emailEnabled !== 'false' },
+          phone: { enabled: phoneEnabled === 'true' },
+          wechat: {
+            enabled: wechatEnabled === 'true',
+            appId: wechatAppId ? '••••••••' : '',
+            appSecret: wechatAppSecret ? '••••••••' : '',
+            redirectUri: wechatRedirectUri || '',
+            hasCredentials: !!(wechatAppId && wechatAppSecret),
+          },
+          google: {
+            enabled: googleEnabled === 'true',
+            clientId: googleClientId ? '••••••••' : '',
+            clientSecret: googleClientSecret ? '••••••••' : '',
+            redirectUri: googleRedirectUri || '',
+            hasCredentials: !!(googleClientId && googleClientSecret),
+          },
+        },
+      })
+    } catch (error: any) {
+      res.status(400).json({ error: error.message })
+    }
+  },
+)
+
+router.put(
+  '/login-config',
+  authMiddleware,
+  adminMiddleware,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const { phone, wechat, google } = req.body
+      const updates: Promise<void>[] = []
+
+      if (phone?.enabled !== undefined) {
+        updates.push(setSetting('login_phone_enabled', String(phone.enabled), false))
+      }
+
+      if (wechat) {
+        if (wechat.enabled !== undefined) {
+          updates.push(setSetting('login_wechat_enabled', String(wechat.enabled), false))
+        }
+        if (wechat.appId && wechat.appId !== '••••••••') {
+          updates.push(setSetting('wechat_login_app_id', wechat.appId, true))
+        }
+        if (wechat.appSecret && wechat.appSecret !== '••••••••') {
+          updates.push(setSetting('wechat_login_app_secret', wechat.appSecret, true))
+        }
+        if (wechat.redirectUri !== undefined) {
+          updates.push(setSetting('wechat_login_redirect_uri', wechat.redirectUri, false))
+        }
+      }
+
+      if (google) {
+        if (google.enabled !== undefined) {
+          updates.push(setSetting('login_google_enabled', String(google.enabled), false))
+          if (google.enabled) {
+            updates.push(setSetting('login_wechat_enabled', 'false', false))
+          }
+        }
+        if (google.clientId && google.clientId !== '••••••••') {
+          updates.push(setSetting('google_login_client_id', google.clientId, true))
+        }
+        if (google.clientSecret && google.clientSecret !== '••••••••') {
+          updates.push(setSetting('google_login_client_secret', google.clientSecret, true))
+        }
+        if (google.redirectUri !== undefined) {
+          updates.push(setSetting('google_login_redirect_uri', google.redirectUri, false))
+        }
+      }
+
+      if (wechat?.enabled === true) {
+        updates.push(setSetting('login_google_enabled', 'false', false))
+      }
+
+      await Promise.all(updates)
+      res.json({ success: true })
+    } catch (error: any) {
+      res.status(400).json({ success: false, error: error.message })
+    }
+  },
+)
+
+router.get('/login-config-public', async (_req, res) => {
+  try {
+    const [emailEnabled, phoneEnabled, wechatEnabled, googleEnabled] = await Promise.all([
+      getSetting('login_email_enabled'),
+      getSetting('login_phone_enabled'),
+      getSetting('login_wechat_enabled'),
+      getSetting('login_google_enabled'),
+    ])
+
+    res.json({
+      data: {
+        email: emailEnabled !== 'false',
+        phone: phoneEnabled === 'true',
+        wechat: wechatEnabled === 'true',
+        google: googleEnabled === 'true',
+      },
+    })
+  } catch {
+    res.json({
+      data: { email: true, phone: false, wechat: false, google: false },
+    })
+  }
+})
+
+export { getSetting, setSetting }
 export default router

@@ -127,8 +127,8 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = memo(
             </div>
           </motion.div>
 
-          <motion.div variants={itemVariants}>
-            <div className="relative group">
+          <motion.div variants={itemVariants} className="grid grid-cols-2 gap-2">
+            <div className="relative group h-10 flex items-center">
               <div
                 className={cn(
                   'absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none transition-colors duration-200',
@@ -143,7 +143,7 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = memo(
                 value={language}
                 onChange={(e) => setLanguage(e.target.value as typeof language)}
                 className={cn(
-                  'w-full appearance-none pl-8 pr-8 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 cursor-pointer outline-none',
+                  'w-full h-full appearance-none pl-8 pr-8 rounded-lg text-xs font-medium transition-all duration-200 cursor-pointer outline-none',
                   isDarkMode
                     ? 'bg-gray-900/50 border border-gray-800 text-gray-200 hover:bg-gray-800 hover:border-gray-700 focus:ring-1 focus:ring-gray-700'
                     : 'bg-white border border-gray-200 text-gray-900 hover:border-gray-300 hover:bg-gray-50 focus:ring-1 focus:ring-black/5',
@@ -166,9 +166,9 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = memo(
                 <ChevronsUpDown className="w-3.5 h-3.5" />
               </div>
             </div>
-          </motion.div>
 
-          <ShortcutSettings isDarkMode={isDarkMode} variants={itemVariants} />
+            <ShortcutSettings isDarkMode={isDarkMode} />
+          </motion.div>
         </div>
       </motion.div>
     )

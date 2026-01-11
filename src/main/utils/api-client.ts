@@ -110,6 +110,18 @@ export const api = {
         body: JSON.stringify({ code }),
       }),
     getWechatConfigStatus: () => apiRequest('/api/auth/wechat/config-status'),
+    getGoogleAuthUrl: () => apiRequest('/api/auth/google/auth-url'),
+    googleCallback: (code: string) =>
+      apiRequest('/api/auth/google/callback', {
+        method: 'POST',
+        body: JSON.stringify({ code }),
+      }),
+    getGoogleConfigStatus: () => apiRequest('/api/auth/google/config-status'),
+    forgotPassword: (email: string) =>
+      apiRequest('/api/auth/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      }),
   },
 
   user: {
@@ -226,6 +238,17 @@ export const api = {
       }),
     updateWechatLoginConfig: (token: string, config: any) =>
       apiRequest('/api/settings/wechat-login-config', {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify(config),
+      }),
+    getLoginConfigPublic: () => apiRequest('/api/settings/login-config-public'),
+    getLoginConfig: (token: string) =>
+      apiRequest('/api/settings/login-config', {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    updateLoginConfig: (token: string, config: any) =>
+      apiRequest('/api/settings/login-config', {
         method: 'PUT',
         headers: { Authorization: `Bearer ${token}` },
         body: JSON.stringify(config),

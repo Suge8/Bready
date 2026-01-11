@@ -74,12 +74,12 @@ bready/
 
 ## 技术债务
 
-| 文件                    | 问题                      | 优先级 |
-| ----------------------- | ------------------------- | ------ |
-| `CollaborationMode.tsx` | 1351 行，25+ useState     | 高     |
-| `supabase.ts`           | 命名误导，实为 IPC 客户端 | 中     |
-| `preload/index.ts`      | 大量 `: any` 类型         | 中     |
-| `ipc-handlers.ts`       | 重构过渡态                | 低     |
+| 文件                    | 问题                  | 优先级 |
+| ----------------------- | --------------------- | ------ |
+| `CollaborationMode.tsx` | 1351 行，25+ useState | 高     |
+
+| `preload/index.ts` | 大量 `: any` 类型 | 中 |
+| `ipc-handlers.ts` | 重构过渡态 | 低 |
 
 ## 测试
 

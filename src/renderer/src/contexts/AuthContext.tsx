@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
-import { authService, userProfileService, UserProfile } from '../lib/supabase'
+import { authService, userProfileService, UserProfile } from '../lib/api-client'
 
 type SupabaseUser = {
   id: string
@@ -16,9 +16,9 @@ interface AuthContextType {
   session: SupabaseSession | null
   profile: UserProfile | null
   loading: boolean
-  signIn: (email: string, password: string) => Promise<any>
+  signIn: (email: string, password: string, delay?: number) => Promise<any>
   signUp: (email: string, password: string, userData?: { full_name?: string }) => Promise<any>
-  signInWithGoogle: () => Promise<any>
+  signInWithGoogle: (code: string) => Promise<any>
   signInWithPhone: (phone: string) => Promise<any>
   verifyOtp: (phone: string, token: string) => Promise<any>
   signOut: () => Promise<any>
@@ -149,13 +149,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }
 
-  const signIn = async (email: string, password: string) => {
-    setLoading(true)
+  const signIn = async (email: string, password: string, delay?: number) => {
     try {
-      const result = await authService.signInWithEmail(email, password)
+      const deferCommit = !!(delay && delay > 0)
+      const result = await authService.signInWithEmail(email, password, deferCommit)
+
+      if (!result.error && result.data.session && deferCommit) {
+        setTimeout(() => {
+          authService.commitSession(result.data.session)
+        }, delay)
+      }
+
       return result
-    } finally {
-      setLoading(false)
+    } catch (error) {
+      throw error
     }
   }
 
@@ -169,10 +176,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = async (code: string) => {
     setLoading(true)
     try {
-      const result = await authService.signInWithGoogle()
+      const result = await authService.signInWithGoogle(code)
       return result
     } finally {
       setLoading(false)

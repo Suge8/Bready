@@ -1,21 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import {
-  Send,
-  RefreshCw,
-  Mic,
-  Volume2,
-  X,
-  AlertCircle,
-  CheckCircle,
-  XCircle,
-  Loader2,
-  Wifi,
-  WifiOff,
-  Check,
-  DoorOpen,
-  User,
-} from 'lucide-react'
+import { Send, Mic, Volume2, X, AlertCircle, Loader2, Check, DoorOpen, User } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Button } from './ui/button'
@@ -27,7 +12,7 @@ import { useToast } from '../contexts/ToastContext'
 import { Modal } from './ui/Modal'
 import CollaborationHeader from './collaboration/CollaborationHeader'
 import CollaborationSidebar from './collaboration/CollaborationSidebar'
-import { usageRecordService } from '../lib/supabase'
+import { usageRecordService } from '../lib/api-client'
 import { useAuth } from '../contexts/AuthContext'
 
 const getDynamicFontSize = (textLength: number, isInput: boolean = false) => {
@@ -217,7 +202,6 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
     message: string
     onConfirm: () => void
   } | null>(null)
-  const [showPermissionsModal, setShowPermissionsModal] = useState(false)
   const [copySuccess, setCopySuccess] = useState(false)
   const [currentMicrophoneDeviceId, setCurrentMicrophoneDeviceId] = useState<string>('')
 
@@ -243,6 +227,7 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
   const sessionReadyRef = useRef(false)
   const audioStartPendingRef = useRef(false)
   const audioStartedRef = useRef(false)
+  const isUserExitingRef = useRef(false)
   const pendingUserInputRef = useRef<{ content: string; source: 'text' } | null>(null)
   const currentVoiceInputRef = useRef('')
   const currentAIResponseRef = useRef('')
@@ -251,14 +236,6 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const rootRef = useRef<HTMLDivElement>(null)
   const currentMicrophoneDeviceIdRef = useRef('')
-
-  // 权限状态
-  const [systemPermissions, setSystemPermissions] = useState({
-    screenRecording: { granted: false, canRequest: true, message: '' },
-    microphone: { granted: false, canRequest: true, message: '' },
-    apiKey: { granted: false, canRequest: true, message: '' },
-    audioDevice: { granted: false, canRequest: true, message: '' },
-  })
 
   // 音频模式选项
   const audioModeOptions = [
@@ -275,17 +252,6 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
       description: t('collaboration.audioMode.microphone.description'),
     },
   ]
-
-  // 状态图标
-  const getStatusIcon = (status: any) => {
-    if (status.granted) {
-      return <CheckCircle className="w-5 h-5 text-green-500" />
-    } else if (status.canRequest) {
-      return <AlertCircle className="w-5 h-5 text-yellow-500" />
-    } else {
-      return <XCircle className="w-5 h-5 text-red-500" />
-    }
-  }
 
   const handleAudioModeChange = async (newMode: 'system' | 'microphone') => {
     console.log('🎧 切换音频模式:', currentAudioMode, '->', newMode)
@@ -366,43 +332,14 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
     [currentAudioMode, isConnected, t, showToast],
   )
 
-  // 权限检查
-  const checkPermissions = async () => {
+  const startCollaboration = async () => {
     try {
-      console.log('🔍 开始检查系统权限...')
-      setStatus(t('collaboration.status.checkingPermissions'))
-
-      const permissions = await window.bready.checkPermissions()
-      console.log('🔍 权限检查结果:', permissions)
-
-      setSystemPermissions(permissions)
-
-      // 检查所有权限是否已授予
-      const allGranted =
-        permissions.screenRecording.granted &&
-        permissions.microphone.granted &&
-        permissions.apiKey.granted &&
-        permissions.audioDevice.granted
-
-      if (!allGranted) {
-        console.log('❌ 权限未完全授予')
-        setStatus(t('collaboration.status.permissionsIncomplete'))
-        setCurrentError({
-          type: 'permissions-not-set',
-          message: t('collaboration.errors.permissionsHint'),
-        })
-        setIsInitializing(false)
-        return
-      }
-
-      console.log('✅ 所有权限已授予，初始化 AI API')
+      console.log('🚀 开始初始化协作模式...')
       setStatus(t('collaboration.status.connecting'))
-
-      // 初始化 AI API
       await initializeAI()
     } catch (error) {
-      console.error('权限检查失败:', error)
-      setStatus(t('collaboration.status.permissionsFailed'))
+      console.error('初始化失败:', error)
+      setStatus(t('collaboration.status.initFailed'))
       setCurrentError({
         type: 'unknown-error',
         message: `${t('collaboration.status.permissionsFailed')}: ${error instanceof Error ? error.message : String(error)}`,
@@ -536,14 +473,6 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
     }
   }
 
-  const openSystemPreferences = async (pane: string) => {
-    try {
-      await window.bready.openSystemPreferences(pane)
-    } catch (error) {
-      console.error('打开系统偏好设置失败:', error)
-    }
-  }
-
   const handleSendMessage = async () => {
     if (!inputText.trim()) return
 
@@ -615,6 +544,7 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
   const handleExitConfirm = async () => {
     setShowExitConfirm(false)
     setIsExiting(true)
+    isUserExitingRef.current = true
 
     await new Promise((resolve) => setTimeout(resolve, 400))
 
@@ -647,10 +577,9 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
 
   // 组件挂载时初始化
   useEffect(() => {
-    // 只在第一次调用时检查权限（防止 React StrictMode 重复调用）
     if (!hasInitialized.current) {
       hasInitialized.current = true
-      checkPermissions()
+      startCollaboration()
     }
 
     // 设置事件监听器（每次 mount 都需要设置）
@@ -789,10 +718,13 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
       sessionReadyRef.current = false
       audioStartPendingRef.current = false
       audioStartedRef.current = false
-      showToast(t('collaboration.toasts.audioInterrupted'), 'error')
-      setTimeout(() => {
-        onExit()
-      }, 1500)
+
+      if (!isUserExitingRef.current) {
+        showToast(t('collaboration.toasts.audioInterrupted'), 'error')
+        setTimeout(() => {
+          onExit()
+        }, 1500)
+      }
     })
 
     // 监听音频设备变更事件
@@ -893,7 +825,6 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
         showAudioModeDropdown={showAudioModeDropdown}
         onToggleAudioModeDropdown={() => setShowAudioModeDropdown(!showAudioModeDropdown)}
         onAudioModeChange={handleAudioModeChange}
-        onOpenPermissions={() => setShowPermissionsModal(true)}
         onExit={() => setShowExitConfirm(true)}
         currentMicrophoneDeviceId={currentMicrophoneDeviceId}
         onMicrophoneDeviceChange={handleMicrophoneDeviceChange}
@@ -1188,184 +1119,6 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
                   {t('collaboration.exit.confirm')}
                 </button>
               </motion.div>
-            </motion.div>
-          </Modal>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {showPermissionsModal && (
-          <Modal
-            isOpen
-            onClose={() => setShowPermissionsModal(false)}
-            size="sm"
-            className="max-w-md"
-          >
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.05 }}
-                className="mb-6"
-              >
-                <h2 className="text-xl font-bold text-[var(--bready-text)]">
-                  {t('collaboration.permissions.title')}
-                </h2>
-              </motion.div>
-
-              <div className="space-y-3">
-                <motion.div
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.1 }}
-                  onClick={() =>
-                    !systemPermissions.screenRecording.granted &&
-                    openSystemPreferences('screen-recording')
-                  }
-                  className={`group relative overflow-hidden rounded-xl p-4 transition-all duration-300 ${
-                    !systemPermissions.screenRecording.granted
-                      ? 'cursor-pointer hover:scale-[1.02]'
-                      : ''
-                  } ${
-                    systemPermissions.screenRecording.granted
-                      ? 'bg-emerald-500/10 border border-emerald-500/20'
-                      : 'bg-[var(--bready-surface-2)] border border-[var(--bready-border)] hover:border-amber-500/30'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                        systemPermissions.screenRecording.granted
-                          ? 'bg-emerald-500/20'
-                          : 'bg-[var(--bready-surface-3)]'
-                      }`}
-                    >
-                      <Volume2
-                        className={`w-5 h-5 ${
-                          systemPermissions.screenRecording.granted
-                            ? 'text-emerald-500'
-                            : 'text-[var(--bready-text-muted)]'
-                        }`}
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium text-[var(--bready-text)]">
-                          {t('collaboration.permissions.systemAudio')}
-                        </span>
-                        {getStatusIcon(systemPermissions.screenRecording)}
-                      </div>
-                      <p className="text-xs text-[var(--bready-text-muted)] mt-0.5">
-                        {t('collaboration.permissions.systemAudioDesc')}
-                      </p>
-                    </div>
-                  </div>
-                </motion.div>
-
-                <motion.div
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.15 }}
-                  onClick={() =>
-                    !systemPermissions.microphone.granted && openSystemPreferences('microphone')
-                  }
-                  className={`group relative overflow-hidden rounded-xl p-4 transition-all duration-300 ${
-                    !systemPermissions.microphone.granted ? 'cursor-pointer hover:scale-[1.02]' : ''
-                  } ${
-                    systemPermissions.microphone.granted
-                      ? 'bg-emerald-500/10 border border-emerald-500/20'
-                      : 'bg-[var(--bready-surface-2)] border border-[var(--bready-border)] hover:border-amber-500/30'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                        systemPermissions.microphone.granted
-                          ? 'bg-emerald-500/20'
-                          : 'bg-[var(--bready-surface-3)]'
-                      }`}
-                    >
-                      <Mic
-                        className={`w-5 h-5 ${
-                          systemPermissions.microphone.granted
-                            ? 'text-emerald-500'
-                            : 'text-[var(--bready-text-muted)]'
-                        }`}
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium text-[var(--bready-text)]">
-                          {t('collaboration.permissions.microphone')}
-                        </span>
-                        {getStatusIcon(systemPermissions.microphone)}
-                      </div>
-                      <p className="text-xs text-[var(--bready-text-muted)] mt-0.5">
-                        {t('collaboration.permissions.microphoneDesc')}
-                      </p>
-                    </div>
-                  </div>
-                </motion.div>
-
-                <motion.div
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.2 }}
-                  className={`group relative overflow-hidden rounded-xl p-4 transition-all duration-300 ${
-                    isConnected
-                      ? 'bg-emerald-500/10 border border-emerald-500/20'
-                      : 'bg-red-500/10 border border-red-500/20'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                        isConnected ? 'bg-emerald-500/20' : 'bg-red-500/20'
-                      }`}
-                    >
-                      {isConnected ? (
-                        <Wifi className="w-5 h-5 text-emerald-500" />
-                      ) : (
-                        <WifiOff className="w-5 h-5 text-red-500" />
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium text-[var(--bready-text)]">
-                          {t('collaboration.permissions.network')}
-                        </span>
-                        {isConnected ? (
-                          <CheckCircle className="w-5 h-5 text-emerald-500" />
-                        ) : (
-                          <XCircle className="w-5 h-5 text-red-500" />
-                        )}
-                      </div>
-                      <p className="text-xs text-[var(--bready-text-muted)] mt-0.5">
-                        {isConnected
-                          ? t('collaboration.permissions.networkConnectedDesc')
-                          : t('collaboration.permissions.networkDisconnectedDesc')}
-                      </p>
-                    </div>
-                  </div>
-                  {!isConnected && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      className="mt-3"
-                    >
-                      <Button
-                        onClick={handleReconnect}
-                        variant="outline"
-                        size="sm"
-                        className="w-full"
-                      >
-                        <RefreshCw className="w-4 h-4 mr-2" />
-                        {t('collaboration.permissions.reconnect')}
-                      </Button>
-                    </motion.div>
-                  )}
-                </motion.div>
-              </div>
             </motion.div>
           </Modal>
         )}

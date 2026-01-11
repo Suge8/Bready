@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Pencil, Check, X, Loader2 } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { useI18n } from '../../contexts/I18nContext'
-import { type UserProfile } from '../../lib/supabase'
+import { type UserProfile } from '../../lib/api-client'
 import { Button } from '../ui/button'
 import { AvatarDisplay, AvatarSelector } from './AvatarSelector'
 

@@ -50,7 +50,9 @@ export async function checkAiConfigStatus(): Promise<{
   missingFields: string[]
 }> {
   const result = await api.settings.checkAiConfig()
+  console.log('🔍 checkAiConfig API 返回:', JSON.stringify(result))
   if (result.error) {
+    console.log('❌ checkAiConfig 错误:', result.error)
     return { configured: false, provider: '', missingFields: ['unknown'] }
   }
   return result as {

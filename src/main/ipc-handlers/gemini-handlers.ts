@@ -1,6 +1,18 @@
 import { ipcMain } from 'electron'
-import { getAiProvider, getAiService, initializeAiService } from '../ai-service'
+import { getAiProvider, getAiService, initializeAiService, checkAiReady } from '../ai-service'
 import type { AnalyzePreparationRequest, ExtractFileContentRequest } from '../../shared/ipc'
+
+// 检查 AI 服务是否就绪
+ipcMain.handle('check-ai-ready', async () => {
+  try {
+    const result = await checkAiReady()
+    console.log('🔍 AI 就绪检查结果:', result)
+    return result
+  } catch (error) {
+    console.error('❌ AI 就绪检查失败:', error)
+    return { ready: false, provider: '', missingFields: ['unknown'] }
+  }
+})
 
 // 初始化 AI 会话
 ipcMain.handle(

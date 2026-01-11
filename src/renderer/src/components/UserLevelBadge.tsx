@@ -1,7 +1,7 @@
 import React, { memo } from 'react'
 import { User, Crown, Star, Shield, Zap } from 'lucide-react'
 import { cn } from '../lib/utils'
-import { UserLevel } from '../lib/supabase'
+import { UserLevel } from '../lib/api-client'
 
 interface UserLevelBadgeProps {
   level: UserLevel

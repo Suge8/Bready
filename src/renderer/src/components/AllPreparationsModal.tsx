@@ -2,7 +2,7 @@ import React from 'react'
 import { motion } from 'framer-motion'
 import { Calendar, Trash2, FileText, Code, Users, Briefcase } from 'lucide-react'
 import { Modal } from './ui/Modal'
-import { type Preparation } from '../lib/supabase'
+import { type Preparation } from '../lib/api-client'
 import { useI18n } from '../contexts/I18nContext'
 import { useTheme } from './ui/theme-provider'
 

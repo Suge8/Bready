@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { usageRecordService, type InterviewUsageRecord } from '../../../lib/supabase'
+import { usageRecordService, type InterviewUsageRecord } from '../../../lib/api-client'
 import { useAuth } from '../../../contexts/AuthContext'
 
 interface UseUsageHistoryReturn {

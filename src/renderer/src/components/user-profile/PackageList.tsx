@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Zap, Sparkles, Crown, Rocket } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { useI18n } from '../../contexts/I18nContext'
-import { membershipService, type MembershipPackage, type UserLevel } from '../../lib/supabase'
+import { membershipService, type MembershipPackage, type UserLevel } from '../../lib/api-client'
 import { PackageListSkeleton } from './SkeletonLoaders'
 
 interface PackageListProps {

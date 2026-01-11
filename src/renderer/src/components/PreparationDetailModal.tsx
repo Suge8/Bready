@@ -13,7 +13,7 @@ import {
   Sparkles,
 } from 'lucide-react'
 import { Button } from './ui/button'
-import { preparationService, type Preparation } from '../lib/supabase'
+import { preparationService, type Preparation } from '../lib/api-client'
 import { useI18n } from '../contexts/I18nContext'
 import { useToast } from '../contexts/ToastContext'
 import { useTheme } from './ui/theme-provider'

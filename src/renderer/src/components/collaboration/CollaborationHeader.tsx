@@ -1,6 +1,6 @@
 import React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Settings } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import MicrophoneSelector from './MicrophoneSelector'
 import { useTheme } from '../ui/theme-provider'
@@ -22,7 +22,6 @@ interface CollaborationHeaderProps {
   showAudioModeDropdown: boolean
   onToggleAudioModeDropdown: () => void
   onAudioModeChange: (mode: 'system' | 'microphone') => void
-  onOpenPermissions: () => void
   onExit: () => void
   currentMicrophoneDeviceId?: string
   onMicrophoneDeviceChange?: (deviceId: string, label: string) => void
@@ -38,7 +37,6 @@ const CollaborationHeader: React.FC<CollaborationHeaderProps> = ({
   showAudioModeDropdown,
   onToggleAudioModeDropdown,
   onAudioModeChange,
-  onOpenPermissions,
   onExit,
   currentMicrophoneDeviceId,
   onMicrophoneDeviceChange,
@@ -163,13 +161,6 @@ const CollaborationHeader: React.FC<CollaborationHeaderProps> = ({
               )}
             </AnimatePresence>
           </div>
-
-          <button
-            onClick={onOpenPermissions}
-            className="p-2 text-[var(--bready-text-muted)] hover:text-[var(--bready-text)] transition-all duration-300 hover:bg-[var(--bready-surface)]/50 rounded-full cursor-pointer app-no-drag"
-          >
-            <Settings className="w-4 h-4" />
-          </button>
         </div>
       </div>
     </div>

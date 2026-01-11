@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { membershipService, type PurchaseRecord } from '../../../lib/supabase'
+import { membershipService, type PurchaseRecord } from '../../../lib/api-client'
 import { useAuth } from '../../../contexts/AuthContext'
 
 interface UsePurchaseHistoryReturn {

@@ -9,6 +9,7 @@ import './ipc-handlers/permission-handlers'
 import './ipc-handlers/debug-handlers'
 import './ipc-handlers/settings-handlers'
 import './ipc-handlers/payment-handlers'
+import './ipc-handlers/shortcut-handlers'
 
 type PagedRequest = {
   userId: string
@@ -250,6 +251,59 @@ export function setupAuthHandlers() {
       return result.data || { enabled: false }
     } catch {
       return { enabled: false }
+    }
+  })
+
+  ipcMain.handle('auth:google-auth-url', async (event) => {
+    void event
+    try {
+      const result = await api.auth.getGoogleAuthUrl()
+      if (result.error) return { success: false, error: result.error }
+      return { success: true, data: result.data }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle('auth:google-callback', async (event, { code }) => {
+    void event
+    try {
+      const result = await api.auth.googleCallback(code)
+      if (result.error) throw new Error(result.error)
+      return result.data
+    } catch (error: any) {
+      throw new Error(error.message)
+    }
+  })
+
+  ipcMain.handle('auth:google-config-status', async (event) => {
+    void event
+    try {
+      const result = await api.auth.getGoogleConfigStatus()
+      return result.data || { enabled: false }
+    } catch {
+      return { enabled: false }
+    }
+  })
+
+  ipcMain.handle('auth:login-config-public', async (event) => {
+    void event
+    try {
+      const result = await api.settings.getLoginConfigPublic()
+      return result.data || { email: true, phone: false, wechat: false, google: false }
+    } catch {
+      return { email: true, phone: false, wechat: false, google: false }
+    }
+  })
+
+  ipcMain.handle('auth:forgot-password', async (event, { email }) => {
+    void event
+    try {
+      const result = await api.auth.forgotPassword(email)
+      if (result.error) return { success: false, error: result.error }
+      return { success: true }
+    } catch (error: any) {
+      return { success: false, error: error.message }
     }
   })
 }

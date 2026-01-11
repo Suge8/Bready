@@ -13,7 +13,7 @@ import {
 } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { useI18n } from '../../contexts/I18nContext'
-import { type UserProfile } from '../../lib/supabase'
+import { type UserProfile } from '../../lib/api-client'
 import { Button } from '../ui/button'
 
 interface SecuritySettingsProps {

@@ -24,6 +24,7 @@ interface BreadyAPI {
   exitCollaborationMode: () => Promise<boolean>
 
   // AI API（通用，支持多个渠道）
+  checkAiReady: () => Promise<{ ready: boolean; provider: string; missingFields: string[] }>
   initializeAI: (
     apiKey: string,
     customPrompt?: string,
@@ -113,6 +114,7 @@ const breadyAPI: BreadyAPI = {
   exitCollaborationMode: () => ipcRenderer.invoke('exit-collaboration-mode'),
 
   // AI API（通用，支持多个渠道）
+  checkAiReady: () => ipcRenderer.invoke('check-ai-ready'),
   initializeAI: (apiKey, customPrompt = '', profile = 'interview', language = 'cmn-CN') =>
     ipcRenderer.invoke('initialize-ai', apiKey, customPrompt, profile, language),
   reconnectAI: () => ipcRenderer.invoke('reconnect-ai'),

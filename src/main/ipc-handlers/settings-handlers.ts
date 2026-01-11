@@ -109,22 +109,35 @@ ipcMain.handle('settings:update-ai-config', async (_, config: any) => {
   }
 })
 
-ipcMain.handle('settings:test-ai-connection', async (_, provider: 'gemini' | 'doubao') => {
-  try {
-    const result = await serverFetch('/api/ai/test-connection', {
-      method: 'POST',
-      body: { provider },
-    })
+ipcMain.handle(
+  'settings:test-ai-connection',
+  async (
+    _,
+    provider: 'gemini' | 'doubao',
+    testType?: 'chat' | 'asr',
+    config?: {
+      geminiApiKey?: string
+      doubaoChatApiKey?: string
+      doubaoAsrAppId?: string
+      doubaoAsrAccessKey?: string
+    },
+  ) => {
+    try {
+      const result = await serverFetch('/api/ai/test-connection', {
+        method: 'POST',
+        body: { provider, testType, config },
+      })
 
-    if (!result.ok) {
-      return { success: false, error: result.error }
+      if (!result.ok) {
+        return { success: false, error: result.error }
+      }
+
+      return result.data
+    } catch (error: any) {
+      return { success: false, error: error.message }
     }
-
-    return result.data
-  } catch (error: any) {
-    return { success: false, error: error.message }
-  }
-})
+  },
+)
 
 ipcMain.handle('settings:get-payment-config', async () => {
   try {
@@ -199,6 +212,94 @@ ipcMain.handle('settings:update-payment-config', async (_, config: Partial<Payme
     })
     if (!result.ok) {
       return { success: false, error: result.error }
+    }
+    return { success: true }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+})
+
+ipcMain.handle('settings:get-login-config', async (_, token?: string) => {
+  try {
+    const headers: Record<string, string> = {}
+    if (token) headers['Authorization'] = `Bearer ${token}`
+
+    const response = await fetch(`${API_SERVER_URL}/api/settings/login-config`, {
+      headers: { 'Content-Type': 'application/json', ...headers },
+      signal: AbortSignal.timeout(15000),
+    })
+
+    if (!response.ok) {
+      return {
+        email: { enabled: true },
+        phone: { enabled: false },
+        wechat: { enabled: false, hasCredentials: false },
+        google: { enabled: false, hasCredentials: false },
+      }
+    }
+
+    const data = await response.json()
+    return data?.data || {}
+  } catch {
+    return {
+      email: { enabled: true },
+      phone: { enabled: false },
+      wechat: { enabled: false, hasCredentials: false },
+      google: { enabled: false, hasCredentials: false },
+    }
+  }
+})
+
+ipcMain.handle('settings:update-login-config', async (_, token: string, config: any) => {
+  try {
+    const response = await fetch(`${API_SERVER_URL}/api/settings/login-config`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(config),
+      signal: AbortSignal.timeout(15000),
+    })
+
+    if (!response.ok) {
+      return { success: false, error: '保存失败' }
+    }
+    return { success: true }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+})
+
+ipcMain.handle('settings:get-sms-config', async (_, token?: string) => {
+  try {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+    if (token) headers['Authorization'] = `Bearer ${token}`
+
+    const response = await fetch(`${API_SERVER_URL}/api/settings/sms-config`, {
+      headers,
+      signal: AbortSignal.timeout(15000),
+    })
+
+    if (!response.ok) {
+      return { provider: '', aliyun: { hasCredentials: false }, tencent: { hasCredentials: false } }
+    }
+
+    const data = await response.json()
+    return data?.data || {}
+  } catch {
+    return { provider: '', aliyun: { hasCredentials: false }, tencent: { hasCredentials: false } }
+  }
+})
+
+ipcMain.handle('settings:update-sms-config', async (_, token: string, config: any) => {
+  try {
+    const response = await fetch(`${API_SERVER_URL}/api/settings/sms-config`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(config),
+      signal: AbortSignal.timeout(15000),
+    })
+
+    if (!response.ok) {
+      return { success: false, error: '保存失败' }
     }
     return { success: true }
   } catch (error: any) {

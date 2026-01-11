@@ -17,10 +17,17 @@ interface ToastContextType {
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined)
 
+const fallbackToast = (message: string, type: ToastType) => {
+  console.warn(`Toast (${type}): ${message} - ToastProvider not available`)
+}
+
 export const useToast = (): ToastContextType => {
   const context = useContext(ToastContext)
   if (!context) {
-    throw new Error('useToast must be used within a ToastProvider')
+    return {
+      showToast: fallbackToast,
+      toast: fallbackToast,
+    }
   }
   return context
 }
@@ -46,7 +53,7 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
   return (
     <ToastContext.Provider value={{ showToast, toast: showToast }}>
       {children}
-      <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[9999] flex flex-col items-center gap-2 pointer-events-none">
+      <div className="fixed top-6 left-0 right-0 z-[9999] flex flex-col items-center gap-3 pointer-events-none">
         {toasts.map((t) => (
           <ToastNotification
             key={t.id}
@@ -55,7 +62,7 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
             duration={t.duration}
             onClose={() => removeToast(t.id)}
             attachToBody={false}
-            className="pointer-events-auto static transform-none"
+            className="pointer-events-auto"
           />
         ))}
       </div>

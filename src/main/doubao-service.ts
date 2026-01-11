@@ -83,7 +83,13 @@ class DoubaoService {
 
   private async loadConfig(): Promise<{ ok: boolean; error?: string }> {
     try {
+      log('info', '🔄 loadConfig: 开始从服务器加载配置...')
       const config = await getAiConfigFromServer()
+      log('info', '🔄 loadConfig: 服务器返回配置:', {
+        hasAsrAppId: !!config.doubaoAsrAppId,
+        hasAsrAccessKey: !!config.doubaoAsrAccessKey,
+        hasChatApiKey: !!config.doubaoChatApiKey,
+      })
 
       this.asrAppId = config.doubaoAsrAppId || ''
       this.asrAccessKey = config.doubaoAsrAccessKey || ''
@@ -615,6 +621,13 @@ class DoubaoService {
 
   private async connectAsr(): Promise<boolean> {
     const connectId = randomUUID()
+    log('info', '🔌 connectAsr: 准备连接豆包 ASR...', {
+      endpoint: this.asrEndpoint,
+      hasAppId: !!this.asrAppId,
+      hasAccessKey: !!this.asrAccessKey,
+      resourceId: this.asrResourceId,
+    })
+
     const headers: Record<string, string> = {
       'X-Api-App-Key': this.asrAppId,
       'X-Api-Access-Key': this.asrAccessKey,
@@ -727,6 +740,7 @@ class DoubaoService {
 
         this.ws!.on('error', (event) => {
           clearTimeout(timeout)
+          log('error', '❌ 豆包 WebSocket 连接错误:', event)
           if (debugDoubao) {
             log('debug', '豆包 WebSocket 错误:', event)
           }
@@ -735,8 +749,9 @@ class DoubaoService {
           finish(false)
         })
 
-        this.ws!.on('close', () => {
+        this.ws!.on('close', (code, reason) => {
           clearTimeout(timeout)
+          log('warn', '🔌 豆包 WebSocket 关闭:', { code, reason: reason?.toString() })
           this.sessionReady = false
           this.ws = null
           if (this.suppressCloseEvent) {

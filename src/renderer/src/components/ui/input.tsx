@@ -37,9 +37,9 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
 
     const variantClasses = {
       outline:
-        'border border-[var(--bready-border)] bg-[var(--bready-surface)] focus-visible:border-black/40 focus-visible:ring-2 focus-visible:ring-black/10 dark:focus-visible:border-white/40 dark:focus-visible:ring-white/20',
+        'border border-[var(--bready-border)] bg-[var(--bready-surface)] focus:outline-none focus:border-[var(--bready-accent)] focus:shadow-[0_0_0_2px_var(--bready-accent)]',
       filled:
-        'border border-transparent bg-[var(--bready-surface-2)] focus-visible:bg-[var(--bready-surface)] focus-visible:border-black/30 focus-visible:ring-2 focus-visible:ring-black/10 dark:focus-visible:border-white/30 dark:focus-visible:ring-white/20',
+        'border border-transparent bg-[var(--bready-surface-2)] focus:bg-[var(--bready-surface)] focus:outline-none focus:border-[var(--bready-accent)] focus:shadow-[0_0_0_2px_var(--bready-accent)]',
     }
 
     return (
@@ -61,13 +61,13 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             disabled={disabled || loading}
             className={cn(
-              'w-full rounded-lg text-[var(--bready-text)] placeholder:text-[var(--bready-text-muted)] transition-colors focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50',
+              'w-full rounded-lg text-[var(--bready-text)] placeholder:text-[var(--bready-text-muted)] transition-all disabled:cursor-not-allowed disabled:opacity-50',
               sizeClasses[size],
               variantClasses[variant],
               leftIcon && 'pl-10',
               (rightIcon || loading) && 'pr-10',
               error &&
-                'border-red-500 focus-visible:border-red-500 focus-visible:ring-2 focus-visible:ring-red-500/20',
+                'border-red-500 focus:border-red-500 focus:shadow-[0_0_0_1px_rgb(239,68,68)]',
               className,
             )}
             {...props}
@@ -130,10 +130,9 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           ref={ref}
           rows={rows}
           className={cn(
-            'w-full rounded-lg border border-[var(--bready-border)] bg-[var(--bready-surface)] px-4 py-2.5 text-sm text-[var(--bready-text)] placeholder:text-[var(--bready-text-muted)] transition-colors focus-visible:border-black/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/10 dark:focus-visible:border-white/40 dark:focus-visible:ring-white/20 disabled:cursor-not-allowed disabled:opacity-50',
+            'w-full rounded-lg border border-[var(--bready-border)] bg-[var(--bready-surface)] px-4 py-2.5 text-sm text-[var(--bready-text)] placeholder:text-[var(--bready-text-muted)] transition-all focus:outline-none focus:border-[var(--bready-accent)] focus:shadow-[0_0_0_2px_var(--bready-accent)] disabled:cursor-not-allowed disabled:opacity-50',
             resizeClasses[resize],
-            error &&
-              'border-red-500 focus-visible:border-red-500 focus-visible:ring-2 focus-visible:ring-red-500/20',
+            error && 'border-red-500 focus:border-red-500 focus:shadow-[0_0_0_2px_rgb(239,68,68)]',
             className,
           )}
           {...props}

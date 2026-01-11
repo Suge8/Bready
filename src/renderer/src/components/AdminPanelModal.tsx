@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import {
   ArrowLeft,
+  LogIn,
   Users,
   Clock,
   ChevronDown,
@@ -9,7 +10,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Search,
-  UserCheck,
   Mail,
   TrendingUp,
   Settings,
@@ -29,14 +29,14 @@ import {
   type AiConfigDisplay,
   type PaymentConfigDisplay,
   type SmsConfigDisplay,
-  type WechatLoginConfigDisplay,
-} from '../lib/supabase'
+  type LoginConfigDisplay,
+} from '../lib/api-client'
 import UserLevelBadge from './UserLevelBadge'
 import { useI18n } from '../contexts/I18nContext'
 import { useTheme } from './ui/theme-provider'
 import { useToast } from '../contexts/ToastContext'
 import { Modal } from './ui/Modal'
-import { Input } from './ui/input'
+import { FloatingLabelInput } from './ui/FloatingLabelInput'
 import { Button } from './ui/button'
 
 interface AdminPanelModalProps {
@@ -44,7 +44,7 @@ interface AdminPanelModalProps {
   onBack?: () => void
 }
 
-type TabType = 'users' | 'usage' | 'email' | 'ai' | 'payment' | 'sms' | 'wechat-login'
+type TabType = 'users' | 'usage' | 'ai' | 'payment' | 'login'
 
 interface UsageRecordWithUser extends InterviewUsageRecord {
   full_name?: string
@@ -59,6 +59,9 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
   const { showToast } = useToast()
 
   const [activeTab, setActiveTab] = useState<TabType>('users')
+  const [expandedCard, setExpandedCard] = useState<'email' | 'phone' | 'wechat' | 'google' | null>(
+    null,
+  )
   const [users, setUsers] = useState<UserProfile[]>([])
   const [loading, setLoading] = useState(false)
   const [showRoleDropdown, setShowRoleDropdown] = useState<string | null>(null)
@@ -70,6 +73,17 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
 
   const [usageRecords, setUsageRecords] = useState<UsageRecordWithUser[]>([])
   const [usageLoading, setUsageLoading] = useState(false)
+  const [expandedUsageUsers, setExpandedUsageUsers] = useState<Set<string>>(new Set())
+
+  const [aiTestStatus, setAiTestStatus] = useState<{
+    gemini: { tested: boolean; success: boolean; loading: boolean }
+    doubaoChat: { tested: boolean; success: boolean; loading: boolean }
+    doubaoAsr: { tested: boolean; success: boolean; loading: boolean }
+  }>({
+    gemini: { tested: false, success: false, loading: false },
+    doubaoChat: { tested: false, success: false, loading: false },
+    doubaoAsr: { tested: false, success: false, loading: false },
+  })
 
   const [aiConfig, setAiConfig] = useState<AiConfigDisplay>({
     provider: 'gemini',
@@ -112,23 +126,38 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
       hasCredentials: false,
     },
   })
-  const [wechatLoginConfig, setWechatLoginConfig] = useState<WechatLoginConfigDisplay>({
-    enabled: false,
-    appId: '',
-    appSecret: '',
-    redirectUri: '',
-    hasCredentials: false,
+  const [loginConfig, setLoginConfig] = useState<LoginConfigDisplay>({
+    email: { enabled: true },
+    phone: { enabled: false },
+    wechat: {
+      enabled: false,
+      appId: '',
+      appSecret: '',
+      redirectUri: '',
+      hasCredentials: false,
+    },
+    google: {
+      enabled: false,
+      clientId: '',
+      clientSecret: '',
+      redirectUri: '',
+      hasCredentials: false,
+    },
   })
 
   useEffect(() => {
     if (activeTab === 'ai') {
       loadAiConfig()
+      setAiTestStatus({
+        gemini: { tested: false, success: false, loading: false },
+        doubaoChat: { tested: false, success: false, loading: false },
+        doubaoAsr: { tested: false, success: false, loading: false },
+      })
     } else if (activeTab === 'payment') {
       loadPaymentConfig()
-    } else if (activeTab === 'sms') {
+    } else if (activeTab === 'login') {
+      loadLoginConfig()
       loadSmsConfig()
-    } else if (activeTab === 'wechat-login') {
-      loadWechatLoginConfig()
     }
   }, [activeTab])
 
@@ -159,20 +188,26 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
     }
   }
 
-  const loadWechatLoginConfig = async () => {
+  const loadLoginConfig = async () => {
     try {
-      const config = await settingsService.getWechatLoginConfig()
-      if (config) setWechatLoginConfig(config)
+      const config = await settingsService.getLoginConfig()
+      if (config) setLoginConfig(config)
     } catch (error) {
-      console.error('Failed to load WeChat login config', error)
+      console.error('Failed to load login config', error)
     }
   }
 
-  const handleSaveAiConfig = async () => {
+  const handleSaveAiConfig = async (saveType?: 'chat' | 'asr') => {
     try {
       const result = await settingsService.updateAiConfig(aiConfig)
       if (result.success) {
-        showToast(t('alerts.saveSuccess') || '保存成功', 'success')
+        const msg =
+          saveType === 'chat'
+            ? 'Chat 配置已保存'
+            : saveType === 'asr'
+              ? 'ASR 配置已保存'
+              : '保存成功'
+        showToast(msg, 'success')
       } else {
         showToast(result.error || t('alerts.saveFailed') || '保存失败', 'error')
       }
@@ -182,9 +217,26 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
     }
   }
 
-  const handleTestAiConnection = async () => {
+  const handleTestAiConnection = async (testType?: 'chat' | 'asr') => {
+    const statusKey =
+      aiConfig.provider === 'gemini' ? 'gemini' : testType === 'asr' ? 'doubaoAsr' : 'doubaoChat'
+
+    setAiTestStatus((prev) => ({
+      ...prev,
+      [statusKey]: { ...prev[statusKey], loading: true },
+    }))
+
     try {
-      const result = await settingsService.testAiConnection(aiConfig.provider)
+      const result = await settingsService.testAiConnection(aiConfig.provider, testType, {
+        geminiApiKey: aiConfig.geminiApiKey,
+        doubaoChatApiKey: aiConfig.doubaoChatApiKey,
+        doubaoAsrAppId: aiConfig.doubaoAsrAppId,
+        doubaoAsrAccessKey: aiConfig.doubaoAsrAccessKey,
+      })
+      setAiTestStatus((prev) => ({
+        ...prev,
+        [statusKey]: { tested: true, success: result.success, loading: false },
+      }))
       if (result.success) {
         showToast(t('alerts.testSuccess') || '连接测试成功', 'success')
       } else {
@@ -192,6 +244,10 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
       }
     } catch (error) {
       console.error('Failed to test AI connection', error)
+      setAiTestStatus((prev) => ({
+        ...prev,
+        [statusKey]: { tested: true, success: false, loading: false },
+      }))
       showToast('测试失败', 'error')
     }
   }
@@ -210,31 +266,26 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
     }
   }
 
-  const handleSaveSmsConfig = async () => {
+  const handleSaveAllLoginSettings = async () => {
     try {
-      const result = await settingsService.updateSmsConfig(smsConfig)
-      if (result.success) {
-        showToast(t('alerts.saveSuccess') || '保存成功', 'success')
-      } else {
-        showToast(result.error || t('alerts.saveFailed') || '保存失败', 'error')
-      }
-    } catch (error) {
-      console.error('Failed to save SMS config', error)
-      showToast(t('alerts.saveFailed') || '保存失败', 'error')
-    }
-  }
+      // Save Email Config (Local Storage)
+      localStorage.setItem('email_config', JSON.stringify(emailConfig))
 
-  const handleSaveWechatLoginConfig = async () => {
-    try {
-      const result = await settingsService.updateWechatLoginConfig(wechatLoginConfig)
-      if (result.success) {
-        showToast(t('alerts.saveSuccess') || '保存成功', 'success')
+      // Save SMS & Login Config (API)
+      const [smsResult, loginResult] = await Promise.all([
+        settingsService.updateSmsConfig(smsConfig),
+        settingsService.updateLoginConfig(loginConfig),
+      ])
+
+      if (smsResult.success && loginResult.success) {
+        showToast(t('alerts.saveSuccess') || '所有设置已保存', 'success')
       } else {
-        showToast(result.error || t('alerts.saveFailed') || '保存失败', 'error')
+        const errorMsg = smsResult.error || loginResult.error || '保存失败'
+        showToast(errorMsg, 'error')
       }
     } catch (error) {
-      console.error('Failed to save WeChat login config', error)
-      showToast(t('alerts.saveFailed') || '保存失败', 'error')
+      console.error('Failed to save settings', error)
+      showToast('保存失败', 'error')
     }
   }
 
@@ -259,11 +310,6 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
 
   const handleEmailConfigChange = (key: string, value: any) => {
     setEmailConfig((prev) => ({ ...prev, [key]: value }))
-  }
-
-  const handleSaveEmailConfig = () => {
-    localStorage.setItem('email_config', JSON.stringify(emailConfig))
-    showToast('设置已保存', 'success')
   }
 
   const handleTestEmailConnection = () => {
@@ -353,11 +399,9 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
   const tabs = [
     { id: 'users' as TabType, label: t('admin.tabs.users'), icon: Users },
     { id: 'usage' as TabType, label: t('admin.tabs.usage'), icon: Clock },
-    { id: 'email' as TabType, label: t('admin.tabs.email') || '邮箱设置', icon: Mail },
     { id: 'ai' as TabType, label: 'AI 设置', icon: Settings },
+    { id: 'login' as TabType, label: '登录设置', icon: LogIn },
     { id: 'payment' as TabType, label: '支付设置', icon: CreditCard },
-    { id: 'sms' as TabType, label: '短信设置', icon: MessageSquare },
-    { id: 'wechat-login' as TabType, label: '微信登录', icon: MessageCircle },
   ]
 
   const filteredUsers = users.filter((userItem) => {
@@ -467,6 +511,699 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
         </div>
 
         <div className="flex-1 overflow-hidden min-h-0 flex flex-col">
+          {activeTab === 'login' && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className="flex-1 overflow-y-auto p-4"
+            >
+              <div className="max-w-2xl mx-auto space-y-3">
+                <motion.div
+                  whileHover={{ scale: 1.01, y: -2 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                  className={cn(
+                    'rounded-xl border transition-all duration-300 overflow-hidden',
+                    isDarkMode
+                      ? 'border-neutral-800 bg-neutral-900/50 hover:border-blue-500/20 hover:shadow-lg hover:shadow-blue-500/5'
+                      : 'border-neutral-200 bg-neutral-50 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-500/10',
+                    expandedCard === 'email' &&
+                      (isDarkMode ? 'border-blue-500/30' : 'border-blue-200'),
+                  )}
+                >
+                  <div
+                    onClick={() => setExpandedCard(expandedCard === 'email' ? null : 'email')}
+                    className="p-4 flex items-center justify-between cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={cn(
+                          'w-10 h-10 rounded-full flex items-center justify-center transition-colors',
+                          isDarkMode ? 'bg-neutral-800' : 'bg-white shadow-sm border',
+                          expandedCard === 'email' && 'text-blue-500',
+                        )}
+                      >
+                        <Mail className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div
+                          className={cn(
+                            'text-sm font-semibold',
+                            isDarkMode ? 'text-white' : 'text-black',
+                          )}
+                        >
+                          邮箱登录
+                        </div>
+                        <div className="text-xs text-gray-500">SMTP / 验证码配置</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400">
+                        必选
+                      </span>
+                      <motion.div
+                        animate={{ rotate: expandedCard === 'email' ? 180 : 0 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <ChevronDown className="w-4 h-4 text-gray-400" />
+                      </motion.div>
+                    </div>
+                  </div>
+
+                  <AnimatePresence>
+                    {expandedCard === 'email' && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.3, ease: 'easeInOut' }}
+                      >
+                        <div className="p-4 pt-0 border-t border-dashed border-gray-200 dark:border-gray-800">
+                          <div className="grid grid-cols-2 gap-4 mt-4">
+                            <div className="space-y-3">
+                              <h4 className="text-xs font-medium text-gray-500 mb-2">
+                                SMTP 服务器
+                              </h4>
+                              <FloatingLabelInput
+                                label={t('admin.email.smtp.server')}
+                                value={emailConfig.smtpServer}
+                                placeholder={t('admin.email.smtp.placeholders.server')}
+                                alwaysShowLabel
+                                onChange={(value) => handleEmailConfigChange('smtpServer', value)}
+                                className="text-xs"
+                              />
+                              <div className="flex gap-2">
+                                <div className="w-24">
+                                  <FloatingLabelInput
+                                    label={t('admin.email.smtp.port')}
+                                    value={emailConfig.port}
+                                    placeholder={t('admin.email.smtp.placeholders.port')}
+                                    alwaysShowLabel
+                                    onChange={(value) => handleEmailConfigChange('port', value)}
+                                    className="text-xs"
+                                  />
+                                </div>
+                                <div className="flex items-end pb-2">
+                                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                                    <div
+                                      onClick={() =>
+                                        handleEmailConfigChange('enableSsl', !emailConfig.enableSsl)
+                                      }
+                                      className={cn(
+                                        'w-8 h-5 rounded-full p-0.5 transition-colors duration-200 relative',
+                                        emailConfig.enableSsl
+                                          ? 'bg-blue-500'
+                                          : isDarkMode
+                                            ? 'bg-neutral-700'
+                                            : 'bg-gray-300',
+                                      )}
+                                    >
+                                      <motion.div
+                                        className="w-4 h-4 bg-white rounded-full shadow-sm"
+                                        animate={{ x: emailConfig.enableSsl ? 12 : 0 }}
+                                        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                                      />
+                                    </div>
+                                    <span className="text-[10px] text-gray-500">SSL</span>
+                                  </label>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="space-y-3">
+                              <h4 className="text-xs font-medium text-gray-500 mb-2">发送账号</h4>
+                              <FloatingLabelInput
+                                label={t('admin.email.auth.email')}
+                                value={emailConfig.senderEmail}
+                                placeholder={t('admin.email.auth.placeholders.email')}
+                                alwaysShowLabel
+                                onChange={(value) => handleEmailConfigChange('senderEmail', value)}
+                                className="text-xs"
+                              />
+                              <FloatingLabelInput
+                                label={t('admin.email.auth.code')}
+                                type="text"
+                                value={emailConfig.authCode}
+                                placeholder={t('admin.email.auth.placeholders.code')}
+                                alwaysShowLabel
+                                onChange={(value) => handleEmailConfigChange('authCode', value)}
+                                className="text-xs"
+                              />
+                            </div>
+                          </div>
+                          <div className="flex justify-end mt-3">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={handleTestEmailConnection}
+                              className="text-xs h-7"
+                            >
+                              测试连接
+                            </Button>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+
+                <motion.div
+                  whileHover={{ scale: 1.01, y: -2 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                  className={cn(
+                    'rounded-xl border transition-all duration-300 overflow-hidden',
+                    isDarkMode
+                      ? 'border-neutral-800 bg-neutral-900/50 hover:border-emerald-500/20 hover:shadow-lg hover:shadow-emerald-500/5'
+                      : 'border-neutral-200 bg-neutral-50 hover:border-emerald-300 hover:shadow-lg hover:shadow-emerald-500/10',
+                    expandedCard === 'phone' &&
+                      (isDarkMode ? 'border-emerald-500/30' : 'border-emerald-200'),
+                  )}
+                >
+                  <div
+                    onClick={() => setExpandedCard(expandedCard === 'phone' ? null : 'phone')}
+                    className="p-4 flex items-center justify-between cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={cn(
+                          'w-10 h-10 rounded-full flex items-center justify-center transition-colors',
+                          isDarkMode ? 'bg-neutral-800' : 'bg-white shadow-sm border',
+                          expandedCard === 'phone' && 'text-emerald-500',
+                        )}
+                      >
+                        <MessageSquare className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div
+                          className={cn(
+                            'text-sm font-semibold',
+                            isDarkMode ? 'text-white' : 'text-black',
+                          )}
+                        >
+                          手机登录
+                        </div>
+                        <div className="text-xs text-gray-500">短信服务配置</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setLoginConfig({
+                            ...loginConfig,
+                            phone: { ...loginConfig.phone, enabled: !loginConfig.phone.enabled },
+                          })
+                        }}
+                        className={cn(
+                          'w-10 h-6 rounded-full p-1 cursor-pointer transition-colors duration-300',
+                          loginConfig.phone.enabled
+                            ? 'bg-emerald-500'
+                            : isDarkMode
+                              ? 'bg-neutral-800'
+                              : 'bg-gray-200',
+                        )}
+                      >
+                        <motion.div
+                          className="w-4 h-4 bg-white rounded-full shadow-sm"
+                          animate={{ x: loginConfig.phone.enabled ? 16 : 0 }}
+                          transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                        />
+                      </div>
+                      <motion.div
+                        animate={{ rotate: expandedCard === 'phone' ? 180 : 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="cursor-pointer"
+                      >
+                        <ChevronDown className="w-4 h-4 text-gray-400" />
+                      </motion.div>
+                    </div>
+                  </div>
+
+                  <AnimatePresence>
+                    {expandedCard === 'phone' && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.3, ease: 'easeInOut' }}
+                      >
+                        <div className="p-4 pt-0 border-t border-dashed border-gray-200 dark:border-gray-800">
+                          <div className="mt-4 space-y-4">
+                            <div className="flex gap-4 p-2 bg-black/5 dark:bg-white/5 rounded-lg w-fit">
+                              <label className="flex items-center gap-2 text-xs cursor-pointer select-none">
+                                <input
+                                  type="radio"
+                                  name="smsProvider"
+                                  value="aliyun"
+                                  checked={smsConfig.provider === 'aliyun'}
+                                  onChange={(e) =>
+                                    setSmsConfig({ ...smsConfig, provider: e.target.value as any })
+                                  }
+                                  className="accent-emerald-500"
+                                />
+                                <span className={isDarkMode ? 'text-gray-300' : 'text-gray-700'}>
+                                  阿里云
+                                </span>
+                              </label>
+                              <label className="flex items-center gap-2 text-xs cursor-pointer select-none">
+                                <input
+                                  type="radio"
+                                  name="smsProvider"
+                                  value="tencent"
+                                  checked={smsConfig.provider === 'tencent'}
+                                  onChange={(e) =>
+                                    setSmsConfig({ ...smsConfig, provider: e.target.value as any })
+                                  }
+                                  className="accent-emerald-500"
+                                />
+                                <span className={isDarkMode ? 'text-gray-300' : 'text-gray-700'}>
+                                  腾讯云
+                                </span>
+                              </label>
+                            </div>
+
+                            {smsConfig.provider === 'aliyun' && (
+                              <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
+                                <FloatingLabelInput
+                                  label={t('admin.sms.accessKeyId')}
+                                  value={smsConfig.aliyun.accessKeyId}
+                                  placeholder={t('admin.sms.placeholders.aliyun.accessKeyId')}
+                                  alwaysShowLabel
+                                  onChange={(value) =>
+                                    setSmsConfig({
+                                      ...smsConfig,
+                                      aliyun: { ...smsConfig.aliyun, accessKeyId: value },
+                                    })
+                                  }
+                                  className="text-xs"
+                                />
+                                <FloatingLabelInput
+                                  label={t('admin.sms.accessKeySecret')}
+                                  value={smsConfig.aliyun.accessKeySecret}
+                                  placeholder={
+                                    smsConfig.aliyun.hasCredentials
+                                      ? t('admin.sms.placeholders.aliyun.accessKeySecretEmpty')
+                                      : t('admin.sms.placeholders.aliyun.accessKeySecret')
+                                  }
+                                  alwaysShowLabel
+                                  onChange={(value) =>
+                                    setSmsConfig({
+                                      ...smsConfig,
+                                      aliyun: {
+                                        ...smsConfig.aliyun,
+                                        accessKeySecret: value,
+                                      },
+                                    })
+                                  }
+                                  className="text-xs"
+                                />
+                                <FloatingLabelInput
+                                  alwaysShowLabel
+                                  label={t('admin.sms.signName')}
+                                  value={smsConfig.aliyun.signName}
+                                  onChange={(value) =>
+                                    setSmsConfig({
+                                      ...smsConfig,
+                                      aliyun: { ...smsConfig.aliyun, signName: value },
+                                    })
+                                  }
+                                  className="text-xs"
+                                />
+                                <FloatingLabelInput
+                                  alwaysShowLabel
+                                  label={t('admin.sms.templateCode')}
+                                  value={smsConfig.aliyun.templateCode}
+                                  onChange={(value) =>
+                                    setSmsConfig({
+                                      ...smsConfig,
+                                      aliyun: { ...smsConfig.aliyun, templateCode: value },
+                                    })
+                                  }
+                                  className="text-xs"
+                                />
+                              </div>
+                            )}
+
+                            {smsConfig.provider === 'tencent' && (
+                              <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
+                                <FloatingLabelInput
+                                  alwaysShowLabel
+                                  label={t('admin.sms.appId')}
+                                  value={smsConfig.tencent.appId}
+                                  onChange={(value) =>
+                                    setSmsConfig({
+                                      ...smsConfig,
+                                      tencent: { ...smsConfig.tencent, appId: value },
+                                    })
+                                  }
+                                  className="text-xs"
+                                />
+                                <FloatingLabelInput
+                                  alwaysShowLabel
+                                  label={t('admin.sms.secretId')}
+                                  value={smsConfig.tencent.secretId}
+                                  placeholder={t('admin.sms.placeholders.tencent.secretId')}
+                                  onChange={(value) =>
+                                    setSmsConfig({
+                                      ...smsConfig,
+                                      tencent: { ...smsConfig.tencent, secretId: value },
+                                    })
+                                  }
+                                  className="text-xs"
+                                />
+                                <FloatingLabelInput
+                                  alwaysShowLabel
+                                  label={t('admin.sms.secretKey')}
+                                  type="text"
+                                  value={smsConfig.tencent.secretKey}
+                                  placeholder={
+                                    smsConfig.tencent.hasCredentials
+                                      ? t('admin.sms.placeholders.tencent.secretKeyEmpty')
+                                      : t('admin.sms.placeholders.tencent.secretKey')
+                                  }
+                                  onChange={(value) =>
+                                    setSmsConfig({
+                                      ...smsConfig,
+                                      tencent: { ...smsConfig.tencent, secretKey: value },
+                                    })
+                                  }
+                                  className="text-xs"
+                                />
+                                <FloatingLabelInput
+                                  alwaysShowLabel
+                                  label={t('admin.sms.signName')}
+                                  value={smsConfig.tencent.signName}
+                                  onChange={(value) =>
+                                    setSmsConfig({
+                                      ...smsConfig,
+                                      tencent: { ...smsConfig.tencent, signName: value },
+                                    })
+                                  }
+                                  className="text-xs"
+                                />
+                                <FloatingLabelInput
+                                  alwaysShowLabel
+                                  label={t('admin.sms.templateId')}
+                                  value={smsConfig.tencent.templateId}
+                                  onChange={(value) =>
+                                    setSmsConfig({
+                                      ...smsConfig,
+                                      tencent: { ...smsConfig.tencent, templateId: value },
+                                    })
+                                  }
+                                  className="text-xs"
+                                />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+
+                <motion.div
+                  whileHover={{ scale: 1.01, y: -2 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                  className={cn(
+                    'rounded-xl border transition-all duration-300 overflow-hidden',
+                    isDarkMode
+                      ? 'border-neutral-800 bg-neutral-900/50 hover:border-green-500/20 hover:shadow-lg hover:shadow-green-500/5'
+                      : 'border-neutral-200 bg-neutral-50 hover:border-green-300 hover:shadow-lg hover:shadow-green-500/10',
+                    expandedCard === 'wechat' &&
+                      (isDarkMode ? 'border-green-500/30' : 'border-green-200'),
+                  )}
+                >
+                  <div
+                    onClick={() => setExpandedCard(expandedCard === 'wechat' ? null : 'wechat')}
+                    className="p-4 flex items-center justify-between cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={cn(
+                          'w-10 h-10 rounded-full flex items-center justify-center transition-colors',
+                          isDarkMode ? 'bg-neutral-800' : 'bg-white shadow-sm border',
+                          expandedCard === 'wechat' && 'text-green-500',
+                        )}
+                      >
+                        <MessageCircle className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div
+                          className={cn(
+                            'text-sm font-semibold',
+                            isDarkMode ? 'text-white' : 'text-black',
+                          )}
+                        >
+                          微信登录
+                        </div>
+                        <div className="text-xs text-gray-500">开放平台 / 回调配置</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setLoginConfig((prev) => ({
+                            ...prev,
+                            wechat: { ...prev.wechat, enabled: !prev.wechat.enabled },
+                            google: {
+                              ...prev.google,
+                              enabled: !prev.wechat.enabled ? false : prev.google.enabled,
+                            },
+                          }))
+                        }}
+                        className={cn(
+                          'w-10 h-6 rounded-full p-1 cursor-pointer transition-colors duration-300',
+                          loginConfig.wechat.enabled
+                            ? 'bg-green-500'
+                            : isDarkMode
+                              ? 'bg-neutral-800'
+                              : 'bg-gray-200',
+                        )}
+                      >
+                        <motion.div
+                          className="w-4 h-4 bg-white rounded-full shadow-sm"
+                          animate={{ x: loginConfig.wechat.enabled ? 16 : 0 }}
+                          transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                        />
+                      </div>
+                      <motion.div
+                        animate={{ rotate: expandedCard === 'wechat' ? 180 : 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="cursor-pointer"
+                      >
+                        <ChevronDown className="w-4 h-4 text-gray-400" />
+                      </motion.div>
+                    </div>
+                  </div>
+
+                  <AnimatePresence>
+                    {expandedCard === 'wechat' && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.3, ease: 'easeInOut' }}
+                      >
+                        <div className="p-4 pt-0 border-t border-dashed border-gray-200 dark:border-gray-800">
+                          <div className="mt-4 space-y-3">
+                            <FloatingLabelInput
+                              alwaysShowLabel
+                              label={t('admin.login.wechat.appId')}
+                              value={loginConfig.wechat.appId}
+                              placeholder={t('admin.login.placeholders.wechat.appId')}
+                              onChange={(value) =>
+                                setLoginConfig({
+                                  ...loginConfig,
+                                  wechat: { ...loginConfig.wechat, appId: value },
+                                })
+                              }
+                              className="text-xs"
+                            />
+                            <FloatingLabelInput
+                              alwaysShowLabel
+                              label={t('admin.login.wechat.appSecret')}
+                              value={loginConfig.wechat.appSecret}
+                              placeholder={
+                                loginConfig.wechat.hasCredentials
+                                  ? t('admin.login.placeholders.wechat.appSecretSet')
+                                  : t('admin.login.placeholders.wechat.appSecret')
+                              }
+                              onChange={(value) =>
+                                setLoginConfig({
+                                  ...loginConfig,
+                                  wechat: { ...loginConfig.wechat, appSecret: value },
+                                })
+                              }
+                              className="text-xs"
+                            />
+                            <FloatingLabelInput
+                              alwaysShowLabel
+                              label={t('admin.login.wechat.redirectUri')}
+                              value={loginConfig.wechat.redirectUri}
+                              placeholder={t('admin.login.placeholders.wechat.redirectUri')}
+                              onChange={(value) =>
+                                setLoginConfig({
+                                  ...loginConfig,
+                                  wechat: { ...loginConfig.wechat, redirectUri: value },
+                                })
+                              }
+                              className="text-xs"
+                            />
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+
+                <motion.div
+                  whileHover={{ scale: 1.01, y: -2 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                  className={cn(
+                    'rounded-xl border transition-all duration-300 overflow-hidden',
+                    isDarkMode
+                      ? 'border-neutral-800 bg-neutral-900/50 hover:border-orange-500/20 hover:shadow-lg hover:shadow-orange-500/5'
+                      : 'border-neutral-200 bg-neutral-50 hover:border-orange-300 hover:shadow-lg hover:shadow-orange-500/10',
+                    expandedCard === 'google' &&
+                      (isDarkMode ? 'border-orange-500/30' : 'border-orange-200'),
+                  )}
+                >
+                  <div
+                    onClick={() => setExpandedCard(expandedCard === 'google' ? null : 'google')}
+                    className="p-4 flex items-center justify-between cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={cn(
+                          'w-10 h-10 rounded-full flex items-center justify-center transition-colors',
+                          isDarkMode ? 'bg-neutral-800' : 'bg-white shadow-sm border',
+                          expandedCard === 'google' && 'text-orange-500',
+                        )}
+                      >
+                        <div className="w-5 h-5 flex items-center justify-center font-bold text-sm">
+                          G
+                        </div>
+                      </div>
+                      <div>
+                        <div
+                          className={cn(
+                            'text-sm font-semibold',
+                            isDarkMode ? 'text-white' : 'text-black',
+                          )}
+                        >
+                          Google 登录
+                        </div>
+                        <div className="text-xs text-gray-500">OAuth 2.0 / Client 配置</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setLoginConfig((prev) => ({
+                            ...prev,
+                            google: { ...prev.google, enabled: !prev.google.enabled },
+                            wechat: {
+                              ...prev.wechat,
+                              enabled: !prev.google.enabled ? false : prev.wechat.enabled,
+                            },
+                          }))
+                        }}
+                        className={cn(
+                          'w-10 h-6 rounded-full p-1 cursor-pointer transition-colors duration-300',
+                          loginConfig.google.enabled
+                            ? 'bg-orange-500'
+                            : isDarkMode
+                              ? 'bg-neutral-800'
+                              : 'bg-gray-200',
+                        )}
+                      >
+                        <motion.div
+                          className="w-4 h-4 bg-white rounded-full shadow-sm"
+                          animate={{ x: loginConfig.google.enabled ? 16 : 0 }}
+                          transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                        />
+                      </div>
+                      <motion.div
+                        animate={{ rotate: expandedCard === 'google' ? 180 : 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="cursor-pointer"
+                      >
+                        <ChevronDown className="w-4 h-4 text-gray-400" />
+                      </motion.div>
+                    </div>
+                  </div>
+
+                  <AnimatePresence>
+                    {expandedCard === 'google' && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.3, ease: 'easeInOut' }}
+                      >
+                        <div className="p-4 pt-0 border-t border-dashed border-gray-200 dark:border-gray-800">
+                          <div className="mt-4 space-y-3">
+                            <FloatingLabelInput
+                              alwaysShowLabel
+                              label={t('admin.login.google.clientId')}
+                              value={loginConfig.google.clientId}
+                              placeholder={t('admin.login.placeholders.google.clientId')}
+                              onChange={(value) =>
+                                setLoginConfig({
+                                  ...loginConfig,
+                                  google: { ...loginConfig.google, clientId: value },
+                                })
+                              }
+                              className="text-xs"
+                            />
+                            <FloatingLabelInput
+                              alwaysShowLabel
+                              label={t('admin.login.google.clientSecret')}
+                              value={loginConfig.google.clientSecret}
+                              placeholder={
+                                loginConfig.google.hasCredentials
+                                  ? t('admin.login.placeholders.google.clientSecretSet')
+                                  : t('admin.login.placeholders.google.clientSecret')
+                              }
+                              onChange={(value) =>
+                                setLoginConfig({
+                                  ...loginConfig,
+                                  google: { ...loginConfig.google, clientSecret: value },
+                                })
+                              }
+                              className="text-xs"
+                            />
+                            <FloatingLabelInput
+                              alwaysShowLabel
+                              label={t('admin.login.google.redirectUri')}
+                              value={loginConfig.google.redirectUri}
+                              placeholder={t('admin.login.placeholders.google.redirectUri')}
+                              onChange={(value) =>
+                                setLoginConfig({
+                                  ...loginConfig,
+                                  google: { ...loginConfig.google, redirectUri: value },
+                                })
+                              }
+                              className="text-xs"
+                            />
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+
+                <div className="flex justify-end pt-4 pb-8">
+                  <Button onClick={handleSaveAllLoginSettings} className="w-full sm:w-auto px-8">
+                    保存所有设置
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
           {activeTab === 'users' && (
             <>
               <div
@@ -856,45 +1593,79 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
                             </div>
                           </div>
                           <div className="space-y-1">
-                            {data.records.slice(0, 3).map((record) => (
-                              <div
-                                key={record.id}
-                                className={cn(
-                                  'flex items-center justify-between text-xs py-1.5 px-2 rounded-lg',
-                                  isDarkMode ? 'bg-neutral-800/50' : 'bg-neutral-50',
-                                )}
-                              >
-                                <div className="flex items-center gap-2">
-                                  <span
-                                    className={cn(
-                                      'px-1.5 py-0.5 rounded text-[10px] font-medium',
-                                      record.session_type === 'collaboration'
-                                        ? isDarkMode
-                                          ? 'bg-blue-500/20 text-blue-400'
-                                          : 'bg-blue-100 text-blue-600'
-                                        : isDarkMode
-                                          ? 'bg-violet-500/20 text-violet-400'
-                                          : 'bg-violet-100 text-violet-600',
-                                    )}
-                                  >
-                                    {record.session_type === 'collaboration'
-                                      ? t('profile.history.collaboration') || '协作'
-                                      : t('profile.history.liveInterview') || '面试'}
-                                  </span>
-                                  <span className="text-gray-500">
-                                    {new Date(record.started_at).toLocaleDateString(locale)}
+                            {data.records
+                              .slice(0, expandedUsageUsers.has(visitorId) ? undefined : 3)
+                              .map((record) => (
+                                <div
+                                  key={record.id}
+                                  className={cn(
+                                    'flex items-center justify-between text-xs py-1.5 px-2 rounded-lg',
+                                    isDarkMode ? 'bg-neutral-800/50' : 'bg-neutral-50',
+                                  )}
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <span
+                                      className={cn(
+                                        'px-1.5 py-0.5 rounded text-[10px] font-medium',
+                                        record.session_type === 'collaboration'
+                                          ? isDarkMode
+                                            ? 'bg-blue-500/20 text-blue-400'
+                                            : 'bg-blue-100 text-blue-600'
+                                          : isDarkMode
+                                            ? 'bg-violet-500/20 text-violet-400'
+                                            : 'bg-violet-100 text-violet-600',
+                                      )}
+                                    >
+                                      {record.session_type === 'collaboration'
+                                        ? t('profile.history.collaboration') || '协作'
+                                        : t('profile.history.liveInterview') || '面试'}
+                                    </span>
+                                    <span className="text-gray-500">
+                                      {new Date(record.started_at).toLocaleDateString(locale)}
+                                    </span>
+                                  </div>
+                                  <span className={isDarkMode ? 'text-gray-300' : 'text-gray-600'}>
+                                    {record.minutes_used} min
                                   </span>
                                 </div>
-                                <span className={isDarkMode ? 'text-gray-300' : 'text-gray-600'}>
-                                  {record.minutes_used} min
-                                </span>
-                              </div>
-                            ))}
+                              ))}
                             {data.records.length > 3 && (
-                              <div className="text-xs text-gray-400 text-center py-1">
-                                +{data.records.length - 3}{' '}
-                                {t('profile.history.loadMore') || '更多记录'}
-                              </div>
+                              <motion.button
+                                onClick={() => {
+                                  setExpandedUsageUsers((prev) => {
+                                    const next = new Set(prev)
+                                    if (next.has(visitorId)) {
+                                      next.delete(visitorId)
+                                    } else {
+                                      next.add(visitorId)
+                                    }
+                                    return next
+                                  })
+                                }}
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                className={cn(
+                                  'w-full text-xs py-1.5 rounded-lg cursor-pointer transition-colors flex items-center justify-center gap-1',
+                                  isDarkMode
+                                    ? 'text-gray-400 hover:text-white hover:bg-white/5'
+                                    : 'text-gray-500 hover:text-black hover:bg-black/5',
+                                )}
+                              >
+                                {expandedUsageUsers.has(visitorId) ? (
+                                  <>
+                                    <ChevronDown className="w-3 h-3 rotate-180 transition-transform" />
+                                    <span>{t('common.collapse') || '收起'}</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <ChevronDown className="w-3 h-3 transition-transform" />
+                                    <span>
+                                      +{data.records.length - 3}{' '}
+                                      {t('profile.history.loadMore') || '更多记录'}
+                                    </span>
+                                  </>
+                                )}
+                              </motion.button>
                             )}
                           </div>
                         </div>
@@ -903,135 +1674,6 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
                 )}
               </div>
             </div>
-          )}
-
-          {activeTab === 'email' && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-              className="flex-1 p-4 flex flex-col"
-            >
-              <div className="text-center mb-4">
-                <h3
-                  className={cn(
-                    'text-sm font-semibold',
-                    isDarkMode ? 'text-white' : 'text-gray-900',
-                  )}
-                >
-                  {t('admin.email.title')}
-                </h3>
-                <p
-                  className={cn(
-                    'text-[10px] mt-0.5',
-                    isDarkMode ? 'text-zinc-500' : 'text-gray-400',
-                  )}
-                >
-                  {t('admin.email.subtitle')}
-                </p>
-              </div>
-
-              <div className="flex gap-3 flex-1">
-                <div
-                  className={cn(
-                    'flex-1 p-3 rounded-xl border',
-                    isDarkMode ? 'border-zinc-800 bg-zinc-900/50' : 'border-gray-200 bg-gray-50/50',
-                  )}
-                >
-                  <h4
-                    className={cn(
-                      'text-[11px] font-medium mb-2.5 flex items-center gap-1.5',
-                      isDarkMode ? 'text-zinc-300' : 'text-gray-700',
-                    )}
-                  >
-                    <Mail className="w-3 h-3" />
-                    {t('admin.email.smtp.title')}
-                  </h4>
-                  <div className="space-y-2">
-                    <Input
-                      label={t('admin.email.smtp.server')}
-                      value={emailConfig.smtpServer}
-                      placeholder={t('admin.email.smtp.serverPlaceholder')}
-                      onChange={(e) => handleEmailConfigChange('smtpServer', e.target.value)}
-                      className="text-xs"
-                    />
-                    <div className="flex gap-2">
-                      <div className="w-20">
-                        <Input
-                          label={t('admin.email.smtp.port')}
-                          value={emailConfig.port}
-                          onChange={(e) => handleEmailConfigChange('port', e.target.value)}
-                          className="text-xs"
-                        />
-                      </div>
-                      <div className="flex items-end pb-1.5">
-                        <label
-                          className={cn(
-                            'flex items-center gap-1.5 text-[10px] cursor-pointer',
-                            isDarkMode ? 'text-zinc-400' : 'text-gray-500',
-                          )}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={emailConfig.enableSsl}
-                            onChange={(e) => handleEmailConfigChange('enableSsl', e.target.checked)}
-                            className="rounded w-3 h-3"
-                          />
-                          {t('admin.email.smtp.ssl')}
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div
-                  className={cn(
-                    'flex-1 p-3 rounded-xl border',
-                    isDarkMode ? 'border-zinc-800 bg-zinc-900/50' : 'border-gray-200 bg-gray-50/50',
-                  )}
-                >
-                  <h4
-                    className={cn(
-                      'text-[11px] font-medium mb-2.5 flex items-center gap-1.5',
-                      isDarkMode ? 'text-zinc-300' : 'text-gray-700',
-                    )}
-                  >
-                    <UserCheck className="w-3 h-3" />
-                    {t('admin.email.auth.title')}
-                  </h4>
-                  <div className="space-y-2">
-                    <Input
-                      label={t('admin.email.auth.email')}
-                      value={emailConfig.senderEmail}
-                      placeholder={t('admin.email.auth.emailPlaceholder')}
-                      onChange={(e) => handleEmailConfigChange('senderEmail', e.target.value)}
-                      className="text-xs"
-                    />
-                    <Input
-                      label={t('admin.email.auth.code')}
-                      type="password"
-                      value={emailConfig.authCode}
-                      placeholder={t('admin.email.auth.codePlaceholder')}
-                      onChange={(e) => handleEmailConfigChange('authCode', e.target.value)}
-                      className="text-xs"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex gap-2 mt-3">
-                <Button
-                  variant="outline"
-                  onClick={handleTestEmailConnection}
-                  className="flex-1 text-xs h-8"
-                >
-                  {t('admin.email.actions.test')}
-                </Button>
-                <Button onClick={handleSaveEmailConfig} className="flex-1 text-xs h-8">
-                  {t('admin.email.actions.save')}
-                </Button>
-              </div>
-            </motion.div>
           )}
 
           {activeTab === 'ai' && (
@@ -1106,75 +1748,192 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
                   >
                     配置参数
                   </h4>
-                  <div className="grid gap-2">
+                  <div className="grid gap-3">
                     {aiConfig.provider === 'gemini' && (
-                      <Input
-                        label="API Key"
-                        type="password"
-                        value={aiConfig.geminiApiKey}
-                        placeholder={
-                          aiConfig.hasGeminiKey ? '已设置 (留空保持不变)' : '请输入 API Key'
-                        }
-                        onChange={(e) => setAiConfig({ ...aiConfig, geminiApiKey: e.target.value })}
-                        className="text-xs"
-                      />
+                      <div className="flex items-end gap-2">
+                        <div className="flex-1">
+                          <FloatingLabelInput
+                            alwaysShowLabel
+                            label={t('admin.ai.gemini.apiKey')}
+                            value={aiConfig.geminiApiKey}
+                            placeholder={
+                              aiConfig.hasGeminiKey
+                                ? t('admin.ai.placeholders.gemini.apiKeySet')
+                                : t('admin.ai.placeholders.gemini.apiKey')
+                            }
+                            onChange={(value) => setAiConfig({ ...aiConfig, geminiApiKey: value })}
+                            className="text-xs"
+                          />
+                        </div>
+                        {aiTestStatus.gemini.tested && aiTestStatus.gemini.success ? (
+                          <motion.button
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => handleSaveAiConfig()}
+                            className={cn(
+                              'h-10 px-4 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 shrink-0',
+                              isDarkMode
+                                ? 'bg-white text-black hover:bg-neutral-200'
+                                : 'bg-black text-white hover:bg-neutral-800',
+                            )}
+                          >
+                            <Check className="w-3 h-3" />
+                            保存设置
+                          </motion.button>
+                        ) : (
+                          <motion.button
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => handleTestAiConnection()}
+                            disabled={aiTestStatus.gemini.loading}
+                            className={cn(
+                              'h-10 px-4 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 shrink-0',
+                              isDarkMode
+                                ? 'bg-white text-black hover:bg-neutral-200'
+                                : 'bg-black text-white hover:bg-neutral-800',
+                            )}
+                          >
+                            {aiTestStatus.gemini.loading ? (
+                              <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                            ) : null}
+                            测试连接
+                          </motion.button>
+                        )}
+                      </div>
                     )}
 
                     {aiConfig.provider === 'doubao' && (
-                      <>
-                        <Input
-                          label="Chat API Key"
-                          type="password"
-                          value={aiConfig.doubaoChatApiKey}
-                          placeholder={
-                            aiConfig.hasDoubaoKey ? '已设置 (留空保持不变)' : '请输入 Chat API Key'
-                          }
-                          onChange={(e) =>
-                            setAiConfig({ ...aiConfig, doubaoChatApiKey: e.target.value })
-                          }
-                          className="text-xs"
-                        />
-                        <Input
-                          label="ASR App ID"
-                          value={aiConfig.doubaoAsrAppId}
-                          placeholder={
-                            aiConfig.hasDoubaoKey ? '已设置 (留空保持不变)' : '请输入 ASR App ID'
-                          }
-                          onChange={(e) =>
-                            setAiConfig({ ...aiConfig, doubaoAsrAppId: e.target.value })
-                          }
-                          className="text-xs"
-                        />
-                        <Input
-                          label="ASR Access Key"
-                          type="password"
-                          value={aiConfig.doubaoAsrAccessKey}
-                          placeholder={
-                            aiConfig.hasDoubaoKey
-                              ? '已设置 (留空保持不变)'
-                              : '请输入 ASR Access Key'
-                          }
-                          onChange={(e) =>
-                            setAiConfig({ ...aiConfig, doubaoAsrAccessKey: e.target.value })
-                          }
-                          className="text-xs"
-                        />
-                      </>
+                      <div className="space-y-3">
+                        <div className="flex items-end gap-2">
+                          <div className="flex-1">
+                            <FloatingLabelInput
+                              alwaysShowLabel
+                              label={t('admin.ai.doubao.chatApiKey')}
+                              value={aiConfig.doubaoChatApiKey}
+                              placeholder={
+                                aiConfig.hasDoubaoKey
+                                  ? t('admin.ai.placeholders.doubao.chatApiKeySet')
+                                  : t('admin.ai.placeholders.doubao.chatApiKey')
+                              }
+                              onChange={(value) =>
+                                setAiConfig({ ...aiConfig, doubaoChatApiKey: value })
+                              }
+                              className="text-xs"
+                            />
+                          </div>
+                          {aiTestStatus.doubaoChat.tested && aiTestStatus.doubaoChat.success ? (
+                            <motion.button
+                              initial={{ scale: 0.9, opacity: 0 }}
+                              animate={{ scale: 1, opacity: 1 }}
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                              onClick={() => handleSaveAiConfig('chat')}
+                              className={cn(
+                                'h-10 px-4 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 shrink-0',
+                                isDarkMode
+                                  ? 'bg-white text-black hover:bg-neutral-200'
+                                  : 'bg-black text-white hover:bg-neutral-800',
+                              )}
+                            >
+                              <Check className="w-3 h-3" />
+                              保存设置
+                            </motion.button>
+                          ) : (
+                            <motion.button
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                              onClick={() => handleTestAiConnection('chat')}
+                              disabled={aiTestStatus.doubaoChat.loading}
+                              className={cn(
+                                'h-10 px-4 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 shrink-0',
+                                isDarkMode
+                                  ? 'bg-white text-black hover:bg-neutral-200'
+                                  : 'bg-black text-white hover:bg-neutral-800',
+                              )}
+                            >
+                              {aiTestStatus.doubaoChat.loading ? (
+                                <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                              ) : null}
+                              测试连接
+                            </motion.button>
+                          )}
+                        </div>
+
+                        <div className="flex gap-2">
+                          <div className="flex-1 space-y-2">
+                            <FloatingLabelInput
+                              alwaysShowLabel
+                              label={t('admin.ai.doubao.asrAppId')}
+                              value={aiConfig.doubaoAsrAppId}
+                              placeholder={
+                                aiConfig.hasDoubaoKey
+                                  ? t('admin.ai.placeholders.doubao.asrAppIdSet')
+                                  : t('admin.ai.placeholders.doubao.asrAppId')
+                              }
+                              onChange={(value) =>
+                                setAiConfig({ ...aiConfig, doubaoAsrAppId: value })
+                              }
+                              className="text-xs"
+                            />
+                            <FloatingLabelInput
+                              alwaysShowLabel
+                              label={t('admin.ai.doubao.asrAccessKey')}
+                              value={aiConfig.doubaoAsrAccessKey}
+                              placeholder={
+                                aiConfig.hasDoubaoKey
+                                  ? t('admin.ai.placeholders.doubao.asrAccessKeySet')
+                                  : t('admin.ai.placeholders.doubao.asrAccessKey')
+                              }
+                              onChange={(value) =>
+                                setAiConfig({ ...aiConfig, doubaoAsrAccessKey: value })
+                              }
+                              className="text-xs"
+                            />
+                          </div>
+                          <div className="flex items-center pt-5">
+                            {aiTestStatus.doubaoAsr.tested && aiTestStatus.doubaoAsr.success ? (
+                              <motion.button
+                                initial={{ scale: 0.9, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => handleSaveAiConfig('asr')}
+                                className={cn(
+                                  'h-10 px-4 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 shrink-0',
+                                  isDarkMode
+                                    ? 'bg-white text-black hover:bg-neutral-200'
+                                    : 'bg-black text-white hover:bg-neutral-800',
+                                )}
+                              >
+                                <Check className="w-3 h-3" />
+                                保存设置
+                              </motion.button>
+                            ) : (
+                              <motion.button
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => handleTestAiConnection('asr')}
+                                disabled={aiTestStatus.doubaoAsr.loading}
+                                className={cn(
+                                  'h-10 px-4 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 shrink-0',
+                                  isDarkMode
+                                    ? 'bg-white text-black hover:bg-neutral-200'
+                                    : 'bg-black text-white hover:bg-neutral-800',
+                                )}
+                              >
+                                {aiTestStatus.doubaoAsr.loading ? (
+                                  <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                ) : null}
+                                测试连接
+                              </motion.button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     )}
                   </div>
-                </div>
-
-                <div className="flex gap-2 pt-1">
-                  <Button
-                    variant="outline"
-                    onClick={handleTestAiConnection}
-                    className="flex-1 text-xs"
-                  >
-                    测试连接
-                  </Button>
-                  <Button onClick={handleSaveAiConfig} className="flex-1 text-xs">
-                    保存设置
-                  </Button>
                 </div>
               </div>
             </motion.div>
@@ -1262,12 +2021,11 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
                   >
                     通用设置
                   </h4>
-                  <Input
-                    label="回调地址 (Notify URL)"
+                  <FloatingLabelInput
+                    alwaysShowLabel
+                    label={t('admin.payment.notifyUrl')}
                     value={paymentConfig.notifyUrl}
-                    onChange={(e) =>
-                      setPaymentConfig({ ...paymentConfig, notifyUrl: e.target.value })
-                    }
+                    onChange={(value) => setPaymentConfig({ ...paymentConfig, notifyUrl: value })}
                     className="text-xs"
                   />
                 </div>
@@ -1290,41 +2048,43 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
                       易支付配置
                     </h4>
                     <div className="grid gap-2">
-                      <Input
-                        label="商户ID (PID)"
+                      <FloatingLabelInput
+                        alwaysShowLabel
+                        label={t('admin.payment.epay.pid')}
                         value={paymentConfig.epay.pid}
-                        onChange={(e) =>
+                        onChange={(value) =>
                           setPaymentConfig({
                             ...paymentConfig,
-                            epay: { ...paymentConfig.epay, pid: e.target.value },
+                            epay: { ...paymentConfig.epay, pid: value },
                           })
                         }
                         className="text-xs"
                       />
-                      <Input
-                        label="商户密钥 (Key)"
-                        type="password"
+                      <FloatingLabelInput
+                        alwaysShowLabel
+                        label={t('admin.payment.epay.key')}
                         value={paymentConfig.epay.key}
                         placeholder={
                           paymentConfig.epay.hasCredentials
                             ? '已设置 (留空保持不变)'
                             : '请输入商户密钥'
                         }
-                        onChange={(e) =>
+                        onChange={(value) =>
                           setPaymentConfig({
                             ...paymentConfig,
-                            epay: { ...paymentConfig.epay, key: e.target.value },
+                            epay: { ...paymentConfig.epay, key: value },
                           })
                         }
                         className="text-xs"
                       />
-                      <Input
-                        label="API 接口地址"
+                      <FloatingLabelInput
+                        alwaysShowLabel
+                        label={t('admin.payment.epay.apiUrl')}
                         value={paymentConfig.epay.apiUrl}
-                        onChange={(e) =>
+                        onChange={(value) =>
                           setPaymentConfig({
                             ...paymentConfig,
-                            epay: { ...paymentConfig.epay, apiUrl: e.target.value },
+                            epay: { ...paymentConfig.epay, apiUrl: value },
                           })
                         }
                         className="text-xs"
@@ -1351,69 +2111,72 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
                       微信支付配置
                     </h4>
                     <div className="grid gap-2">
-                      <Input
-                        label="AppID"
+                      <FloatingLabelInput
+                        alwaysShowLabel
+                        label={t('admin.payment.wechat.appId')}
                         value={paymentConfig.wechat.appid}
-                        onChange={(e) =>
+                        onChange={(value) =>
                           setPaymentConfig({
                             ...paymentConfig,
-                            wechat: { ...paymentConfig.wechat, appid: e.target.value },
+                            wechat: { ...paymentConfig.wechat, appid: value },
                           })
                         }
                         className="text-xs"
                       />
-                      <Input
-                        label="商户号 (MCHID)"
+                      <FloatingLabelInput
+                        alwaysShowLabel
+                        label={t('admin.payment.wechat.mchId')}
                         value={paymentConfig.wechat.mchid}
-                        onChange={(e) =>
+                        onChange={(value) =>
                           setPaymentConfig({
                             ...paymentConfig,
-                            wechat: { ...paymentConfig.wechat, mchid: e.target.value },
+                            wechat: { ...paymentConfig.wechat, mchid: value },
                           })
                         }
                         className="text-xs"
                       />
-                      <Input
-                        label="API Key"
-                        type="password"
+                      <FloatingLabelInput
+                        alwaysShowLabel
+                        label={t('admin.payment.wechat.apiKey')}
                         value={paymentConfig.wechat.apiKey}
                         placeholder={
                           paymentConfig.wechat.hasCredentials
                             ? '已设置 (留空保持不变)'
                             : '请输入 API Key'
                         }
-                        onChange={(e) =>
+                        onChange={(value) =>
                           setPaymentConfig({
                             ...paymentConfig,
-                            wechat: { ...paymentConfig.wechat, apiKey: e.target.value },
+                            wechat: { ...paymentConfig.wechat, apiKey: value },
                           })
                         }
                         className="text-xs"
                       />
-                      <Input
-                        label="证书序列号 (Cert Serial)"
+                      <FloatingLabelInput
+                        alwaysShowLabel
+                        label={t('admin.payment.wechat.certSerial')}
                         value={paymentConfig.wechat.certSerial}
-                        onChange={(e) =>
+                        onChange={(value) =>
                           setPaymentConfig({
                             ...paymentConfig,
-                            wechat: { ...paymentConfig.wechat, certSerial: e.target.value },
+                            wechat: { ...paymentConfig.wechat, certSerial: value },
                           })
                         }
                         className="text-xs"
                       />
-                      <Input
-                        label="私钥 (Private Key)"
-                        type="password"
+                      <FloatingLabelInput
+                        alwaysShowLabel
+                        label={t('admin.payment.wechat.privateKey')}
                         value={paymentConfig.wechat.privateKey}
                         placeholder={
                           paymentConfig.wechat.hasCredentials
                             ? '已设置 (留空保持不变)'
                             : '请输入私钥内容'
                         }
-                        onChange={(e) =>
+                        onChange={(value) =>
                           setPaymentConfig({
                             ...paymentConfig,
-                            wechat: { ...paymentConfig.wechat, privateKey: e.target.value },
+                            wechat: { ...paymentConfig.wechat, privateKey: value },
                           })
                         }
                         className="text-xs"
@@ -1440,47 +2203,48 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
                       支付宝配置
                     </h4>
                     <div className="grid gap-2">
-                      <Input
-                        label="App ID"
+                      <FloatingLabelInput
+                        alwaysShowLabel
+                        label={t('admin.payment.alipay.appId')}
                         value={paymentConfig.alipay.appId}
-                        onChange={(e) =>
+                        onChange={(value) =>
                           setPaymentConfig({
                             ...paymentConfig,
-                            alipay: { ...paymentConfig.alipay, appId: e.target.value },
+                            alipay: { ...paymentConfig.alipay, appId: value },
                           })
                         }
                         className="text-xs"
                       />
-                      <Input
-                        label="应用私钥 (Private Key)"
-                        type="password"
+                      <FloatingLabelInput
+                        alwaysShowLabel
+                        label={t('admin.payment.alipay.privateKey')}
                         value={paymentConfig.alipay.privateKey}
                         placeholder={
                           paymentConfig.alipay.hasCredentials
                             ? '已设置 (留空保持不变)'
                             : '请输入应用私钥'
                         }
-                        onChange={(e) =>
+                        onChange={(value) =>
                           setPaymentConfig({
                             ...paymentConfig,
-                            alipay: { ...paymentConfig.alipay, privateKey: e.target.value },
+                            alipay: { ...paymentConfig.alipay, privateKey: value },
                           })
                         }
                         className="text-xs"
                       />
-                      <Input
-                        label="支付宝公钥 (Public Key)"
-                        type="password"
+                      <FloatingLabelInput
+                        alwaysShowLabel
+                        label={t('admin.payment.alipay.publicKey')}
                         value={paymentConfig.alipay.publicKey}
                         placeholder={
                           paymentConfig.alipay.hasCredentials
                             ? '已设置 (留空保持不变)'
                             : '请输入支付宝公钥'
                         }
-                        onChange={(e) =>
+                        onChange={(value) =>
                           setPaymentConfig({
                             ...paymentConfig,
-                            alipay: { ...paymentConfig.alipay, publicKey: e.target.value },
+                            alipay: { ...paymentConfig.alipay, publicKey: value },
                           })
                         }
                         className="text-xs"
@@ -1491,301 +2255,6 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
 
                 <Button onClick={handleSavePaymentConfig} className="w-full text-xs">
                   保存支付设置
-                </Button>
-              </div>
-            </motion.div>
-          )}
-
-          {activeTab === 'sms' && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-              className="flex-1 overflow-y-auto p-4"
-            >
-              <div className="grid gap-3 max-w-md mx-auto">
-                <div
-                  className={cn(
-                    'p-3 rounded-xl border',
-                    isDarkMode
-                      ? 'border-neutral-800 bg-neutral-900/50'
-                      : 'border-neutral-200 bg-neutral-50',
-                  )}
-                >
-                  <h4
-                    className={cn(
-                      'text-xs font-medium mb-3',
-                      isDarkMode ? 'text-white' : 'text-black',
-                    )}
-                  >
-                    短信服务商
-                  </h4>
-                  <div className="flex gap-4">
-                    <label className="flex items-center gap-2 text-xs cursor-pointer">
-                      <input
-                        type="radio"
-                        name="smsProvider"
-                        value="aliyun"
-                        checked={smsConfig.provider === 'aliyun'}
-                        onChange={(e) =>
-                          setSmsConfig({ ...smsConfig, provider: e.target.value as any })
-                        }
-                      />
-                      <span className={isDarkMode ? 'text-gray-300' : 'text-gray-700'}>阿里云</span>
-                    </label>
-                    <label className="flex items-center gap-2 text-xs cursor-pointer">
-                      <input
-                        type="radio"
-                        name="smsProvider"
-                        value="tencent"
-                        checked={smsConfig.provider === 'tencent'}
-                        onChange={(e) =>
-                          setSmsConfig({ ...smsConfig, provider: e.target.value as any })
-                        }
-                      />
-                      <span className={isDarkMode ? 'text-gray-300' : 'text-gray-700'}>腾讯云</span>
-                    </label>
-                  </div>
-                </div>
-
-                {smsConfig.provider === 'aliyun' && (
-                  <div
-                    className={cn(
-                      'p-3 rounded-xl border',
-                      isDarkMode
-                        ? 'border-neutral-800 bg-neutral-900/50'
-                        : 'border-neutral-200 bg-neutral-50',
-                    )}
-                  >
-                    <h4
-                      className={cn(
-                        'text-xs font-medium mb-3',
-                        isDarkMode ? 'text-white' : 'text-black',
-                      )}
-                    >
-                      阿里云短信配置
-                    </h4>
-                    <div className="grid gap-2">
-                      <Input
-                        label="AccessKey ID"
-                        value={smsConfig.aliyun.accessKeyId}
-                        onChange={(e) =>
-                          setSmsConfig({
-                            ...smsConfig,
-                            aliyun: { ...smsConfig.aliyun, accessKeyId: e.target.value },
-                          })
-                        }
-                        className="text-xs"
-                      />
-                      <Input
-                        label="AccessKey Secret"
-                        type="password"
-                        value={smsConfig.aliyun.accessKeySecret}
-                        placeholder={
-                          smsConfig.aliyun.hasCredentials
-                            ? '已设置 (留空保持不变)'
-                            : '请输入 AccessKey Secret'
-                        }
-                        onChange={(e) =>
-                          setSmsConfig({
-                            ...smsConfig,
-                            aliyun: { ...smsConfig.aliyun, accessKeySecret: e.target.value },
-                          })
-                        }
-                        className="text-xs"
-                      />
-                      <Input
-                        label="短信签名 (Sign Name)"
-                        value={smsConfig.aliyun.signName}
-                        onChange={(e) =>
-                          setSmsConfig({
-                            ...smsConfig,
-                            aliyun: { ...smsConfig.aliyun, signName: e.target.value },
-                          })
-                        }
-                        className="text-xs"
-                      />
-                      <Input
-                        label="模板代码 (Template Code)"
-                        value={smsConfig.aliyun.templateCode}
-                        onChange={(e) =>
-                          setSmsConfig({
-                            ...smsConfig,
-                            aliyun: { ...smsConfig.aliyun, templateCode: e.target.value },
-                          })
-                        }
-                        className="text-xs"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {smsConfig.provider === 'tencent' && (
-                  <div
-                    className={cn(
-                      'p-3 rounded-xl border',
-                      isDarkMode
-                        ? 'border-neutral-800 bg-neutral-900/50'
-                        : 'border-neutral-200 bg-neutral-50',
-                    )}
-                  >
-                    <h4
-                      className={cn(
-                        'text-xs font-medium mb-3',
-                        isDarkMode ? 'text-white' : 'text-black',
-                      )}
-                    >
-                      腾讯云短信配置
-                    </h4>
-                    <div className="grid gap-2">
-                      <Input
-                        label="App ID"
-                        value={smsConfig.tencent.appId}
-                        onChange={(e) =>
-                          setSmsConfig({
-                            ...smsConfig,
-                            tencent: { ...smsConfig.tencent, appId: e.target.value },
-                          })
-                        }
-                        className="text-xs"
-                      />
-                      <Input
-                        label="Secret ID"
-                        value={smsConfig.tencent.secretId}
-                        onChange={(e) =>
-                          setSmsConfig({
-                            ...smsConfig,
-                            tencent: { ...smsConfig.tencent, secretId: e.target.value },
-                          })
-                        }
-                        className="text-xs"
-                      />
-                      <Input
-                        label="Secret Key"
-                        type="password"
-                        value={smsConfig.tencent.secretKey}
-                        placeholder={
-                          smsConfig.tencent.hasCredentials
-                            ? '已设置 (留空保持不变)'
-                            : '请输入 Secret Key'
-                        }
-                        onChange={(e) =>
-                          setSmsConfig({
-                            ...smsConfig,
-                            tencent: { ...smsConfig.tencent, secretKey: e.target.value },
-                          })
-                        }
-                        className="text-xs"
-                      />
-                      <Input
-                        label="短信签名 (Sign Name)"
-                        value={smsConfig.tencent.signName}
-                        onChange={(e) =>
-                          setSmsConfig({
-                            ...smsConfig,
-                            tencent: { ...smsConfig.tencent, signName: e.target.value },
-                          })
-                        }
-                        className="text-xs"
-                      />
-                      <Input
-                        label="模板 ID (Template ID)"
-                        value={smsConfig.tencent.templateId}
-                        onChange={(e) =>
-                          setSmsConfig({
-                            ...smsConfig,
-                            tencent: { ...smsConfig.tencent, templateId: e.target.value },
-                          })
-                        }
-                        className="text-xs"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                <Button onClick={handleSaveSmsConfig} className="w-full text-xs">
-                  保存短信设置
-                </Button>
-              </div>
-            </motion.div>
-          )}
-
-          {activeTab === 'wechat-login' && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-              className="flex-1 overflow-y-auto p-4"
-            >
-              <div className="grid gap-3 max-w-md mx-auto">
-                <div
-                  className={cn(
-                    'p-3 rounded-xl border',
-                    isDarkMode
-                      ? 'border-neutral-800 bg-neutral-900/50'
-                      : 'border-neutral-200 bg-neutral-50',
-                  )}
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <h4
-                      className={cn(
-                        'text-xs font-medium',
-                        isDarkMode ? 'text-white' : 'text-black',
-                      )}
-                    >
-                      微信扫码登录
-                    </h4>
-                    <label className="flex items-center gap-2 text-xs cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={wechatLoginConfig.enabled}
-                        onChange={(e) =>
-                          setWechatLoginConfig({
-                            ...wechatLoginConfig,
-                            enabled: e.target.checked,
-                          })
-                        }
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
-                      <span className={isDarkMode ? 'text-gray-300' : 'text-gray-700'}>启用</span>
-                    </label>
-                  </div>
-                  <div className="grid gap-2">
-                    <Input
-                      label="AppID"
-                      value={wechatLoginConfig.appId}
-                      onChange={(e) =>
-                        setWechatLoginConfig({ ...wechatLoginConfig, appId: e.target.value })
-                      }
-                      className="text-xs"
-                    />
-                    <Input
-                      label="AppSecret"
-                      type="password"
-                      value={wechatLoginConfig.appSecret}
-                      placeholder={
-                        wechatLoginConfig.hasCredentials
-                          ? '已设置 (留空保持不变)'
-                          : '请输入 AppSecret'
-                      }
-                      onChange={(e) =>
-                        setWechatLoginConfig({ ...wechatLoginConfig, appSecret: e.target.value })
-                      }
-                      className="text-xs"
-                    />
-                    <Input
-                      label="回调地址 (Redirect URI)"
-                      value={wechatLoginConfig.redirectUri}
-                      onChange={(e) =>
-                        setWechatLoginConfig({ ...wechatLoginConfig, redirectUri: e.target.value })
-                      }
-                      className="text-xs"
-                    />
-                  </div>
-                </div>
-
-                <Button onClick={handleSaveWechatLoginConfig} className="w-full text-xs">
-                  保存微信登录设置
                 </Button>
               </div>
             </motion.div>
