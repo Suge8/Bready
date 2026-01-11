@@ -320,7 +320,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ onClose, onOpenAdmi
       isOpen
       onClose={onClose}
       size="xl"
-      className="p-0 w-full max-w-[560px] h-[520px] flex flex-col overflow-hidden"
+      className="p-0 w-full max-w-[560px] h-auto max-h-[90vh] flex flex-col overflow-hidden"
     >
       <div className={cn('h-full flex flex-col', isDarkMode ? 'bg-black' : 'bg-white')}>
         <div
@@ -366,7 +366,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ onClose, onOpenAdmi
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4">{renderTabContent()}</div>
+        <div className="flex-1 overflow-hidden p-4">{renderTabContent()}</div>
       </div>
 
       {paymentModal && (

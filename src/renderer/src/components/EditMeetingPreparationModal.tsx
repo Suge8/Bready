@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import { Loader2, Check } from 'lucide-react'
 import { Button } from './ui/button'
-import { ToastNotification } from './ui/notifications'
 import { Modal } from './ui/Modal'
 import { Input, Textarea } from './ui/input'
 import { preparationService, type Preparation } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { useI18n } from '../contexts/I18nContext'
+import { useToast } from '../contexts/ToastContext'
 
 interface EditMeetingPreparationModalProps {
   preparation?: Preparation
@@ -27,6 +27,7 @@ const EditMeetingPreparationModal: React.FC<EditMeetingPreparationModalProps> = 
 }) => {
   const { user } = useAuth()
   const { t } = useI18n()
+  const { showToast } = useToast()
   const isEditing = !!preparation
 
   const [name, setName] = useState('')
@@ -34,10 +35,6 @@ const EditMeetingPreparationModal: React.FC<EditMeetingPreparationModalProps> = 
   const [participants, setParticipants] = useState('')
   const [agenda, setAgenda] = useState('')
   const [keyPoints, setKeyPoints] = useState('')
-  const [toast, setToast] = useState<{
-    message: string
-    type: 'success' | 'error' | 'info' | 'warning'
-  } | null>(null)
   const [isSaving, setIsSaving] = useState(false)
 
   useEffect(() => {
@@ -54,11 +51,6 @@ const EditMeetingPreparationModal: React.FC<EditMeetingPreparationModalProps> = 
       }
     }
   }, [isEditing, preparation])
-
-  const showToast = (message: string, type: 'success' | 'error' | 'info' | 'warning') => {
-    setToast({ message, type })
-    setTimeout(() => setToast(null), 3000)
-  }
 
   const handleSave = async () => {
     if (!name.trim() || !meetingTopic.trim()) {
@@ -206,14 +198,6 @@ const EditMeetingPreparationModal: React.FC<EditMeetingPreparationModalProps> = 
           </div>
         </div>
       </div>
-
-      {toast && (
-        <ToastNotification
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(null)}
-        />
-      )}
     </Modal>
   )
 }

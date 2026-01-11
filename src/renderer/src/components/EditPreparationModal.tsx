@@ -2,12 +2,12 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { Upload, Loader2, Check, FileText, Briefcase } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from './ui/button'
-import { ToastNotification } from './ui/notifications'
 import { Modal } from './ui/Modal'
 import { Input, Textarea } from './ui/input'
 import { preparationService, type Preparation } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { useI18n } from '../contexts/I18nContext'
+import { useToast } from '../contexts/ToastContext'
 
 interface EditPreparationModalProps {
   preparation?: Preparation
@@ -54,6 +54,7 @@ const EditPreparationModal: React.FC<EditPreparationModalProps> = ({
 }) => {
   const { user } = useAuth()
   const { t } = useI18n()
+  const { showToast } = useToast()
   const isEditing = !!preparation
 
   const [name, setName] = useState('')
@@ -61,10 +62,6 @@ const EditPreparationModal: React.FC<EditPreparationModalProps> = ({
   const [resume, setResume] = useState('')
   const [analysisResult, setAnalysisResult] = useState<any>(null)
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
-  const [toast, setToast] = useState<{
-    message: string
-    type: 'success' | 'error' | 'info' | 'warning'
-  } | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [isExtracting, setIsExtracting] = useState(false)
 
@@ -87,11 +84,6 @@ const EditPreparationModal: React.FC<EditPreparationModalProps> = ({
       setAnalysisResult(preparation.analysis || null)
     }
   }, [isEditing, preparation])
-
-  const showToast = (message: string, type: 'success' | 'error' | 'info' | 'warning') => {
-    setToast({ message, type })
-    setTimeout(() => setToast(null), 3000)
-  }
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -377,15 +369,7 @@ const EditPreparationModal: React.FC<EditPreparationModalProps> = ({
         </motion.div>
       </motion.div>
 
-      <AnimatePresence>
-        {toast && (
-          <ToastNotification
-            message={toast.message}
-            type={toast.type}
-            onClose={() => setToast(null)}
-          />
-        )}
-      </AnimatePresence>
+      <AnimatePresence />
     </Modal>
   )
 }

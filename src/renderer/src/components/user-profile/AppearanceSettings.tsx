@@ -5,6 +5,7 @@ import { cn } from '../../lib/utils'
 import { useI18n } from '../../contexts/I18nContext'
 import { useTheme } from '../ui/theme-provider'
 import { SettingsSkeleton } from './SkeletonLoaders'
+import { ShortcutSettings } from './ShortcutSettings'
 
 interface AppearanceSettingsProps {
   loading?: boolean
@@ -166,6 +167,8 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = memo(
               </div>
             </div>
           </motion.div>
+
+          <ShortcutSettings isDarkMode={isDarkMode} variants={itemVariants} />
         </div>
       </motion.div>
     )

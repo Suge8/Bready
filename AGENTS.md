@@ -105,3 +105,6 @@ npm run db:setup     # 初始化 PostgreSQL
 - 首次运行需配置 `.env` (API Keys)
 - 原生工具需 Swift 5.0+ 编译
 - `payment-callback-server/` 是独立项目，需单独部署
+
+与 ui 相关的都使用前端工作师agent，且使用 frontend-design skills，保持我们的 vercel 黑白风格，所有能按的都支持hover动画和pointer，减少使用影响性能导致动画一卡一卡的blur，动效丰富丝滑，视觉冲击力强，tab 切换或模态框变换时都有滑动或切换的丝滑动效。
+编写完ui 确定好我们的页面有没有缺失翻译键，都把他们补齐

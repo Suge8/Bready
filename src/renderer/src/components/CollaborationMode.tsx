@@ -19,10 +19,11 @@ import {
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Button } from './ui/button'
-import { ToastNotification, ConfirmationDialog } from './ui/notifications'
+import { ConfirmationDialog } from './ui/notifications'
 
 import 'highlight.js/styles/github.css'
 import { useI18n } from '../contexts/I18nContext'
+import { useToast } from '../contexts/ToastContext'
 import { Modal } from './ui/Modal'
 import CollaborationHeader from './collaboration/CollaborationHeader'
 import CollaborationSidebar from './collaboration/CollaborationSidebar'
@@ -128,7 +129,12 @@ const StreamingMarkdown: React.FC<{
       setChars((prev) => [...prev, ...newChars])
     } else if (text !== prevText) {
       idCounterRef.current = 0
-      setChars(text.split('').map((char) => ({ char, id: idCounterRef.current++ })))
+      setChars(
+        text.split('').map((char) => ({
+          char,
+          id: idCounterRef.current++,
+        })),
+      )
     }
 
     prevTextRef.current = text
@@ -153,13 +159,12 @@ const StreamingMarkdown: React.FC<{
       {chars.map(({ char, id }) => (
         <span
           key={id}
-          className="animate-char-fade-in"
+          className="char-fade"
           style={{ whiteSpace: char === ' ' ? 'pre' : 'normal' }}
         >
           {char}
         </span>
       ))}
-      <span className="typing-cursor">|</span>
     </div>
   )
 }
@@ -179,6 +184,23 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
   const [conversationHistory, setConversationHistory] = useState<
     Array<{ type: 'user' | 'ai'; content: string; timestamp: Date; source: 'voice' | 'text' }>
   >([])
+
+  const MAX_HISTORY_LENGTH = 100
+  const addToHistory = useCallback(
+    (entry: {
+      type: 'user' | 'ai'
+      content: string
+      timestamp: Date
+      source: 'voice' | 'text'
+    }) => {
+      setConversationHistory((prev) => {
+        const next = [...prev, entry]
+        return next.length > MAX_HISTORY_LENGTH ? next.slice(-MAX_HISTORY_LENGTH) : next
+      })
+    },
+    [],
+  )
+
   const [isWaitingForAI, setIsWaitingForAI] = useState(false)
   const [currentVoiceInput, setCurrentVoiceInput] = useState('')
   const [currentAIResponse, setCurrentAIResponse] = useState('')
@@ -189,10 +211,7 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
   const [showAudioModeDropdown, setShowAudioModeDropdown] = useState(false)
   const [currentError, setCurrentError] = useState<{ type: string; message: string } | null>(null)
   const [isInitializing, setIsInitializing] = useState(true)
-  const [toast, setToast] = useState<{
-    message: string
-    type: 'success' | 'error' | 'info' | 'warning'
-  } | null>(null)
+  const { showToast } = useToast()
   const [showConfirmationDialog, setShowConfirmationDialog] = useState<{
     title: string
     message: string
@@ -336,21 +355,15 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
           setCurrentMicrophoneDeviceId(previousDeviceId)
           currentMicrophoneDeviceIdRef.current = previousDeviceId
         }
-        setToast({
-          message: '切换麦克风设备失败',
-          type: 'error',
-        })
+        showToast('切换麦克风设备失败', 'error')
         return
       }
 
       if (window.bready && isConnected && currentAudioMode === 'microphone') {
-        setToast({
-          message: t('collaboration.toasts.deviceSwitched', { device: label }),
-          type: 'success',
-        })
+        showToast(t('collaboration.toasts.deviceSwitched', { device: label }), 'success')
       }
     },
-    [currentAudioMode, isConnected, t],
+    [currentAudioMode, isConnected, t, showToast],
   )
 
   // 权限检查
@@ -422,39 +435,15 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
   // 初始化 AI API
   const initializeAI = async () => {
     try {
-      let apiKey = ''
       sessionReadyRef.current = false
       audioStartPendingRef.current = false
       audioStartedRef.current = false
 
-      // 从环境变量获取 API 密钥
-      if (window.env && window.env.GEMINI_API_KEY) {
-        apiKey = window.env.GEMINI_API_KEY
-      }
-
-      // 从 localStorage 获取（备用）
-      if (!apiKey) {
-        const storedKey = localStorage.getItem('gemini-api-key')
-        if (storedKey) {
-          apiKey = storedKey
-        }
-      }
-
-      if (!apiKey) {
-        setIsInitializing(false)
-        setCurrentError({
-          type: 'api-connection-failed',
-          message: t('collaboration.errors.apiKeyMissing'),
-        })
-        setStatus(t('collaboration.status.apiKeyMissing'))
-        return
-      }
-
       // 获取选择的准备项
       const selectedPreparationStr = localStorage.getItem('bready-selected-preparation')
-      let customPrompt = selectedPreparationStr || ''
+      const customPrompt = selectedPreparationStr || ''
 
-      let language = localStorage.getItem('bready-selected-language') || 'cmn-CN'
+      const language = localStorage.getItem('bready-selected-language') || 'cmn-CN'
       const purpose = localStorage.getItem('bready-selected-purpose') || 'interview'
 
       console.log('📤 前端准备调用 initializeAI，参数:', {
@@ -464,10 +453,9 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
       })
 
       setStatus(t('collaboration.status.connecting'))
-      console.log('🤖 初始化 AI API，API 密钥长度:', apiKey.length)
 
-      // 初始化 AI 连接
-      const success = await window.bready.initializeAI(apiKey, customPrompt, purpose, language)
+      // 初始化 AI 连接 (API Key 从数据库获取，前端传空字符串)
+      const success = await window.bready.initializeAI('', customPrompt, purpose, language)
 
       if (success) {
         setIsConnected(true)
@@ -485,7 +473,7 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
           message: t('collaboration.errors.connectFailed'),
         })
         setStatus(t('collaboration.status.connectFailed'))
-        setToast({ message: t('collaboration.toasts.connectionFailed'), type: 'error' })
+        showToast(t('collaboration.toasts.connectionFailed'), 'error')
         setTimeout(() => {
           onExit()
         }, 800)
@@ -498,7 +486,7 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
         message: `${t('collaboration.status.initFailed')}: ${error instanceof Error ? error.message : String(error)}`,
       })
       setStatus(t('collaboration.status.initFailed'))
-      setToast({ message: t('collaboration.toasts.connectionFailed'), type: 'error' })
+      showToast(t('collaboration.toasts.connectionFailed'), 'error')
       setTimeout(() => {
         onExit()
       }, 800)
@@ -568,7 +556,7 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
       source: 'text' as const,
     }
 
-    setConversationHistory((prev) => [...prev, userMessage])
+    addToHistory(userMessage)
 
     pendingUserInputRef.current = {
       content: messageText,
@@ -586,7 +574,7 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
         timestamp: new Date(),
         source: 'text' as const,
       }
-      setConversationHistory((prev) => [...prev, errorMessage])
+      addToHistory(errorMessage)
       setIsWaitingForAI(false)
       return
     }
@@ -606,7 +594,7 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
           timestamp: new Date(),
           source: 'text' as const,
         }
-        setConversationHistory((prev) => [...prev, errorMessage])
+        addToHistory(errorMessage)
         setIsWaitingForAI(false)
       }
       // 如果发送成功，AI 的回复会通过 onAIResponse 事件监听器接收
@@ -618,7 +606,7 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
         timestamp: new Date(),
         source: 'text' as const,
       }
-      setConversationHistory((prev) => [...prev, errorMessage])
+      addToHistory(errorMessage)
       setIsWaitingForAI(false)
     }
   }
@@ -714,7 +702,7 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
         }
 
         console.log('📝 [前端] 立即添加语音用户消息到历史记录')
-        setConversationHistory((prev) => [...prev, userMessage])
+        addToHistory(userMessage)
 
         // 清空当前语音输入显示（因为已经添加到历史记录了）
         setCurrentVoiceInput('')
@@ -758,7 +746,7 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
         source: pendingUserInputRef.current ? ('text' as const) : ('voice' as const),
       }
 
-      setConversationHistory((prev) => [...prev, aiMessage])
+      addToHistory(aiMessage)
       pendingUserInputRef.current = null
       setCurrentVoiceInput('')
       currentVoiceInputRef.current = ''
@@ -801,10 +789,10 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
       sessionReadyRef.current = false
       audioStartPendingRef.current = false
       audioStartedRef.current = false
-      setCurrentError({
-        type: 'api-connection-failed',
-        message: t('collaboration.errors.audioInterrupted'),
-      })
+      showToast(t('collaboration.toasts.audioInterrupted'), 'error')
+      setTimeout(() => {
+        onExit()
+      }, 1500)
     })
 
     // 监听音频设备变更事件
@@ -824,19 +812,13 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
         currentMicrophoneDeviceIdRef.current = nextId
         setCurrentMicrophoneDeviceId(nextId)
 
-        // 只有当设备真正改变时才显示 Toast
         if (previousId && previousId !== nextId && nextLabel) {
-          setToast({
-            message: t('collaboration.toasts.deviceSwitched', { device: nextLabel }),
-            type: 'info',
-          })
+          showToast(t('collaboration.toasts.deviceSwitched', { device: nextLabel }), 'info')
         }
       },
     )
 
-    // 返回清理函数
     return () => {
-      // 清理事件监听器
       removeStatusListener()
       removeTranscriptionListener()
       removeAIResponseUpdateListener()
@@ -847,6 +829,7 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
       removeSessionErrorListener()
       removeSessionClosedListener()
       removeAudioDeviceChangedListener?.()
+      window.bready?.stopAudioCapture?.()
     }
   }, [])
 
@@ -1387,15 +1370,6 @@ const CollaborationMode: React.FC<CollaborationModeProps> = ({ onExit }) => {
           </Modal>
         )}
       </AnimatePresence>
-
-      {/* Toast通知 */}
-      {toast && (
-        <ToastNotification
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(null)}
-        />
-      )}
 
       {/* 确认对话框 */}
       {showConfirmationDialog && (

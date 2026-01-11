@@ -6,18 +6,14 @@
 import { systemPreferences } from 'electron'
 import { EventEmitter } from 'events'
 import type { AudioCaptureOptions, AudioMode, AudioStatus } from '../../shared/ipc'
+import { getAiProvider } from '../ai-service'
 
 const debugAudio = process.env.DEBUG_AUDIO === '1'
 const GEMINI_SAMPLE_RATE = 24000
 const DOUBAO_SAMPLE_RATE = 16000
 
-function resolveAiProvider(): 'gemini' | 'doubao' {
-  const provider = (process.env.AI_PROVIDER || 'gemini').toLowerCase()
-  return provider === 'doubao' ? 'doubao' : 'gemini'
-}
-
 function getCaptureSampleRate(): number {
-  return resolveAiProvider() === 'doubao' ? DOUBAO_SAMPLE_RATE : GEMINI_SAMPLE_RATE
+  return getAiProvider() === 'doubao' ? DOUBAO_SAMPLE_RATE : GEMINI_SAMPLE_RATE
 }
 
 export type { AudioCaptureOptions } from '../../shared/ipc'

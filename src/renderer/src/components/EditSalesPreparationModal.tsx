@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import { Loader2, Check } from 'lucide-react'
 import { Button } from './ui/button'
-import { ToastNotification } from './ui/notifications'
 import { Modal } from './ui/Modal'
 import { Input, Textarea } from './ui/input'
 import { preparationService, type Preparation } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { useI18n } from '../contexts/I18nContext'
+import { useToast } from '../contexts/ToastContext'
 
 interface EditSalesPreparationModalProps {
   preparation?: Preparation
@@ -27,16 +27,13 @@ const EditSalesPreparationModal: React.FC<EditSalesPreparationModalProps> = ({
 }) => {
   const { user } = useAuth()
   const { t } = useI18n()
+  const { showToast } = useToast()
   const isEditing = !!preparation
 
   const [name, setName] = useState('')
   const [clientInfo, setClientInfo] = useState('')
   const [productInfo, setProductInfo] = useState('')
   const [salesGoal, setSalesGoal] = useState('')
-  const [toast, setToast] = useState<{
-    message: string
-    type: 'success' | 'error' | 'info' | 'warning'
-  } | null>(null)
   const [isSaving, setIsSaving] = useState(false)
 
   useEffect(() => {
@@ -52,11 +49,6 @@ const EditSalesPreparationModal: React.FC<EditSalesPreparationModalProps> = ({
       }
     }
   }, [isEditing, preparation])
-
-  const showToast = (message: string, type: 'success' | 'error' | 'info' | 'warning') => {
-    setToast({ message, type })
-    setTimeout(() => setToast(null), 3000)
-  }
 
   const handleSave = async () => {
     if (!name.trim() || !clientInfo.trim()) {
@@ -189,14 +181,6 @@ const EditSalesPreparationModal: React.FC<EditSalesPreparationModalProps> = ({
           </div>
         </div>
       </div>
-
-      {toast && (
-        <ToastNotification
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(null)}
-        />
-      )}
     </Modal>
   )
 }

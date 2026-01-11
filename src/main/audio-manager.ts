@@ -21,8 +21,7 @@ const DOUBAO_SAMPLE_RATE = 16000
 const SYSTEM_INPUT_SAMPLE_RATE = 48000
 
 function resolveAiProvider(): 'gemini' | 'doubao' {
-  const provider = (process.env.AI_PROVIDER || 'gemini').toLowerCase()
-  return provider === 'doubao' ? 'doubao' : 'gemini'
+  return getAiProvider()
 }
 
 function getTargetSampleRate(): number {

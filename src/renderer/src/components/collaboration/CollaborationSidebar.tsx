@@ -23,8 +23,16 @@ const CollaborationSidebar: React.FC<CollaborationSidebarProps> = ({
   t,
 }) => {
   const [hoveredMessageIndex, setHoveredMessageIndex] = useState<number | null>(null)
-  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const listRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current)
+      }
+    }
+  }, [])
 
   useEffect(() => {
     const sidebar = listRef.current

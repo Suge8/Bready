@@ -5,10 +5,10 @@ import { electronAudioCapture } from './audio/electron-native-capture'
 import { log, logRateLimited, logSampled } from './utils/logging'
 import { recordMetric } from './utils/metrics'
 
-const SERVER_URL = process.env.SERVER_URL || 'http://localhost:3001'
+const API_SERVER_URL = process.env.API_SERVER_URL || 'http://localhost:3001'
 
 async function getAiConfigFromServer() {
-  const response = await fetch(`${SERVER_URL}/api/ai/config-full`, {
+  const response = await fetch(`${API_SERVER_URL}/api/ai/config-full`, {
     signal: AbortSignal.timeout(10000),
   })
   if (!response.ok) {
@@ -667,7 +667,7 @@ class GeminiService {
         errorMessage.includes('401') ||
         errorMessage.includes('API key')
       ) {
-        errorMessage = 'API密钥无效，请检查.env.local文件中的VITE_GEMINI_API_KEY配置'
+        errorMessage = 'API密钥无效，请在管理后台检查 Gemini API 配置'
         this.currentApiKey = null
       } else if (errorMessage.includes('PERMISSION_DENIED') || errorMessage.includes('403')) {
         errorMessage = 'API权限被拒绝，请检查API密钥权限'

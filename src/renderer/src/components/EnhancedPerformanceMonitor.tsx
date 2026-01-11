@@ -2,7 +2,7 @@
  * 增强版性能监控组件（简化版）
  */
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { Activity, Cpu, HardDrive, Wifi, AlertTriangle, CheckCircle, X } from 'lucide-react'
 
 interface PerformanceMetrics {
@@ -30,6 +30,7 @@ const EnhancedPerformanceMonitor: React.FC = () => {
   })
   const [isMonitoring, setIsMonitoring] = useState(false)
   const [activeTab, setActiveTab] = useState<'overview' | 'details'>('overview')
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const collectMetrics = useCallback(async () => {
     const memoryInfo = (performance as any).memory || {}
@@ -99,11 +100,16 @@ const EnhancedPerformanceMonitor: React.FC = () => {
   }, [])
 
   const toggleMonitoring = useCallback(() => {
-    setIsMonitoring((prev) => !prev)
-    if (!isMonitoring) {
+    if (isMonitoring) {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
+      setIsMonitoring(false)
+    } else {
       collectMetrics()
-      const interval = setInterval(collectMetrics, 5000)
-      return () => clearInterval(interval)
+      intervalRef.current = setInterval(collectMetrics, 5000)
+      setIsMonitoring(true)
     }
   }, [isMonitoring, collectMetrics])
 
@@ -115,7 +121,13 @@ const EnhancedPerformanceMonitor: React.FC = () => {
       }
     }
     document.addEventListener('keydown', handleKeyPress)
-    return () => document.removeEventListener('keydown', handleKeyPress)
+    return () => {
+      document.removeEventListener('keydown', handleKeyPress)
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
+    }
   }, [])
 
   const getStatusIcon = (status: PerformanceStatus['overall']) => {

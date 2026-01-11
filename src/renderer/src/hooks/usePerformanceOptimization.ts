@@ -29,7 +29,15 @@ export function useDebounce<T>(value: T, delay: number): T {
  */
 export function useThrottle<T extends (...args: any[]) => any>(callback: T, delay: number): T {
   const lastCall = useRef<number>(0)
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+      }
+    }
+  }, [])
 
   return useCallback(
     ((...args: Parameters<T>) => {
@@ -39,12 +47,10 @@ export function useThrottle<T extends (...args: any[]) => any>(callback: T, dela
         lastCall.current = now
         return callback(...args)
       } else {
-        // 清除之前的延迟调用
         if (timeoutRef.current) {
           clearTimeout(timeoutRef.current)
         }
 
-        // 设置新的延迟调用
         timeoutRef.current = setTimeout(
           () => {
             lastCall.current = Date.now()
@@ -230,7 +236,15 @@ export function useLazyComponent<T>(importFunc: () => Promise<{ default: T }>) {
 export function useBatchedState<T>(initialValue: T) {
   const [state, setState] = useState(initialValue)
   const pendingUpdates = useRef<Array<(prev: T) => T>>([])
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+      }
+    }
+  }, [])
 
   const batchedSetState = useCallback((updater: (prev: T) => T | T) => {
     if (typeof updater === 'function') {
@@ -239,12 +253,10 @@ export function useBatchedState<T>(initialValue: T) {
       pendingUpdates.current.push(() => updater)
     }
 
-    // 清除之前的定时器
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current)
     }
 
-    // 在下一个事件循环中批量应用更新
     timeoutRef.current = setTimeout(() => {
       setState((prevState) => {
         let newState = prevState
@@ -258,4 +270,31 @@ export function useBatchedState<T>(initialValue: T) {
   }, [])
 
   return [state, batchedSetState] as const
+}
+
+export function useSafeTimeout() {
+  const timeoutRefs = useRef<Set<ReturnType<typeof setTimeout>>>(new Set())
+
+  useEffect(() => {
+    return () => {
+      timeoutRefs.current.forEach(clearTimeout)
+      timeoutRefs.current.clear()
+    }
+  }, [])
+
+  const setSafeTimeout = useCallback((callback: () => void, delay: number) => {
+    const id = setTimeout(() => {
+      timeoutRefs.current.delete(id)
+      callback()
+    }, delay)
+    timeoutRefs.current.add(id)
+    return id
+  }, [])
+
+  const clearSafeTimeout = useCallback((id: ReturnType<typeof setTimeout>) => {
+    clearTimeout(id)
+    timeoutRefs.current.delete(id)
+  }, [])
+
+  return { setSafeTimeout, clearSafeTimeout }
 }

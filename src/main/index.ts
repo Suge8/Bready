@@ -10,6 +10,8 @@ import {
   stopSystemAudioCapture as stopSystemAudioCaptureFromAudioManager,
 } from './audio-manager'
 import { registerCleanup, runCleanup } from './utils/cleanup'
+import { shortcutService } from './services/shortcut-service'
+import { getFloatingWindow } from './window-manager'
 
 // 加载环境变量（支持开发和生产环境）
 const envPaths = [
@@ -25,12 +27,6 @@ for (const envPath of envPaths) {
     break // 找到第一个就停止
   }
 }
-
-// 调试：输出环境变量加载状态
-console.log('🔧 环境变量状态:')
-console.log('  - AI_PROVIDER:', process.env.AI_PROVIDER || '(未设置)')
-console.log('  - 应用已打包:', app.isPackaged)
-console.log('  - __dirname:', __dirname)
 
 // 调试标志
 const debugStartup = process.env.DEBUG_STARTUP === '1'
@@ -157,6 +153,20 @@ app.whenReady().then(async () => {
 
   // 注册所有 IPC 处理器
   setupAllHandlers()
+
+  // 初始化快捷键服务
+  shortcutService.setToggleWindowCallback(() => {
+    const floatingWindow = getFloatingWindow()
+    if (floatingWindow && !floatingWindow.isDestroyed()) {
+      if (floatingWindow.isVisible()) {
+        floatingWindow.hide()
+      } else {
+        floatingWindow.show()
+      }
+    }
+  })
+  shortcutService.registerShortcuts()
+  registerCleanup(() => shortcutService.cleanup())
 
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the

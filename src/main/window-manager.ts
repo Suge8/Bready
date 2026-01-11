@@ -4,8 +4,10 @@ import { is } from '@electron-toolkit/utils'
 import { log } from './utils/logging'
 import { getIPCBatcher } from './utils/ipc-batcher'
 
-const MIN_WINDOW_WIDTH = 960
-const MIN_WINDOW_HEIGHT = 640
+const MIN_WINDOW_WIDTH = 1024
+const MIN_WINDOW_HEIGHT = 680
+const DEFAULT_WINDOW_WIDTH = 1120
+const DEFAULT_WINDOW_HEIGHT = 720
 const debugIpc = process.env.DEBUG_IPC === '1'
 const batcher = getIPCBatcher()
 
@@ -15,8 +17,8 @@ let floatingWindow: BrowserWindow | null = null
 function createWindow(): BrowserWindow {
   // Create the browser window.
   mainWindow = new BrowserWindow({
-    width: 1000,
-    height: 700,
+    width: DEFAULT_WINDOW_WIDTH,
+    height: DEFAULT_WINDOW_HEIGHT,
     minWidth: MIN_WINDOW_WIDTH,
     minHeight: MIN_WINDOW_HEIGHT,
     resizable: true,
@@ -119,17 +121,24 @@ function createFloatingWindow(): BrowserWindow {
     },
   })
 
-  // macOS 隐形功能 - 防止在屏幕共享中显示
+  // 防止屏幕捕获 - 跨平台支持
+  try {
+    floatingWindow.setContentProtection(true)
+  } catch (error) {
+    console.log('setContentProtection 不可用:', error)
+  }
+
+  try {
+    floatingWindow.setContentProtection(true)
+  } catch {}
+
   if (process.platform === 'darwin') {
     // @ts-ignore - macOS specific API
     floatingWindow.setWindowButtonVisibility?.(false)
-    // 设置窗口为不可捕获类型
     try {
       // @ts-ignore - macOS specific API
       floatingWindow.setVisibleOnAllWorkspaces?.(true, { visibleOnFullScreen: true })
-    } catch (error) {
-      console.log('macOS 特定 API 不可用:', error)
-    }
+    } catch {}
   }
 
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {

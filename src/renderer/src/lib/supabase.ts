@@ -224,7 +224,6 @@ export const authService = {
     }
   },
 
-  // Google OAuth 登录（暂不支持）
   async signInWithGoogle() {
     return {
       data: { user: null, session: null },
@@ -232,26 +231,66 @@ export const authService = {
     }
   },
 
-  // 手机号登录（暂不支持）
   async signInWithPhone(phone: string) {
-    void phone
-    return {
-      data: { user: null, session: null },
-      error: { message: '手机号登录暂不支持，请使用邮箱密码登录' },
+    try {
+      const result = await invokeIpc('auth:send-login-code', { phone })
+      if (!result.success) {
+        return { data: { user: null, session: null }, error: { message: result.error } }
+      }
+      return { data: { user: null, session: null }, error: null }
+    } catch (error: any) {
+      return { data: { user: null, session: null }, error: { message: error.message } }
     }
   },
 
-  // 验证手机号 OTP（暂不支持）
-  async verifyOtp(phone: string, token: string) {
-    void phone
-    void token
-    return {
-      data: { user: null, session: null },
-      error: { message: 'OTP 验证暂不支持，请使用邮箱密码登录' },
+  async verifyOtp(phone: string, code: string) {
+    try {
+      const result = await invokeIpc('auth:sign-in-phone', { phone, code })
+      if (result.token) {
+        localStorage.setItem('auth_token', result.token)
+        const session = { user: result.user, access_token: result.token }
+        notifyAuthStateChange('SIGNED_IN', session)
+        return { data: { user: result.user, session }, error: null }
+      }
+      return { data: { user: null, session: null }, error: { message: '登录失败' } }
+    } catch (error: any) {
+      return { data: { user: null, session: null }, error: { message: error.message } }
     }
   },
 
-  // 登出
+  async getWechatAuthUrl(): Promise<{ success: boolean; authUrl?: string; error?: string }> {
+    try {
+      const result = await invokeIpc('auth:wechat-auth-url')
+      if (!result.success) return { success: false, error: result.error }
+      return { success: true, authUrl: result.data?.authUrl }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  },
+
+  async signInWithWechat(code: string) {
+    try {
+      const result = await invokeIpc('auth:wechat-callback', { code })
+      if (result.token) {
+        localStorage.setItem('auth_token', result.token)
+        const session = { user: result.user, access_token: result.token }
+        notifyAuthStateChange('SIGNED_IN', session)
+        return { data: { user: result.user, session }, error: null }
+      }
+      return { data: { user: null, session: null }, error: { message: '微信登录失败' } }
+    } catch (error: any) {
+      return { data: { user: null, session: null }, error: { message: error.message } }
+    }
+  },
+
+  async getWechatConfigStatus(): Promise<{ enabled: boolean }> {
+    try {
+      return await invokeIpc('auth:wechat-config-status')
+    } catch {
+      return { enabled: false }
+    }
+  },
+
   async signOut() {
     try {
       const token = localStorage.getItem('auth_token')
@@ -677,6 +716,33 @@ export interface PaymentConfigDisplay {
   alipay: { appId: string; privateKey: string; publicKey: string; hasCredentials: boolean }
 }
 
+export interface SmsConfigDisplay {
+  provider: 'aliyun' | 'tencent' | ''
+  aliyun: {
+    accessKeyId: string
+    accessKeySecret: string
+    signName: string
+    templateCode: string
+    hasCredentials: boolean
+  }
+  tencent: {
+    secretId: string
+    secretKey: string
+    appId: string
+    signName: string
+    templateId: string
+    hasCredentials: boolean
+  }
+}
+
+export interface WechatLoginConfigDisplay {
+  enabled: boolean
+  appId: string
+  appSecret: string
+  redirectUri: string
+  hasCredentials: boolean
+}
+
 export interface PaymentOrder {
   id: string
   order_no: string
@@ -725,6 +791,22 @@ export const settingsService = {
 
   async updatePaymentConfig(config: any): Promise<{ success: boolean; error?: string }> {
     return await invokeIpc('settings:update-payment-config', config)
+  },
+
+  async getSmsConfig(): Promise<SmsConfigDisplay> {
+    return await invokeIpc('settings:get-sms-config')
+  },
+
+  async updateSmsConfig(config: any): Promise<{ success: boolean; error?: string }> {
+    return await invokeIpc('settings:update-sms-config', config)
+  },
+
+  async getWechatLoginConfig(): Promise<WechatLoginConfigDisplay> {
+    return await invokeIpc('settings:get-wechat-login-config')
+  },
+
+  async updateWechatLoginConfig(config: any): Promise<{ success: boolean; error?: string }> {
+    return await invokeIpc('settings:update-wechat-login-config', config)
   },
 }
 

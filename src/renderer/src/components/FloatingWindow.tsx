@@ -18,42 +18,11 @@ const FloatingWindow: React.FC = () => {
   const transcriptionRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    // 初始化 AI API
     const initializeAI = async () => {
       try {
-        // 尝试多种方式获取API密钥
-        let apiKey = ''
-
-        // 1. 从环境变量获取
-        if (window.env && window.env.GEMINI_API_KEY) {
-          apiKey = window.env.GEMINI_API_KEY
-          console.log('API密钥来源：环境变量')
-        }
-
-        // 2. 从localStorage获取（备用）
-        if (!apiKey) {
-          const storedKey = localStorage.getItem('gemini-api-key')
-          if (storedKey) {
-            apiKey = storedKey
-            console.log('API密钥来源：localStorage')
-          }
-        }
-
-        // 3. 检查.env.local中的密钥是否存在
-        if (!apiKey) {
-          console.error('API密钥获取失败')
-          console.log('环境变量状态:', window.env)
-          console.log('localStorage状态:', localStorage.getItem('gemini-api-key'))
-          setStatus(t('floating.status.apiKeyMissing'))
-          return
-        }
-
-        console.log('使用API密钥:', apiKey.substring(0, 10) + '...')
-
         const customPrompt = localStorage.getItem('bready-selected-preparation') || ''
         let language = localStorage.getItem('bready-selected-language') || 'cmn-CN'
 
-        // 修复旧的语言代码
         if (language === 'zh-CN') {
           language = 'cmn-CN'
           localStorage.setItem('bready-selected-language', 'cmn-CN')
@@ -61,10 +30,8 @@ const FloatingWindow: React.FC = () => {
 
         const purpose = localStorage.getItem('bready-selected-purpose') || 'interview'
 
-        console.log('初始化参数:', { customPrompt, language, purpose })
-
         setStatus(t('floating.status.connecting'))
-        const success = await window.bready.initializeAI(apiKey, customPrompt, purpose, language)
+        const success = await window.bready.initializeAI('', customPrompt, purpose, language)
 
         if (success) {
           setStatus(t('floating.status.connected'))

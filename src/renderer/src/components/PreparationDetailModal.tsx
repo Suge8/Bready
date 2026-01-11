@@ -13,9 +13,9 @@ import {
   Sparkles,
 } from 'lucide-react'
 import { Button } from './ui/button'
-import { ToastNotification } from './ui/notifications'
 import { preparationService, type Preparation } from '../lib/supabase'
 import { useI18n } from '../contexts/I18nContext'
+import { useToast } from '../contexts/ToastContext'
 import { useTheme } from './ui/theme-provider'
 import { Modal } from './ui/Modal'
 
@@ -38,12 +38,9 @@ const PreparationDetailModal: React.FC<PreparationDetailModalProps> = ({
 }) => {
   const { t, list } = useI18n()
   const { resolvedTheme } = useTheme()
+  const { showToast } = useToast()
   const [isAnalyzing, setIsAnalyzing] = useState(preparation.is_analyzing || false)
   const [currentPreparation, setCurrentPreparation] = useState(preparation)
-  const [toast, setToast] = useState<{
-    message: string
-    type: 'success' | 'error' | 'info' | 'warning'
-  } | null>(null)
   const [displayScore, setDisplayScore] = useState(0)
   const [cardsVisible, setCardsVisible] = useState([false, false, false, false])
 
@@ -98,11 +95,6 @@ const PreparationDetailModal: React.FC<PreparationDetailModalProps> = ({
       setDisplayScore(0)
     }
   }, [isAnalyzing])
-
-  const showToast = (message: string, type: 'success' | 'error' | 'info' | 'warning') => {
-    setToast({ message, type })
-    setTimeout(() => setToast(null), 3000)
-  }
 
   const getScoreColor = (score: number) => {
     if (score >= 80) return isDarkMode ? 'text-emerald-400' : 'text-emerald-600'
@@ -480,14 +472,6 @@ const PreparationDetailModal: React.FC<PreparationDetailModalProps> = ({
           }
           .animate-fadeIn { animation: fadeIn 0.3s ease-out forwards; opacity: 0; }
         `}</style>
-
-        {toast && (
-          <ToastNotification
-            message={toast.message}
-            type={toast.type}
-            onClose={() => setToast(null)}
-          />
-        )}
       </div>
     </Modal>
   )

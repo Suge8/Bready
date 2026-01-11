@@ -10,6 +10,8 @@ import type {
   ExtractFileContentRequest,
   ExtractFileContentResponse,
   PermissionStatus,
+  SetShortcutResponse,
+  ShortcutConfig,
   SystemPermissions,
 } from '../shared/ipc'
 
@@ -75,6 +77,10 @@ interface BreadyAPI {
 
   // 文件内容提取
   extractFileContent: (fileData: ExtractFileContentRequest) => Promise<ExtractFileContentResponse>
+
+  // 快捷键管理
+  getShortcut: () => Promise<ShortcutConfig>
+  setShortcut: (shortcut: string) => Promise<SetShortcutResponse>
 
   // 事件监听
   onStatusUpdate: (callback: (status: string) => void) => () => void
@@ -146,7 +152,9 @@ const breadyAPI: BreadyAPI = {
   // 文件内容提取
   extractFileContent: (fileData) => ipcRenderer.invoke('extract-file-content', fileData),
 
-  // 事件监听
+  getShortcut: () => ipcRenderer.invoke('shortcut:get'),
+  setShortcut: (shortcut: string) => ipcRenderer.invoke('shortcut:set', shortcut),
+
   onStatusUpdate: (callback) => {
     const listener = (_: any, status: string) => callback(status)
     ipcRenderer.on('update-status', listener)
@@ -265,17 +273,4 @@ contextBridge.exposeInMainWorld('bready', {
     removeListener: (channel: string, listener: (...args: any[]) => void) =>
       ipcRenderer.removeListener(channel, listener),
   },
-})
-
-// 也可以暴露Node.js环境变量
-const aiProvider = (process.env.AI_PROVIDER || 'gemini').toLowerCase()
-const geminiApiKey = process.env.VITE_GEMINI_API_KEY
-const doubaoApiKey = process.env.DOUBAO_CHAT_API_KEY
-const exposedApiKey = aiProvider === 'doubao' ? doubaoApiKey : geminiApiKey
-
-contextBridge.exposeInMainWorld('env', {
-  GEMINI_API_KEY: exposedApiKey,
-  SUPABASE_URL: process.env.VITE_SUPABASE_URL,
-  SUPABASE_ANON_KEY: process.env.VITE_SUPABASE_ANON_KEY,
-  DEV_MODE: process.env.VITE_DEV_MODE,
 })

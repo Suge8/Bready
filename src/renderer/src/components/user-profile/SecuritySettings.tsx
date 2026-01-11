@@ -66,12 +66,16 @@ export const SecuritySettings: React.FC<SecuritySettingsProps> = memo(
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [success, setSuccess] = useState<string | null>(null)
-    const countdownTimerRef = useRef<NodeJS.Timeout | null>(null)
+    const countdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+    const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
     useEffect(() => {
       return () => {
         if (countdownTimerRef.current) {
           clearInterval(countdownTimerRef.current)
+        }
+        if (successTimeoutRef.current) {
+          clearTimeout(successTimeoutRef.current)
         }
       }
     }, [])
@@ -134,7 +138,7 @@ export const SecuritySettings: React.FC<SecuritySettingsProps> = memo(
       if (result.success) {
         setSuccess(t('profile.security.passwordChanged') || '密码修改成功')
         resetForm({ keepStatus: true })
-        setTimeout(() => {
+        successTimeoutRef.current = setTimeout(() => {
           setActiveSection(null)
           setSuccess(null)
         }, 2000)
@@ -205,7 +209,7 @@ export const SecuritySettings: React.FC<SecuritySettingsProps> = memo(
       if (result.success) {
         setSuccess(t('profile.security.phoneBound') || '手机绑定成功')
         resetForm({ keepStatus: true })
-        setTimeout(() => {
+        successTimeoutRef.current = setTimeout(() => {
           setActiveSection(null)
           setSuccess(null)
         }, 2000)
@@ -231,7 +235,7 @@ export const SecuritySettings: React.FC<SecuritySettingsProps> = memo(
       if (result.success) {
         setSuccess(t('profile.security.emailBound') || '邮箱绑定成功')
         resetForm({ keepStatus: true })
-        setTimeout(() => {
+        successTimeoutRef.current = setTimeout(() => {
           setActiveSection(null)
           setSuccess(null)
         }, 2000)
@@ -350,7 +354,7 @@ export const SecuritySettings: React.FC<SecuritySettingsProps> = memo(
           </motion.div>
 
           <AnimatePresence mode="wait">
-            {activeSection ? (
+            {activeSection && (
               <motion.div
                 key={activeSection}
                 initial={{ height: 0, opacity: 0 }}
@@ -530,28 +534,6 @@ export const SecuritySettings: React.FC<SecuritySettingsProps> = memo(
                       </Button>
                     </div>
                   )}
-                </div>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="empty"
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden"
-              >
-                <div
-                  className={cn(
-                    'mt-2 py-3 rounded-lg border border-dashed flex items-center justify-center',
-                    isDarkMode
-                      ? 'border-gray-800 bg-gray-900/20 text-gray-500'
-                      : 'border-gray-200 bg-gray-50/50 text-gray-400',
-                  )}
-                >
-                  <span className="text-[10px] font-medium flex items-center gap-1.5">
-                    <ShieldCheck className="w-3 h-3" />
-                    点击上方选项管理安全设置
-                  </span>
                 </div>
               </motion.div>
             )}

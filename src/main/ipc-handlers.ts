@@ -194,6 +194,64 @@ export function setupAuthHandlers() {
       return { success: false, error: error.message }
     }
   })
+
+  ipcMain.handle('auth:send-login-code', async (event, { phone }) => {
+    void event
+    try {
+      const trimmedPhone = String(phone || '').trim()
+      if (!isValidPhone(trimmedPhone)) {
+        return { success: false, error: '手机号格式不正确' }
+      }
+      const result = await api.auth.sendPhoneCode(trimmedPhone)
+      if (result.error) return { success: false, error: result.error }
+      return result.data || { success: true }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle('auth:sign-in-phone', async (event, { phone, code }) => {
+    void event
+    try {
+      const result = await api.auth.signInWithPhone(phone, code)
+      if (result.error) throw new Error(result.error)
+      return result.data
+    } catch (error: any) {
+      throw new Error(error.message)
+    }
+  })
+
+  ipcMain.handle('auth:wechat-auth-url', async (event) => {
+    void event
+    try {
+      const result = await api.auth.getWechatAuthUrl()
+      if (result.error) return { success: false, error: result.error }
+      return { success: true, data: result.data }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle('auth:wechat-callback', async (event, { code }) => {
+    void event
+    try {
+      const result = await api.auth.wechatCallback(code)
+      if (result.error) throw new Error(result.error)
+      return result.data
+    } catch (error: any) {
+      throw new Error(error.message)
+    }
+  })
+
+  ipcMain.handle('auth:wechat-config-status', async (event) => {
+    void event
+    try {
+      const result = await api.auth.getWechatConfigStatus()
+      return result.data || { enabled: false }
+    } catch {
+      return { enabled: false }
+    }
+  })
 }
 
 export function setupUserHandlers() {
@@ -283,7 +341,11 @@ export function setupMembershipHandlers() {
       const { userId, limit, offset } = normalizePagedRequest(payload)
       const result = await api.membership.getUserPurchases(userId, limit, offset)
       if (result.error) throw new Error(result.error)
-      return result.data || []
+      const records = Array.isArray(result.data) ? result.data : []
+      return {
+        records,
+        hasMore: records.length === (limit || 20),
+      }
     } catch (error: any) {
       throw new Error(error.message)
     }
@@ -319,7 +381,11 @@ export function setupUsageHandlers() {
       const { userId, limit, offset } = normalizePagedRequest(payload)
       const result = await api.usage.getUserRecords(userId, limit, offset)
       if (result.error) throw new Error(result.error)
-      return result.data || []
+      const records = Array.isArray(result.data) ? result.data : []
+      return {
+        records,
+        hasMore: records.length === (limit || 20),
+      }
     } catch (error: any) {
       throw new Error(error.message)
     }

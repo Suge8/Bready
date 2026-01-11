@@ -29,7 +29,8 @@ export function PaymentModal({
 }: PaymentModalProps) {
   const [status, setStatus] = useState<PaymentStatus>('pending')
   const { resolvedTheme } = useTheme()
-  const pollTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isPaidRef = useRef(false)
 
   useEffect(() => {
@@ -40,6 +41,10 @@ export function PaymentModal({
       if (pollTimerRef.current) {
         clearInterval(pollTimerRef.current)
         pollTimerRef.current = null
+      }
+      if (closeTimeoutRef.current) {
+        clearTimeout(closeTimeoutRef.current)
+        closeTimeoutRef.current = null
       }
     }
   }, [isOpen, orderNo])
@@ -57,7 +62,7 @@ export function PaymentModal({
             if (result.status === 'paid' && !isPaidRef.current) {
               isPaidRef.current = true
               onPaymentSuccess()
-              setTimeout(() => {
+              closeTimeoutRef.current = setTimeout(() => {
                 onClose()
               }, 2000)
             }

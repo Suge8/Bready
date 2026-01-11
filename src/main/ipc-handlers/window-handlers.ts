@@ -31,10 +31,10 @@ ipcMain.handle('exit-collaboration-mode', () => {
     }
     const mainWindow = getMainWindow()
     if (mainWindow) {
-      // 恢复主窗口原始大小，保持原位置
-      mainWindow.setSize(1000, 700)
+      // 保持用户当前窗口大小，不强制改变
+      // 避免窗口跳变，提供更好的用户体验
       if (debugApp) {
-        console.log('主窗口已恢复到默认尺寸')
+        console.log('退出协作模式，保持当前窗口尺寸')
       }
       return true
     }

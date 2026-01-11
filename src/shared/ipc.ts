@@ -72,3 +72,12 @@ export interface AudioResponsePayload {
   data: string
   mimeType: string
 }
+
+export interface ShortcutConfig {
+  toggleWindow: string
+}
+
+export interface SetShortcutResponse {
+  success: boolean
+  error?: string
+}

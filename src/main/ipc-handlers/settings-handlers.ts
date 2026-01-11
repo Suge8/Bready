@@ -1,14 +1,14 @@
 import { ipcMain } from 'electron'
 import { getPaymentConfig, type PaymentConfig } from '../services/settings-service'
 
-const SERVER_URL = process.env.SERVER_URL || 'http://localhost:3001'
+const API_SERVER_URL = process.env.API_SERVER_URL || 'http://localhost:3001'
 
 async function serverFetch(
   path: string,
   options: { method?: string; body?: any } = {},
 ): Promise<{ ok: boolean; data?: any; error?: string }> {
   try {
-    const response = await fetch(`${SERVER_URL}${path}`, {
+    const response = await fetch(`${API_SERVER_URL}${path}`, {
       method: options.method || 'GET',
       headers: { 'Content-Type': 'application/json' },
       body: options.body ? JSON.stringify(options.body) : undefined,

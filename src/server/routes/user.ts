@@ -75,6 +75,20 @@ router.get('/all', authMiddleware, async (req: AuthenticatedRequest, res) => {
   }
 })
 
+router.get('/all-internal', async (_req, res) => {
+  try {
+    const result = await query(
+      `SELECT id, username, email, full_name, avatar_url, role, user_level,
+       membership_expires_at, remaining_interview_minutes, total_purchased_minutes,
+       discount_rate, created_at, updated_at 
+       FROM user_profiles ORDER BY created_at DESC`,
+    )
+    res.json({ data: result.rows })
+  } catch (error: any) {
+    res.status(400).json({ error: error.message })
+  }
+})
+
 router.get('/profile/:userId', async (req, res) => {
   try {
     const result = await query(

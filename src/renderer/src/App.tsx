@@ -14,6 +14,7 @@ import { Loader2, Volume2, Mic, CheckCircle } from 'lucide-react'
 import { ThemeProvider } from './components/ui/theme-provider'
 import { Button } from './components/ui/button'
 import { I18nProvider, useI18n } from './contexts/I18nContext'
+import { ToastProvider } from './contexts/ToastContext'
 
 // 声明全局类型
 declare global {
@@ -97,12 +98,6 @@ declare global {
         fileType: string
         base64Data: string
       }) => Promise<{ success: boolean; content?: string; error?: string }>
-    }
-    env: {
-      GEMINI_API_KEY?: string
-      SUPABASE_URL?: string
-      SUPABASE_ANON_KEY?: string
-      DEV_MODE?: string
     }
   }
 }
@@ -437,7 +432,9 @@ function App() {
     <I18nProvider>
       <ThemeProvider>
         <AuthProvider>
-          <AppContent />
+          <ToastProvider>
+            <AppContent />
+          </ToastProvider>
         </AuthProvider>
       </ThemeProvider>
     </I18nProvider>

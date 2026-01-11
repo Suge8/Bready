@@ -93,6 +93,23 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ token, email }),
       }),
+    sendPhoneCode: (phone: string) =>
+      apiRequest('/api/auth/send-phone-code', {
+        method: 'POST',
+        body: JSON.stringify({ phone }),
+      }),
+    signInWithPhone: (phone: string, code: string) =>
+      apiRequest('/api/auth/sign-in-phone', {
+        method: 'POST',
+        body: JSON.stringify({ phone, code }),
+      }),
+    getWechatAuthUrl: () => apiRequest('/api/auth/wechat/auth-url'),
+    wechatCallback: (code: string) =>
+      apiRequest('/api/auth/wechat/callback', {
+        method: 'POST',
+        body: JSON.stringify({ code }),
+      }),
+    getWechatConfigStatus: () => apiRequest('/api/auth/wechat/config-status'),
   },
 
   user: {
@@ -102,7 +119,7 @@ export const api = {
         method: 'PUT',
         body: JSON.stringify(updates),
       }),
-    getAllUsers: () => apiRequest('/api/user/all'),
+    getAllUsers: () => apiRequest('/api/user/all-internal'),
     updateLevel: (userId: string, userLevel: string) =>
       apiRequest(`/api/user/level/${userId}`, {
         method: 'PUT',
@@ -193,5 +210,25 @@ export const api = {
     getAiConfigFull: () => apiRequest('/api/settings/ai-config-full'),
     checkAiConfig: () => apiRequest('/api/settings/check-ai-config'),
     getPaymentConfig: () => apiRequest('/api/settings/payment-config'),
+    getSmsConfig: (token: string) =>
+      apiRequest('/api/settings/sms-config', {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    updateSmsConfig: (token: string, config: any) =>
+      apiRequest('/api/settings/sms-config', {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify(config),
+      }),
+    getWechatLoginConfig: (token: string) =>
+      apiRequest('/api/settings/wechat-login-config', {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    updateWechatLoginConfig: (token: string, config: any) =>
+      apiRequest('/api/settings/wechat-login-config', {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify(config),
+      }),
   },
 }

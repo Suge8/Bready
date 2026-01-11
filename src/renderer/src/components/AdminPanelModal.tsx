@@ -14,6 +14,8 @@ import {
   TrendingUp,
   Settings,
   CreditCard,
+  MessageSquare,
+  MessageCircle,
 } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { useAuth } from '../contexts/AuthContext'
@@ -26,12 +28,14 @@ import {
   type InterviewUsageRecord,
   type AiConfigDisplay,
   type PaymentConfigDisplay,
+  type SmsConfigDisplay,
+  type WechatLoginConfigDisplay,
 } from '../lib/supabase'
 import UserLevelBadge from './UserLevelBadge'
 import { useI18n } from '../contexts/I18nContext'
 import { useTheme } from './ui/theme-provider'
+import { useToast } from '../contexts/ToastContext'
 import { Modal } from './ui/Modal'
-import { ToastNotification } from './ui/notifications'
 import { Input } from './ui/input'
 import { Button } from './ui/button'
 
@@ -40,7 +44,7 @@ interface AdminPanelModalProps {
   onBack?: () => void
 }
 
-type TabType = 'users' | 'usage' | 'email' | 'ai' | 'payment'
+type TabType = 'users' | 'usage' | 'email' | 'ai' | 'payment' | 'sms' | 'wechat-login'
 
 interface UsageRecordWithUser extends InterviewUsageRecord {
   full_name?: string
@@ -52,17 +56,7 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
   const { user, profile } = useAuth()
   const { t, locale } = useI18n()
   const { resolvedTheme } = useTheme()
-  const [toast, setToast] = useState<{
-    message: string
-    type: 'success' | 'error' | 'warning' | 'info'
-  } | null>(null)
-
-  const showToast = (
-    message: string,
-    type: 'success' | 'error' | 'warning' | 'info' = 'success',
-  ) => {
-    setToast({ message, type })
-  }
+  const { showToast } = useToast()
 
   const [activeTab, setActiveTab] = useState<TabType>('users')
   const [users, setUsers] = useState<UserProfile[]>([])
@@ -100,12 +94,41 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
     },
     alipay: { appId: '', privateKey: '', publicKey: '', hasCredentials: false },
   })
+  const [smsConfig, setSmsConfig] = useState<SmsConfigDisplay>({
+    provider: '',
+    aliyun: {
+      accessKeyId: '',
+      accessKeySecret: '',
+      signName: '',
+      templateCode: '',
+      hasCredentials: false,
+    },
+    tencent: {
+      secretId: '',
+      secretKey: '',
+      appId: '',
+      signName: '',
+      templateId: '',
+      hasCredentials: false,
+    },
+  })
+  const [wechatLoginConfig, setWechatLoginConfig] = useState<WechatLoginConfigDisplay>({
+    enabled: false,
+    appId: '',
+    appSecret: '',
+    redirectUri: '',
+    hasCredentials: false,
+  })
 
   useEffect(() => {
     if (activeTab === 'ai') {
       loadAiConfig()
     } else if (activeTab === 'payment') {
       loadPaymentConfig()
+    } else if (activeTab === 'sms') {
+      loadSmsConfig()
+    } else if (activeTab === 'wechat-login') {
+      loadWechatLoginConfig()
     }
   }, [activeTab])
 
@@ -124,6 +147,24 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
       if (config) setPaymentConfig(config)
     } catch (error) {
       console.error('Failed to load payment config', error)
+    }
+  }
+
+  const loadSmsConfig = async () => {
+    try {
+      const config = await settingsService.getSmsConfig()
+      if (config) setSmsConfig(config)
+    } catch (error) {
+      console.error('Failed to load SMS config', error)
+    }
+  }
+
+  const loadWechatLoginConfig = async () => {
+    try {
+      const config = await settingsService.getWechatLoginConfig()
+      if (config) setWechatLoginConfig(config)
+    } catch (error) {
+      console.error('Failed to load WeChat login config', error)
     }
   }
 
@@ -165,6 +206,34 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
       }
     } catch (error) {
       console.error('Failed to save payment config', error)
+      showToast(t('alerts.saveFailed') || '保存失败', 'error')
+    }
+  }
+
+  const handleSaveSmsConfig = async () => {
+    try {
+      const result = await settingsService.updateSmsConfig(smsConfig)
+      if (result.success) {
+        showToast(t('alerts.saveSuccess') || '保存成功', 'success')
+      } else {
+        showToast(result.error || t('alerts.saveFailed') || '保存失败', 'error')
+      }
+    } catch (error) {
+      console.error('Failed to save SMS config', error)
+      showToast(t('alerts.saveFailed') || '保存失败', 'error')
+    }
+  }
+
+  const handleSaveWechatLoginConfig = async () => {
+    try {
+      const result = await settingsService.updateWechatLoginConfig(wechatLoginConfig)
+      if (result.success) {
+        showToast(t('alerts.saveSuccess') || '保存成功', 'success')
+      } else {
+        showToast(result.error || t('alerts.saveFailed') || '保存失败', 'error')
+      }
+    } catch (error) {
+      console.error('Failed to save WeChat login config', error)
       showToast(t('alerts.saveFailed') || '保存失败', 'error')
     }
   }
@@ -287,6 +356,8 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
     { id: 'email' as TabType, label: t('admin.tabs.email') || '邮箱设置', icon: Mail },
     { id: 'ai' as TabType, label: 'AI 设置', icon: Settings },
     { id: 'payment' as TabType, label: '支付设置', icon: CreditCard },
+    { id: 'sms' as TabType, label: '短信设置', icon: MessageSquare },
+    { id: 'wechat-login' as TabType, label: '微信登录', icon: MessageCircle },
   ]
 
   const filteredUsers = users.filter((userItem) => {
@@ -1424,18 +1495,303 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
               </div>
             </motion.div>
           )}
+
+          {activeTab === 'sms' && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className="flex-1 overflow-y-auto p-4"
+            >
+              <div className="grid gap-3 max-w-md mx-auto">
+                <div
+                  className={cn(
+                    'p-3 rounded-xl border',
+                    isDarkMode
+                      ? 'border-neutral-800 bg-neutral-900/50'
+                      : 'border-neutral-200 bg-neutral-50',
+                  )}
+                >
+                  <h4
+                    className={cn(
+                      'text-xs font-medium mb-3',
+                      isDarkMode ? 'text-white' : 'text-black',
+                    )}
+                  >
+                    短信服务商
+                  </h4>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 text-xs cursor-pointer">
+                      <input
+                        type="radio"
+                        name="smsProvider"
+                        value="aliyun"
+                        checked={smsConfig.provider === 'aliyun'}
+                        onChange={(e) =>
+                          setSmsConfig({ ...smsConfig, provider: e.target.value as any })
+                        }
+                      />
+                      <span className={isDarkMode ? 'text-gray-300' : 'text-gray-700'}>阿里云</span>
+                    </label>
+                    <label className="flex items-center gap-2 text-xs cursor-pointer">
+                      <input
+                        type="radio"
+                        name="smsProvider"
+                        value="tencent"
+                        checked={smsConfig.provider === 'tencent'}
+                        onChange={(e) =>
+                          setSmsConfig({ ...smsConfig, provider: e.target.value as any })
+                        }
+                      />
+                      <span className={isDarkMode ? 'text-gray-300' : 'text-gray-700'}>腾讯云</span>
+                    </label>
+                  </div>
+                </div>
+
+                {smsConfig.provider === 'aliyun' && (
+                  <div
+                    className={cn(
+                      'p-3 rounded-xl border',
+                      isDarkMode
+                        ? 'border-neutral-800 bg-neutral-900/50'
+                        : 'border-neutral-200 bg-neutral-50',
+                    )}
+                  >
+                    <h4
+                      className={cn(
+                        'text-xs font-medium mb-3',
+                        isDarkMode ? 'text-white' : 'text-black',
+                      )}
+                    >
+                      阿里云短信配置
+                    </h4>
+                    <div className="grid gap-2">
+                      <Input
+                        label="AccessKey ID"
+                        value={smsConfig.aliyun.accessKeyId}
+                        onChange={(e) =>
+                          setSmsConfig({
+                            ...smsConfig,
+                            aliyun: { ...smsConfig.aliyun, accessKeyId: e.target.value },
+                          })
+                        }
+                        className="text-xs"
+                      />
+                      <Input
+                        label="AccessKey Secret"
+                        type="password"
+                        value={smsConfig.aliyun.accessKeySecret}
+                        placeholder={
+                          smsConfig.aliyun.hasCredentials
+                            ? '已设置 (留空保持不变)'
+                            : '请输入 AccessKey Secret'
+                        }
+                        onChange={(e) =>
+                          setSmsConfig({
+                            ...smsConfig,
+                            aliyun: { ...smsConfig.aliyun, accessKeySecret: e.target.value },
+                          })
+                        }
+                        className="text-xs"
+                      />
+                      <Input
+                        label="短信签名 (Sign Name)"
+                        value={smsConfig.aliyun.signName}
+                        onChange={(e) =>
+                          setSmsConfig({
+                            ...smsConfig,
+                            aliyun: { ...smsConfig.aliyun, signName: e.target.value },
+                          })
+                        }
+                        className="text-xs"
+                      />
+                      <Input
+                        label="模板代码 (Template Code)"
+                        value={smsConfig.aliyun.templateCode}
+                        onChange={(e) =>
+                          setSmsConfig({
+                            ...smsConfig,
+                            aliyun: { ...smsConfig.aliyun, templateCode: e.target.value },
+                          })
+                        }
+                        className="text-xs"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {smsConfig.provider === 'tencent' && (
+                  <div
+                    className={cn(
+                      'p-3 rounded-xl border',
+                      isDarkMode
+                        ? 'border-neutral-800 bg-neutral-900/50'
+                        : 'border-neutral-200 bg-neutral-50',
+                    )}
+                  >
+                    <h4
+                      className={cn(
+                        'text-xs font-medium mb-3',
+                        isDarkMode ? 'text-white' : 'text-black',
+                      )}
+                    >
+                      腾讯云短信配置
+                    </h4>
+                    <div className="grid gap-2">
+                      <Input
+                        label="App ID"
+                        value={smsConfig.tencent.appId}
+                        onChange={(e) =>
+                          setSmsConfig({
+                            ...smsConfig,
+                            tencent: { ...smsConfig.tencent, appId: e.target.value },
+                          })
+                        }
+                        className="text-xs"
+                      />
+                      <Input
+                        label="Secret ID"
+                        value={smsConfig.tencent.secretId}
+                        onChange={(e) =>
+                          setSmsConfig({
+                            ...smsConfig,
+                            tencent: { ...smsConfig.tencent, secretId: e.target.value },
+                          })
+                        }
+                        className="text-xs"
+                      />
+                      <Input
+                        label="Secret Key"
+                        type="password"
+                        value={smsConfig.tencent.secretKey}
+                        placeholder={
+                          smsConfig.tencent.hasCredentials
+                            ? '已设置 (留空保持不变)'
+                            : '请输入 Secret Key'
+                        }
+                        onChange={(e) =>
+                          setSmsConfig({
+                            ...smsConfig,
+                            tencent: { ...smsConfig.tencent, secretKey: e.target.value },
+                          })
+                        }
+                        className="text-xs"
+                      />
+                      <Input
+                        label="短信签名 (Sign Name)"
+                        value={smsConfig.tencent.signName}
+                        onChange={(e) =>
+                          setSmsConfig({
+                            ...smsConfig,
+                            tencent: { ...smsConfig.tencent, signName: e.target.value },
+                          })
+                        }
+                        className="text-xs"
+                      />
+                      <Input
+                        label="模板 ID (Template ID)"
+                        value={smsConfig.tencent.templateId}
+                        onChange={(e) =>
+                          setSmsConfig({
+                            ...smsConfig,
+                            tencent: { ...smsConfig.tencent, templateId: e.target.value },
+                          })
+                        }
+                        className="text-xs"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <Button onClick={handleSaveSmsConfig} className="w-full text-xs">
+                  保存短信设置
+                </Button>
+              </div>
+            </motion.div>
+          )}
+
+          {activeTab === 'wechat-login' && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className="flex-1 overflow-y-auto p-4"
+            >
+              <div className="grid gap-3 max-w-md mx-auto">
+                <div
+                  className={cn(
+                    'p-3 rounded-xl border',
+                    isDarkMode
+                      ? 'border-neutral-800 bg-neutral-900/50'
+                      : 'border-neutral-200 bg-neutral-50',
+                  )}
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <h4
+                      className={cn(
+                        'text-xs font-medium',
+                        isDarkMode ? 'text-white' : 'text-black',
+                      )}
+                    >
+                      微信扫码登录
+                    </h4>
+                    <label className="flex items-center gap-2 text-xs cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={wechatLoginConfig.enabled}
+                        onChange={(e) =>
+                          setWechatLoginConfig({
+                            ...wechatLoginConfig,
+                            enabled: e.target.checked,
+                          })
+                        }
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className={isDarkMode ? 'text-gray-300' : 'text-gray-700'}>启用</span>
+                    </label>
+                  </div>
+                  <div className="grid gap-2">
+                    <Input
+                      label="AppID"
+                      value={wechatLoginConfig.appId}
+                      onChange={(e) =>
+                        setWechatLoginConfig({ ...wechatLoginConfig, appId: e.target.value })
+                      }
+                      className="text-xs"
+                    />
+                    <Input
+                      label="AppSecret"
+                      type="password"
+                      value={wechatLoginConfig.appSecret}
+                      placeholder={
+                        wechatLoginConfig.hasCredentials
+                          ? '已设置 (留空保持不变)'
+                          : '请输入 AppSecret'
+                      }
+                      onChange={(e) =>
+                        setWechatLoginConfig({ ...wechatLoginConfig, appSecret: e.target.value })
+                      }
+                      className="text-xs"
+                    />
+                    <Input
+                      label="回调地址 (Redirect URI)"
+                      value={wechatLoginConfig.redirectUri}
+                      onChange={(e) =>
+                        setWechatLoginConfig({ ...wechatLoginConfig, redirectUri: e.target.value })
+                      }
+                      className="text-xs"
+                    />
+                  </div>
+                </div>
+
+                <Button onClick={handleSaveWechatLoginConfig} className="w-full text-xs">
+                  保存微信登录设置
+                </Button>
+              </div>
+            </motion.div>
+          )}
         </div>
       </div>
-      {toast && (
-        <ToastNotification
-          message={toast.message}
-          type={toast.type}
-          duration={toast.type === 'error' ? 5000 : 3000}
-          onClose={() => setToast(null)}
-          attachToBody={false}
-          className="absolute top-4 left-1/2 -translate-x-1/2 w-auto min-w-[300px]"
-        />
-      )}
     </Modal>
   )
 }

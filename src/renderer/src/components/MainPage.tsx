@@ -12,6 +12,7 @@ import {
   Code,
   Briefcase,
 } from 'lucide-react'
+import logoImage from '../assets/logo.png'
 import SelectPreparationModal from './SelectPreparationModal'
 import AllPreparationsModal from './AllPreparationsModal'
 import UserProfileModal from './user-profile/UserProfileModal'
@@ -301,24 +302,18 @@ const MainPage: React.FC<MainPageProps> = ({ preparations, setPreparations, onRe
         <div className="h-8 w-full app-drag"></div>
         <div className="max-w-6xl mx-auto px-4 -ml-10 flex items-center justify-between pb-3 app-no-drag">
           {/* Logo 区域 - 左侧留出空间给 mac 按钮 */}
-          <motion.div className="flex items-center gap-2.5 ml-16" variants={logoVariants}>
-            <div
-              className={`w-8 h-8 -my-4 ${isDarkMode ? 'bg-white' : 'bg-black'} rounded-2xl flex items-center justify-center`}
+          <motion.div className="flex items-center gap-3 ml-16" variants={logoVariants}>
+            <img
+              src={logoImage}
+              alt="Bready Logo"
+              className="w-9 h-9 -my-4 rounded-xl object-contain"
+            />
+            <h1
+              className={`text-xl font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-gray-900'}`}
+              style={{ fontFamily: '"PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif' }}
             >
-              <Sparkles className={`w-4 h-4 ${isDarkMode ? 'text-black' : 'text-white'}`} />
-            </div>
-            <div className="flex flex-col leading-none">
-              <span
-                className={`text-[9px] uppercase tracking-[0.2em] ${isDarkMode ? 'text-gray-500' : 'text-gray-400'} font-medium`}
-              >
-                Bready
-              </span>
-              <h1
-                className={`text-base font-semibold tracking-tight ${isDarkMode ? 'text-white' : 'text-gray-900'}`}
-              >
-                {t('app.name')}
-              </h1>
-            </div>
+              面宝
+            </h1>
           </motion.div>
 
           {/* 用户头像 */}

@@ -233,6 +233,96 @@ export class AuthService {
       email,
     ])
   }
+
+  static async signInOrCreateByPhone(phone: string): Promise<{ user: UserProfile; token: string }> {
+    const client = await pool.connect()
+    try {
+      await client.query('BEGIN')
+
+      let result = await client.query('SELECT * FROM user_profiles WHERE phone = $1', [phone])
+      let user: any
+
+      if (result.rows.length === 0) {
+        const insertResult = await client.query(
+          `INSERT INTO user_profiles (phone, password_hash) 
+           VALUES ($1, '') 
+           RETURNING *`,
+          [phone],
+        )
+        user = insertResult.rows[0]
+      } else {
+        user = result.rows[0]
+      }
+
+      await client.query('DELETE FROM user_sessions WHERE user_id = $1', [user.id])
+      const token = this.generateToken(user.id)
+      await client.query(
+        'INSERT INTO user_sessions (user_id, token, expires_at) VALUES ($1, $2, $3)',
+        [user.id, token, new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)],
+      )
+
+      await client.query('COMMIT')
+      delete user.password_hash
+      return { user, token }
+    } catch (error) {
+      await client.query('ROLLBACK')
+      throw error
+    } finally {
+      client.release()
+    }
+  }
+
+  static async signInOrCreateByWechat(
+    openid: string,
+    unionid: string | undefined,
+    nickname: string,
+    avatarUrl: string,
+  ): Promise<{ user: UserProfile; token: string }> {
+    const client = await pool.connect()
+    try {
+      await client.query('BEGIN')
+
+      let result = await client.query('SELECT * FROM user_profiles WHERE wechat_openid = $1', [
+        openid,
+      ])
+      let user: any
+
+      if (result.rows.length === 0) {
+        const insertResult = await client.query(
+          `INSERT INTO user_profiles (wechat_openid, wechat_unionid, full_name, avatar_url, password_hash) 
+           VALUES ($1, $2, $3, $4, '') 
+           RETURNING *`,
+          [openid, unionid || null, nickname, avatarUrl],
+        )
+        user = insertResult.rows[0]
+      } else {
+        user = result.rows[0]
+        await client.query(
+          `UPDATE user_profiles SET full_name = $2, avatar_url = $3, wechat_unionid = $4, updated_at = NOW() 
+           WHERE id = $1`,
+          [user.id, nickname, avatarUrl, unionid || user.wechat_unionid],
+        )
+        user.full_name = nickname
+        user.avatar_url = avatarUrl
+      }
+
+      await client.query('DELETE FROM user_sessions WHERE user_id = $1', [user.id])
+      const token = this.generateToken(user.id)
+      await client.query(
+        'INSERT INTO user_sessions (user_id, token, expires_at) VALUES ($1, $2, $3)',
+        [user.id, token, new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)],
+      )
+
+      await client.query('COMMIT')
+      delete user.password_hash
+      return { user, token }
+    } catch (error) {
+      await client.query('ROLLBACK')
+      throw error
+    } finally {
+      client.release()
+    }
+  }
 }
 
 export async function initializeDatabase(): Promise<void> {

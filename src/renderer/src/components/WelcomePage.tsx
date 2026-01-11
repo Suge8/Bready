@@ -1,9 +1,10 @@
 import React, { useState } from 'react'
-import { Sparkles, ArrowRight, Zap, Shield, Mic, Moon, Sun } from 'lucide-react'
+import { ArrowRight, Zap, Shield, Mic, Moon, Sun } from 'lucide-react'
 import { Button } from './ui/button'
 import { Card, CardContent } from './ui/card'
 import { useTheme } from './ui/theme-provider'
 import { useI18n } from '../contexts/I18nContext'
+import logoImage from '../assets/logo.png'
 
 interface WelcomePageProps {
   onComplete: () => void
@@ -56,8 +57,20 @@ const WelcomePage: React.FC<WelcomePageProps> = ({ onComplete, onCreatePreparati
           <div className="max-w-3xl mx-auto">
             {/* Logo 和标题 */}
             <div className="text-center mb-8">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-black text-white dark:bg-white dark:text-black rounded-2xl mb-6 shadow-xl">
-                <Sparkles className="w-8 h-8" />
+              <div className="inline-flex items-center justify-center gap-3 mb-6">
+                <img
+                  src={logoImage}
+                  alt="Bready Logo"
+                  className="w-16 h-16 rounded-2xl shadow-xl object-contain"
+                />
+                <span
+                  className="text-3xl font-bold text-[var(--bready-text)]"
+                  style={{
+                    fontFamily: '"PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif',
+                  }}
+                >
+                  面宝
+                </span>
               </div>
               <h1 className="text-4xl font-semibold mb-3 tracking-tight">{t('welcome.title')}</h1>
               <p className="text-lg text-[var(--bready-text-muted)]">{t('welcome.tagline')}</p>

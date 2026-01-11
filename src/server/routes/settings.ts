@@ -227,4 +227,153 @@ router.put('/payment-config', async (req, res) => {
   }
 })
 
+router.get(
+  '/sms-config',
+  authMiddleware,
+  adminMiddleware,
+  async (_req: AuthenticatedRequest, res) => {
+    try {
+      const keys = [
+        'sms_provider',
+        'sms_aliyun_access_key_id',
+        'sms_aliyun_access_key_secret',
+        'sms_aliyun_sign_name',
+        'sms_aliyun_template_code',
+        'sms_tencent_secret_id',
+        'sms_tencent_secret_key',
+        'sms_tencent_app_id',
+        'sms_tencent_sign_name',
+        'sms_tencent_template_id',
+      ]
+      const values = await Promise.all(keys.map((k) => getSetting(k)))
+
+      res.json({
+        data: {
+          provider: values[0] || '',
+          aliyun: {
+            accessKeyId: values[1] ? '••••••••' : '',
+            accessKeySecret: values[2] ? '••••••••' : '',
+            signName: values[3] || '',
+            templateCode: values[4] || '',
+            hasCredentials: !!(values[1] && values[2]),
+          },
+          tencent: {
+            secretId: values[5] ? '••••••••' : '',
+            secretKey: values[6] ? '••••••••' : '',
+            appId: values[7] || '',
+            signName: values[8] || '',
+            templateId: values[9] || '',
+            hasCredentials: !!(values[5] && values[6]),
+          },
+        },
+      })
+    } catch (error: any) {
+      res.status(400).json({ error: error.message })
+    }
+  },
+)
+
+router.put(
+  '/sms-config',
+  authMiddleware,
+  adminMiddleware,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const config = req.body
+      const updates: Promise<void>[] = []
+
+      if (config.provider !== undefined) {
+        updates.push(setSetting('sms_provider', config.provider, false))
+      }
+      if (config.aliyun) {
+        const a = config.aliyun
+        if (a.accessKeyId && a.accessKeyId !== '••••••••')
+          updates.push(setSetting('sms_aliyun_access_key_id', a.accessKeyId, true))
+        if (a.accessKeySecret && a.accessKeySecret !== '••••••••')
+          updates.push(setSetting('sms_aliyun_access_key_secret', a.accessKeySecret, true))
+        if (a.signName !== undefined)
+          updates.push(setSetting('sms_aliyun_sign_name', a.signName, false))
+        if (a.templateCode !== undefined)
+          updates.push(setSetting('sms_aliyun_template_code', a.templateCode, false))
+      }
+      if (config.tencent) {
+        const t = config.tencent
+        if (t.secretId && t.secretId !== '••••••••')
+          updates.push(setSetting('sms_tencent_secret_id', t.secretId, true))
+        if (t.secretKey && t.secretKey !== '••••••••')
+          updates.push(setSetting('sms_tencent_secret_key', t.secretKey, true))
+        if (t.appId !== undefined) updates.push(setSetting('sms_tencent_app_id', t.appId, false))
+        if (t.signName !== undefined)
+          updates.push(setSetting('sms_tencent_sign_name', t.signName, false))
+        if (t.templateId !== undefined)
+          updates.push(setSetting('sms_tencent_template_id', t.templateId, false))
+      }
+
+      await Promise.all(updates)
+      res.json({ success: true })
+    } catch (error: any) {
+      res.status(400).json({ success: false, error: error.message })
+    }
+  },
+)
+
+router.get(
+  '/wechat-login-config',
+  authMiddleware,
+  adminMiddleware,
+  async (_req: AuthenticatedRequest, res) => {
+    try {
+      const [enabled, appId, appSecret, redirectUri] = await Promise.all([
+        getSetting('wechat_login_enabled'),
+        getSetting('wechat_login_app_id'),
+        getSetting('wechat_login_app_secret'),
+        getSetting('wechat_login_redirect_uri'),
+      ])
+
+      res.json({
+        data: {
+          enabled: enabled === 'true',
+          appId: appId ? '••••••••' : '',
+          appSecret: appSecret ? '••••••••' : '',
+          redirectUri: redirectUri || '',
+          hasCredentials: !!(appId && appSecret),
+        },
+      })
+    } catch (error: any) {
+      res.status(400).json({ error: error.message })
+    }
+  },
+)
+
+router.put(
+  '/wechat-login-config',
+  authMiddleware,
+  adminMiddleware,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const { enabled, appId, appSecret, redirectUri } = req.body
+      const updates: Promise<void>[] = []
+
+      if (enabled !== undefined) {
+        updates.push(setSetting('wechat_login_enabled', String(enabled), false))
+      }
+      if (appId && appId !== '••••••••') {
+        updates.push(setSetting('wechat_login_app_id', appId, true))
+      }
+      if (appSecret && appSecret !== '••••••••') {
+        updates.push(setSetting('wechat_login_app_secret', appSecret, true))
+      }
+      if (redirectUri !== undefined) {
+        updates.push(setSetting('wechat_login_redirect_uri', redirectUri, false))
+      }
+
+      await Promise.all(updates)
+      res.json({ success: true })
+    } catch (error: any) {
+      res.status(400).json({ success: false, error: error.message })
+    }
+  },
+)
+
+export { getSetting }
 export default router

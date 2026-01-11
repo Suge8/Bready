@@ -15,6 +15,37 @@ export interface ToastNotificationProps {
   className?: string
 }
 
+const typeConfig = {
+  success: {
+    icon: CheckCircle,
+    bg: 'bg-emerald-50 dark:bg-emerald-950/50',
+    border: 'border-emerald-200 dark:border-emerald-800/60',
+    iconColor: 'text-emerald-600 dark:text-emerald-400',
+    glow: 'shadow-emerald-500/10 dark:shadow-emerald-400/5',
+  },
+  info: {
+    icon: Info,
+    bg: 'bg-sky-50 dark:bg-sky-950/50',
+    border: 'border-sky-200 dark:border-sky-800/60',
+    iconColor: 'text-sky-600 dark:text-sky-400',
+    glow: 'shadow-sky-500/10 dark:shadow-sky-400/5',
+  },
+  warning: {
+    icon: AlertTriangle,
+    bg: 'bg-amber-50 dark:bg-amber-950/50',
+    border: 'border-amber-200 dark:border-amber-800/60',
+    iconColor: 'text-amber-600 dark:text-amber-400',
+    glow: 'shadow-amber-500/10 dark:shadow-amber-400/5',
+  },
+  error: {
+    icon: AlertCircle,
+    bg: 'bg-red-50 dark:bg-red-950/50',
+    border: 'border-red-200 dark:border-red-800/60',
+    iconColor: 'text-red-600 dark:text-red-400',
+    glow: 'shadow-red-500/10 dark:shadow-red-400/5',
+  },
+}
+
 export const ToastNotification: React.FC<ToastNotificationProps> = ({
   message,
   type,
@@ -25,6 +56,7 @@ export const ToastNotification: React.FC<ToastNotificationProps> = ({
 }) => {
   const [visible, setVisible] = useState(true)
   const [mounted, setMounted] = useState(false)
+  const [progress, setProgress] = useState(100)
 
   useEffect(() => {
     setMounted(true)
@@ -32,32 +64,29 @@ export const ToastNotification: React.FC<ToastNotificationProps> = ({
   }, [])
 
   useEffect(() => {
+    const startTime = Date.now()
+    const animate = () => {
+      const elapsed = Date.now() - startTime
+      const remaining = Math.max(0, 100 - (elapsed / duration) * 100)
+      setProgress(remaining)
+      if (remaining > 0) {
+        requestAnimationFrame(animate)
+      }
+    }
+    const animationId = requestAnimationFrame(animate)
+
     const timer = setTimeout(() => {
       setVisible(false)
     }, duration)
 
-    return () => clearTimeout(timer)
+    return () => {
+      clearTimeout(timer)
+      cancelAnimationFrame(animationId)
+    }
   }, [duration])
 
-  const handleAnimationComplete = () => {
-    if (!visible) {
-      onClose?.()
-    }
-  }
-
-  const typeStyles = {
-    success: 'text-emerald-500',
-    info: 'text-blue-500',
-    warning: 'text-amber-500',
-    error: 'text-red-500',
-  }
-
-  const TypeIcon = {
-    success: CheckCircle,
-    info: Info,
-    warning: AlertTriangle,
-    error: AlertCircle,
-  }[type]
+  const config = typeConfig[type]
+  const TypeIcon = config.icon
 
   if (!mounted) return null
 
@@ -65,34 +94,76 @@ export const ToastNotification: React.FC<ToastNotificationProps> = ({
     <AnimatePresence onExitComplete={onClose}>
       {visible && (
         <motion.div
-          initial={{ opacity: 0, y: -20, scale: 0.95 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -20, scale: 0.95 }}
-          transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-          onAnimationComplete={handleAnimationComplete}
+          initial={{ opacity: 0, y: -32, scale: 0.92, filter: 'blur(8px)' }}
+          animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+          exit={{ opacity: 0, y: -24, scale: 0.95, filter: 'blur(4px)' }}
+          transition={{
+            type: 'spring',
+            stiffness: 380,
+            damping: 30,
+            mass: 0.8,
+          }}
           className={cn(
-            'fixed top-6 left-1/2 -translate-x-1/2 px-4 py-3 rounded-xl shadow-2xl',
-            'bg-white/90 dark:bg-neutral-900/90 backdrop-blur-md',
-            'border border-neutral-200 dark:border-neutral-800',
-            'z-[9999] flex items-start gap-3',
-            'w-auto max-w-sm md:max-w-md min-w-[300px]',
+            'fixed top-5 left-1/2 -translate-x-1/2',
+            'px-4 py-3 rounded-2xl',
+            'shadow-xl',
+            config.bg,
+            config.glow,
+            'border',
+            config.border,
+            'z-[9999] flex items-center gap-3',
+            'w-auto max-w-[420px] min-w-[280px]',
+            'overflow-hidden',
             className,
           )}
         >
-          <div className={`mt-0.5 ${typeStyles[type]}`}>
-            <TypeIcon className="w-5 h-5" />
-          </div>
-          <div className="flex-1 flex flex-col gap-1">
-            <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100 leading-snug break-words">
-              {message}
-            </span>
-          </div>
-          <button
+          <motion.div
+            initial={{ scale: 0, rotate: -180 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ type: 'spring', stiffness: 500, damping: 25, delay: 0.1 }}
+            className={cn('flex-shrink-0', config.iconColor)}
+          >
+            <TypeIcon className="w-5 h-5" strokeWidth={2.5} />
+          </motion.div>
+
+          <motion.span
+            initial={{ opacity: 0, x: -8 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3, delay: 0.15 }}
+            className="flex-1 text-sm font-medium text-neutral-800 dark:text-neutral-100 leading-snug"
+          >
+            {message}
+          </motion.span>
+
+          <motion.button
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
             onClick={() => setVisible(false)}
-            className="p-1 -mr-1 -mt-1 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors cursor-pointer"
+            className={cn(
+              'flex-shrink-0 p-1.5 -mr-1 rounded-xl',
+              'text-neutral-400 dark:text-neutral-500',
+              'hover:text-neutral-600 dark:hover:text-neutral-300',
+              'hover:bg-black/5 dark:hover:bg-white/10',
+              'transition-colors duration-200 cursor-pointer',
+            )}
           >
             <X className="w-4 h-4" />
-          </button>
+          </motion.button>
+
+          <motion.div
+            className={cn(
+              'absolute bottom-0 left-0 h-[3px] rounded-full',
+              type === 'success' && 'bg-emerald-500 dark:bg-emerald-400',
+              type === 'info' && 'bg-sky-500 dark:bg-sky-400',
+              type === 'warning' && 'bg-amber-500 dark:bg-amber-400',
+              type === 'error' && 'bg-red-500 dark:bg-red-400',
+            )}
+            style={{ width: `${progress}%` }}
+            transition={{ duration: 0.1 }}
+          />
         </motion.div>
       )}
     </AnimatePresence>

@@ -12,10 +12,10 @@ import type {
   ExtractFileContentResponse,
 } from '../shared/ipc'
 
-const SERVER_URL = process.env.SERVER_URL || 'http://localhost:3001'
+const API_SERVER_URL = process.env.API_SERVER_URL || 'http://localhost:3001'
 
 async function getAiConfigFromServer() {
-  const response = await fetch(`${SERVER_URL}/api/ai/config-full`, {
+  const response = await fetch(`${API_SERVER_URL}/api/ai/config-full`, {
     signal: AbortSignal.timeout(10000),
   })
   if (!response.ok) {
