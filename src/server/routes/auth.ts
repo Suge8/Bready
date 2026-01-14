@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { randomInt, randomBytes, createHash } from 'crypto'
 import { AuthService, query, pool } from '../services/database'
 import { sendSms } from '../services/sms'
-import { sendPasswordResetEmail } from '../services/email-service'
+import { sendPasswordResetEmail, sendVerificationEmail } from '../services/email-service'
 import {
   getWechatLoginConfig,
   getWechatAuthUrl,
@@ -20,14 +20,20 @@ const router = Router()
 const PASSWORD_RESET_TTL_MS = 30 * 60 * 1000
 
 const phoneCodeStore = new Map<string, { code: string; expiresAt: number; lastSentAt: number }>()
+const emailCodeStore = new Map<string, { code: string; expiresAt: number; lastSentAt: number }>()
 const PHONE_CODE_TTL_MS = 5 * 60 * 1000
 const PHONE_CODE_COOLDOWN_MS = 60 * 1000
+const EMAIL_CODE_TTL_MS = 5 * 60 * 1000
+const EMAIL_CODE_COOLDOWN_MS = 60 * 1000
 
 const isValidPhone = (phone: string) => /^1\d{10}$/.test(phone)
 
 function purgeExpiredCodes(now: number) {
   for (const [key, entry] of phoneCodeStore.entries()) {
     if (entry.expiresAt <= now) phoneCodeStore.delete(key)
+  }
+  for (const [key, entry] of emailCodeStore.entries()) {
+    if (entry.expiresAt <= now) emailCodeStore.delete(key)
   }
 }
 
@@ -38,6 +44,81 @@ router.post('/sign-up', async (req, res) => {
     res.json({ data: user })
   } catch (error: any) {
     res.status(400).json({ error: error.message })
+  }
+})
+
+router.post('/send-email-code', async (req, res) => {
+  try {
+    const { email } = req.body
+    const trimmedEmail = String(email || '')
+      .trim()
+      .toLowerCase()
+
+    if (!trimmedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      res.status(400).json({ success: false, error: '邮箱格式不正确' })
+      return
+    }
+
+    const now = Date.now()
+    purgeExpiredCodes(now)
+
+    const existing = emailCodeStore.get(trimmedEmail)
+    if (existing && now - existing.lastSentAt < EMAIL_CODE_COOLDOWN_MS) {
+      const remaining = Math.ceil((EMAIL_CODE_COOLDOWN_MS - (now - existing.lastSentAt)) / 1000)
+      res.json({ success: false, error: `请稍后再试 (${remaining}s)`, cooldownSeconds: remaining })
+      return
+    }
+
+    const code = randomInt(100000, 1000000).toString()
+    const emailResult = await sendVerificationEmail(trimmedEmail, code)
+
+    if (!emailResult.success) {
+      res.status(400).json({ success: false, error: emailResult.error || '邮件发送失败' })
+      return
+    }
+
+    emailCodeStore.set(trimmedEmail, {
+      code,
+      expiresAt: now + EMAIL_CODE_TTL_MS,
+      lastSentAt: now,
+    })
+
+    res.json({ success: true, cooldownSeconds: Math.floor(EMAIL_CODE_COOLDOWN_MS / 1000) })
+  } catch (error: any) {
+    res.status(400).json({ success: false, error: error.message })
+  }
+})
+
+router.post('/verify-email-code', async (req, res) => {
+  try {
+    const { email, code } = req.body
+    const trimmedEmail = String(email || '')
+      .trim()
+      .toLowerCase()
+
+    if (!trimmedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      res.status(400).json({ success: false, error: '邮箱格式不正确' })
+      return
+    }
+
+    purgeExpiredCodes(Date.now())
+    const entry = emailCodeStore.get(trimmedEmail)
+
+    if (!entry || entry.expiresAt < Date.now()) {
+      if (entry) emailCodeStore.delete(trimmedEmail)
+      res.status(400).json({ success: false, error: '验证码已过期，请重新获取' })
+      return
+    }
+
+    if (String(code || '').trim() !== entry.code) {
+      res.status(400).json({ success: false, error: '验证码错误' })
+      return
+    }
+
+    emailCodeStore.delete(trimmedEmail)
+    res.json({ success: true })
+  } catch (error: any) {
+    res.status(400).json({ success: false, error: error.message })
   }
 })
 

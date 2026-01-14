@@ -196,6 +196,40 @@ export function setupAuthHandlers() {
     }
   })
 
+  ipcMain.handle('auth:send-email-code', async (event, { email }) => {
+    void event
+    try {
+      const trimmedEmail = String(email || '')
+        .trim()
+        .toLowerCase()
+      if (!isValidEmail(trimmedEmail)) {
+        return { success: false, error: '邮箱格式不正确' }
+      }
+      const result = await api.auth.sendEmailCode(trimmedEmail)
+      if (result.error) return { success: false, error: result.error }
+      return result.data || { success: true }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle('auth:verify-email-code', async (event, { email, code }) => {
+    void event
+    try {
+      const trimmedEmail = String(email || '')
+        .trim()
+        .toLowerCase()
+      if (!isValidEmail(trimmedEmail)) {
+        return { success: false, error: '邮箱格式不正确' }
+      }
+      const result = await api.auth.verifyEmailCode(trimmedEmail, code)
+      if (result.error) return { success: false, error: result.error }
+      return result.data || { success: true }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
   ipcMain.handle('auth:send-login-code', async (event, { phone }) => {
     void event
     try {
@@ -364,6 +398,17 @@ export function setupUserHandlers() {
       throw new Error(error.message)
     }
   })
+
+  ipcMain.handle('user:delete', async (event, { userId, token }) => {
+    void event
+    try {
+      const result = await api.user.delete(userId, token)
+      if (result.error) throw new Error(result.error)
+      return result.success
+    } catch (error: any) {
+      throw new Error(error.message)
+    }
+  })
 }
 
 export function setupMembershipHandlers() {
@@ -451,6 +496,39 @@ export function setupUsageHandlers() {
       const result = await api.usage.getAllRecords()
       if (result.error) throw new Error(result.error)
       return result.data || []
+    } catch (error: any) {
+      throw new Error(error.message)
+    }
+  })
+
+  ipcMain.handle('collab:start', async (event, { userId }) => {
+    void event
+    try {
+      const result = await api.collab.start(userId)
+      if (result.error) throw new Error(result.error)
+      return result.data
+    } catch (error: any) {
+      throw new Error(error.message)
+    }
+  })
+
+  ipcMain.handle('collab:heartbeat', async (event, { sessionId }) => {
+    void event
+    try {
+      const result = await api.collab.heartbeat(sessionId)
+      if (result.error) throw new Error(result.error)
+      return result.data
+    } catch (error: any) {
+      throw new Error(error.message)
+    }
+  })
+
+  ipcMain.handle('collab:end', async (event, { sessionId, reason }) => {
+    void event
+    try {
+      const result = await api.collab.end(sessionId, reason)
+      if (result.error) throw new Error(result.error)
+      return result.data
     } catch (error: any) {
       throw new Error(error.message)
     }

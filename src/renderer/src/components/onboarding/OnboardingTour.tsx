@@ -59,7 +59,7 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ onComplete }) =>
 
   const variants = {
     enter: (direction: number) => ({
-      x: direction > 0 ? 50 : -50,
+      x: direction > 0 ? 30 : -30,
       opacity: 0,
     }),
     center: {
@@ -69,7 +69,7 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ onComplete }) =>
     },
     exit: (direction: number) => ({
       zIndex: 0,
-      x: direction < 0 ? 50 : -50,
+      x: direction < 0 ? 30 : -30,
       opacity: 0,
     }),
   }
@@ -77,46 +77,51 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({ onComplete }) =>
   const CurrentComponent = steps[currentStep]
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-[var(--bready-bg)] opacity-95"></div>
+    <div className="fixed inset-0 z-50 flex flex-col bg-[var(--bready-bg)]">
+      <div
+        className="h-8 w-full shrink-0"
+        style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
+      />
+      <div className="flex-1 flex items-center justify-center">
+        <div className="relative w-full max-w-2xl flex flex-col h-[480px] px-6">
+          <motion.div
+            initial={{ y: -10, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.1, type: 'spring', stiffness: 300, damping: 30 }}
+            className="flex justify-center z-10 py-3"
+          >
+            <StepIndicator
+              currentStep={currentStep}
+              totalSteps={steps.length}
+              onStepClick={handleStepClick}
+            />
+          </motion.div>
 
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="relative w-full max-w-4xl bg-[var(--bready-bg)] rounded-2xl border border-[var(--bready-border)] shadow-2xl overflow-hidden flex flex-col h-[600px] max-h-[90vh]"
-      >
-        <div className="absolute top-0 left-0 right-0 flex justify-center z-10 pt-6">
-          <StepIndicator
-            currentStep={currentStep}
-            totalSteps={steps.length}
-            onStepClick={handleStepClick}
-          />
+          <div className="flex-1 relative">
+            <AnimatePresence initial={false} custom={direction} mode="wait">
+              <motion.div
+                key={currentStep}
+                custom={direction}
+                variants={variants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={{
+                  x: { type: 'spring', stiffness: 300, damping: 30 },
+                  opacity: { duration: 0.15 },
+                }}
+                className="h-full w-full"
+              >
+                <CurrentComponent
+                  onNext={handleNext}
+                  onPrevious={handlePrevious}
+                  onSkip={handleSkip}
+                />
+              </motion.div>
+            </AnimatePresence>
+          </div>
         </div>
-
-        <div className="flex-1 overflow-y-auto overflow-x-hidden pt-16 pb-6 relative">
-          <AnimatePresence initial={false} custom={direction} mode="wait">
-            <motion.div
-              key={currentStep}
-              custom={direction}
-              variants={variants}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              transition={{
-                x: { type: 'spring', stiffness: 300, damping: 30 },
-                opacity: { duration: 0.2 },
-              }}
-              className="h-full w-full"
-            >
-              <CurrentComponent
-                onNext={handleNext}
-                onPrevious={handlePrevious}
-                onSkip={handleSkip}
-              />
-            </motion.div>
-          </AnimatePresence>
-        </div>
-      </motion.div>
+      </div>
     </div>
   )
 }

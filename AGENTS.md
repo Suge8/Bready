@@ -1,12 +1,14 @@
 # BREADY 项目知识库
 
-**Generated:** 2026-01-11
-**Commit:** 48c36f2
+**Generated:** 2026-01-14
+**Commit:** 936ce94
 **Branch:** main
 
 ## 概述
 
-面宝 (Bready) - Electron + React 19 + TypeScript 的 AI 面试协作助手。集成 Google Gemini 和字节豆包双 AI 引擎，支持实时音频捕获与语音转写。
+面宝 (Bready) - **混合桌面-服务器系统**。Electron + React 19 + TypeScript，集成 Google Gemini 和字节豆包双 AI 引擎，支持实时音频捕获与语音转写。
+
+**架构特点**: 非标准 Electron 应用，内置 Express 服务器处理 PostgreSQL 和音频代理，主进程专注窗口管理和原生 macOS 音频捕获。
 
 ## 项目结构
 
@@ -30,11 +32,13 @@ bready/
 | ----------- | ------------------------------------------------- | ------------------- |
 | AI 服务逻辑 | `src/main/doubao-service.ts`, `gemini-service.ts` | WebSocket 流式处理  |
 | 音频捕获    | `src/renderer/src/lib/audio-capture.ts`           | 多策略降级          |
-| IPC 处理    | `src/main/ipc-handlers.ts`                        | 业务逻辑中枢        |
+| IPC 处理    | `src/main/ipc-handlers/`                          | 分模块处理器        |
 | 类型契约    | `src/shared/ipc.ts`                               | main/renderer 共享  |
 | UI 组件     | `src/renderer/src/components/`                    | 见子目录 AGENTS.md  |
 | 安全机制    | `src/main/security/`                              | IPC 签名验证        |
 | 后端 API    | `src/server/`                                     | Express + WebSocket |
+| 用户中心    | `src/renderer/src/components/user-profile/`       | 见子目录 AGENTS.md  |
+| 协作模块    | `src/renderer/src/components/collaboration/`      | 见子目录 AGENTS.md  |
 
 ## 入口点
 
@@ -44,7 +48,6 @@ bready/
 | `src/renderer/src/main.tsx` | React 入口                        |
 | `src/preload/index.ts`      | 暴露 `window.bready` API          |
 | `src/server/index.ts`       | Express 后端 (WebSocket 音频代理) |
-| `src/api-server.ts`         | 辅助 API 服务器 (端口 3001)       |
 
 ## 代码规范
 
@@ -59,32 +62,48 @@ bready/
 
 ### 模式
 
-- 主进程服务继承 `EventEmitter`
+- 主进程服务继承 `EventEmitter`，单例模式
 - IPC 频道命名: `namespace:action` (如 `auth:sign-in`)
 - 调试开关: `.env.local` 中 `DEBUG_*` 变量
+- 清理机制: 使用 `registerCleanup()` 注册退出回调
 
 ## 反模式 (禁止)
 
 | 禁止                             | 原因                                 |
 | -------------------------------- | ------------------------------------ |
 | `dangerouslySetInnerHTML` 无过滤 | XSS 风险 (FloatingWindow.tsx 已存在) |
-| 渲染进程直接 `console.log`       | 使用调试开关控制                     |
+| 主进程直接 `console.log`         | 使用 `utils/logging.ts`              |
 | IPC 参数无类型                   | 必须在 `shared/ipc.ts` 定义          |
-| `--disable-web-security`         | 生产环境禁用                         |
+| 绕过 `IPCSecurityManager`        | 安全风险                             |
+| 路由内直接 SQL                   | 使用 `services/database.ts`          |
+| 组件内直接 `ipcRenderer`         | 使用 `lib/api-client.ts`             |
+| 超过 15 个 useState              | 拆分为 Hook                          |
 
 ## 技术债务
 
-| 文件                    | 问题                  | 优先级 |
-| ----------------------- | --------------------- | ------ |
-| `CollaborationMode.tsx` | 1351 行，25+ useState | 高     |
+| 文件                  | 问题              | 优先级 |
+| --------------------- | ----------------- | ------ |
+| `AdminPanelModal.tsx` | 2393 行           | 高     |
+| `preload/index.ts`    | 大量 `: any` 类型 | 中     |
+| `ipc-handlers/`       | 重构过渡态        | 低     |
+| `FloatingWindow.tsx`  | XSS 未过滤        | 高     |
+| `server/routes/*.ts`  | 67+ 直接 SQL 查询 | 中     |
 
-| `preload/index.ts` | 大量 `: any` 类型 | 中 |
-| `ipc-handlers.ts` | 重构过渡态 | 低 |
+## 大文件警告 (>500 行)
+
+| 文件                   | 行数 | 说明           |
+| ---------------------- | ---- | -------------- |
+| `i18n/translations.ts` | 3677 | 多语言翻译     |
+| `AdminPanelModal.tsx`  | 2393 | 管理面板       |
+| `doubao-service.ts`    | 1222 | 豆包 AI 服务   |
+| `gemini-service.ts`    | 1141 | Gemini AI 服务 |
+| `lib/audio-capture.ts` | 1105 | 音频捕获       |
+| `lib/api-client.ts`    | 1051 | IPC 客户端     |
 
 ## 测试
 
 - **框架**: Vitest + JSDOM
-- **目录**: 同级 `__tests__/` 目录
+- **目录**: 同级 `__tests__/` 目录，`.spec.ts` 后缀
 - **覆盖率**: 全局 85%，`src/main/services/` 95%
 - **命令**: `npm run test:unit`
 
@@ -105,6 +124,4 @@ npm run db:setup     # 初始化 PostgreSQL
 - 首次运行需配置 `.env` (API Keys)
 - 原生工具需 Swift 5.0+ 编译
 - `payment-callback-server/` 是独立项目，需单独部署
-
-与 ui 相关的都使用前端工作师agent，且使用 frontend-design skills，保持我们的 vercel 黑白风格，所有能按的都支持hover动画和pointer，减少使用影响性能导致动画一卡一卡的blur，动效丰富丝滑，视觉冲击力强，tab 切换或模态框变换时都有滑动或切换的丝滑动效。
-编写完ui 确定好我们的页面有没有缺失翻译键，都把他们补齐
+- CI 未运行 build 命令，本地需验证构建

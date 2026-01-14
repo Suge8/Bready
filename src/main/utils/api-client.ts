@@ -98,6 +98,16 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ phone }),
       }),
+    sendEmailCode: (email: string) =>
+      apiRequest('/api/auth/send-email-code', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      }),
+    verifyEmailCode: (email: string, code: string) =>
+      apiRequest('/api/auth/verify-email-code', {
+        method: 'POST',
+        body: JSON.stringify({ email, code }),
+      }),
     signInWithPhone: (phone: string, code: string) =>
       apiRequest('/api/auth/sign-in-phone', {
         method: 'POST',
@@ -142,6 +152,11 @@ export const api = {
         method: 'PUT',
         body: JSON.stringify({ role }),
       }),
+    delete: (userId: string, token: string) =>
+      apiRequest(`/api/user/${userId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      }),
   },
 
   membership: {
@@ -179,6 +194,24 @@ export const api = {
       return apiRequest(`/api/usage/records/${userId}${query ? `?${query}` : ''}`)
     },
     getAllRecords: () => apiRequest('/api/usage/all-records'),
+  },
+
+  collab: {
+    start: (userId: string) =>
+      apiRequest('/api/collab/start', {
+        method: 'POST',
+        body: JSON.stringify({ userId }),
+      }),
+    heartbeat: (sessionId: string) =>
+      apiRequest('/api/collab/heartbeat', {
+        method: 'POST',
+        body: JSON.stringify({ sessionId }),
+      }),
+    end: (sessionId: string, reason?: string) =>
+      apiRequest('/api/collab/end', {
+        method: 'POST',
+        body: JSON.stringify({ sessionId, reason }),
+      }),
   },
 
   preparation: {

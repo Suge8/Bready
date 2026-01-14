@@ -75,6 +75,7 @@ export interface UserProfile {
   remaining_interview_minutes: number
   total_purchased_minutes: number
   discount_rate: number
+  has_completed_onboarding?: boolean
   created_at: string
   updated_at: string
 }
@@ -416,6 +417,40 @@ export const authService = {
     }
   },
 
+  async sendEmailCode(
+    email: string,
+  ): Promise<{ success: boolean; error?: string; cooldownSeconds?: number }> {
+    try {
+      return await invokeIpc('auth:send-email-code', { email })
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  },
+
+  async verifyEmailCode(
+    email: string,
+    code: string,
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      return await invokeIpc('auth:verify-email-code', { email, code })
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  },
+
+  async getEmailVerificationConfig(): Promise<{ enabled: boolean }> {
+    try {
+      const config = localStorage.getItem('email_config')
+      if (config) {
+        const parsed = JSON.parse(config)
+        return { enabled: parsed.enableVerification || false }
+      }
+      return { enabled: false }
+    } catch {
+      return { enabled: false }
+    }
+  },
+
   // 监听认证状态变化
   onAuthStateChange(callback: (event: string, session: any) => void) {
     console.log('authService: Setting up auth state change listener')
@@ -469,6 +504,11 @@ export const userProfileService = {
     }
   },
 
+  // 标记引导完成
+  async completeOnboarding(userId: string): Promise<UserProfile> {
+    return this.upsertProfile({ id: userId, has_completed_onboarding: true })
+  },
+
   // 获取所有用户（管理员功能）
   async getAllUsers(): Promise<UserProfile[]> {
     try {
@@ -498,6 +538,18 @@ export const userProfileService = {
       return updatedUser
     } catch (error) {
       console.error('Error updating user role:', error)
+      throw error
+    }
+  },
+
+  // 删除用户（超级管理员功能）
+  async deleteUser(userId: string): Promise<boolean> {
+    try {
+      const token = localStorage.getItem('auth_token') || ''
+      const result = await invokeIpc('user:delete', { userId, token })
+      return result
+    } catch (error) {
+      console.error('Error deleting user:', error)
       throw error
     }
   },
@@ -679,6 +731,37 @@ export const usageRecordService = {
       console.error('Error fetching all usage records:', error)
       throw error
     }
+  },
+}
+
+export interface CollabSessionLease {
+  sessionId: string
+  serverNow: string
+  expiresAt: string
+  remainingMs: number
+}
+
+export interface CollabHeartbeatResponse {
+  serverNow: string
+  expiresAt: string
+  remainingMs: number
+  timeUp: boolean
+}
+
+export const collabSessionService = {
+  async start(userId: string): Promise<CollabSessionLease> {
+    return invokeIpc('collab:start', { userId })
+  },
+
+  async heartbeat(sessionId: string): Promise<CollabHeartbeatResponse> {
+    return invokeIpc('collab:heartbeat', { sessionId })
+  },
+
+  async end(
+    sessionId: string,
+    reason?: string,
+  ): Promise<{ sessionId: string; consumedMinutes: number }> {
+    return invokeIpc('collab:end', { sessionId, reason })
   },
 }
 
@@ -896,6 +979,39 @@ export const settingsService = {
   async updateLoginConfig(config: any): Promise<{ success: boolean; error?: string }> {
     const token = localStorage.getItem('auth_token')
     return await invokeIpc('settings:update-login-config', token, config)
+  },
+
+  async getSmtpConfig(): Promise<{
+    host: string
+    port: string
+    secure: boolean
+    user: string
+    hasPassword: boolean
+  }> {
+    const token = localStorage.getItem('auth_token')
+    return await invokeIpc('settings:get-smtp-config', token)
+  },
+
+  async updateSmtpConfig(config: {
+    host: string
+    port: string
+    secure: boolean
+    user: string
+    pass: string
+  }): Promise<{ success: boolean; error?: string }> {
+    const token = localStorage.getItem('auth_token')
+    return await invokeIpc('settings:update-smtp-config', token, config)
+  },
+
+  async testSmtpConnection(config: {
+    host: string
+    port: string
+    secure: boolean
+    user: string
+    pass: string
+  }): Promise<{ success: boolean; error?: string }> {
+    const token = localStorage.getItem('auth_token')
+    return await invokeIpc('settings:test-smtp-connection', token, config)
   },
 }
 

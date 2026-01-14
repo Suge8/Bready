@@ -16,12 +16,14 @@ interface AuthContextType {
   session: SupabaseSession | null
   profile: UserProfile | null
   loading: boolean
+  isSigningOut: boolean
   signIn: (email: string, password: string, delay?: number) => Promise<any>
   signUp: (email: string, password: string, userData?: { full_name?: string }) => Promise<any>
   signInWithGoogle: (code: string) => Promise<any>
   signInWithPhone: (phone: string) => Promise<any>
   verifyOtp: (phone: string, token: string) => Promise<any>
-  signOut: () => Promise<any>
+  signOut: (delay?: number) => Promise<any>
+  completeOnboarding: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -43,6 +45,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [session, setSession] = useState<SupabaseSession | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isSigningOut, setIsSigningOut] = useState(false)
 
   useEffect(() => {
     console.log('AuthProvider: Starting initialization')
@@ -100,15 +103,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             await loadUserProfile(session.user.id)
           } catch (error) {
             console.error('Error loading user profile on auth change:', error)
-            // 即使加载失败也要设置profile为null
             setProfile(null)
           } finally {
             setLoading(false)
           }
         } else {
-          // 登出时清理用户配置
           setProfile(null)
           setLoading(false)
+          setIsSigningOut(false)
         }
       })
 
@@ -167,12 +169,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }
 
   const signUp = async (email: string, password: string, userData?: { full_name?: string }) => {
-    setLoading(true)
     try {
       const result = await authService.signUpWithEmail(email, password, userData)
       return result
-    } finally {
-      setLoading(false)
+    } catch (error) {
+      throw error
     }
   }
 
@@ -206,32 +207,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }
 
-  const signOut = async () => {
-    setLoading(true)
+  const signOut = async (delay?: number) => {
+    setIsSigningOut(true)
+
+    if (delay && delay > 0) {
+      await new Promise((resolve) => setTimeout(resolve, delay))
+    }
+
     try {
       const result = await authService.signOut()
-
-      // 检查是否有错误
       if (result.error) {
         throw result.error
       }
-
-      // 手动清理状态，因为有时认证状态变化事件不会触发
-      setUser(null)
-      setSession(null)
-      setProfile(null)
-
       return result
     } catch (error) {
       console.error('Error during sign out:', error)
-      // 即使出错也要清理状态
-      setUser(null)
-      setSession(null)
-      setProfile(null)
       throw error
-    } finally {
-      setLoading(false)
     }
+  }
+
+  const completeOnboarding = async () => {
+    if (!user?.id) return
+    const updatedProfile = await userProfileService.completeOnboarding(user.id)
+    setProfile(updatedProfile)
   }
 
   const value = {
@@ -239,12 +237,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     session,
     profile,
     loading,
+    isSigningOut,
     signIn,
     signUp,
     signInWithGoogle,
     signInWithPhone,
     verifyOtp,
     signOut,
+    completeOnboarding,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

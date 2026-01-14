@@ -16,6 +16,7 @@ import {
   CreditCard,
   MessageSquare,
   MessageCircle,
+  Trash2,
 } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { useAuth } from '../contexts/AuthContext'
@@ -35,7 +36,7 @@ import UserLevelBadge from './UserLevelBadge'
 import { useI18n } from '../contexts/I18nContext'
 import { useTheme } from './ui/theme-provider'
 import { useToast } from '../contexts/ToastContext'
-import { Modal } from './ui/Modal'
+import { Modal, ConfirmDialog } from './ui/Modal'
 import { FloatingLabelInput } from './ui/FloatingLabelInput'
 import { Button } from './ui/button'
 
@@ -74,6 +75,11 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
   const [usageRecords, setUsageRecords] = useState<UsageRecordWithUser[]>([])
   const [usageLoading, setUsageLoading] = useState(false)
   const [expandedUsageUsers, setExpandedUsageUsers] = useState<Set<string>>(new Set())
+
+  const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; user: UserProfile | null }>({
+    show: false,
+    user: null,
+  })
 
   const [aiTestStatus, setAiTestStatus] = useState<{
     gemini: { tested: boolean; success: boolean; loading: boolean }
@@ -290,30 +296,83 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
   }
 
   const [emailConfig, setEmailConfig] = useState({
-    smtpServer: 'smtp.qq.com',
+    smtpServer: '',
     port: '465',
-    senderEmail: 'nnyless@foxmail.com',
-    authCode: 'myckcqpjqedgdjhi',
+    senderEmail: '',
+    authCode: '',
     enableSsl: true,
+    enableVerification: false,
   })
+  const [emailTestLoading, setEmailTestLoading] = useState(false)
+  const [emailConfigured, setEmailConfigured] = useState(false)
 
   useEffect(() => {
-    const savedConfig = localStorage.getItem('email_config')
-    if (savedConfig) {
-      try {
-        setEmailConfig((prev) => ({ ...prev, ...JSON.parse(savedConfig) }))
-      } catch (e) {
-        console.error('Failed to parse email config', e)
-      }
+    if (activeTab === 'login') {
+      loadSmtpConfig()
     }
-  }, [])
+  }, [activeTab])
+
+  const loadSmtpConfig = async () => {
+    try {
+      const config = await settingsService.getSmtpConfig()
+      if (config) {
+        setEmailConfig((prev) => ({
+          ...prev,
+          smtpServer: config.host || '',
+          port: config.port || '465',
+          senderEmail: config.user || '',
+          enableSsl: config.secure !== false,
+        }))
+        setEmailConfigured(config.hasPassword && !!config.host && !!config.user)
+      }
+    } catch (e) {
+      console.error('Failed to load SMTP config', e)
+    }
+  }
 
   const handleEmailConfigChange = (key: string, value: any) => {
     setEmailConfig((prev) => ({ ...prev, [key]: value }))
+    if (key !== 'enableVerification') {
+      setEmailConfigured(false)
+    }
   }
 
-  const handleTestEmailConnection = () => {
-    showToast('测试连接功能尚未实现', 'warning')
+  const handleTestEmailConnection = async () => {
+    if (!emailConfig.smtpServer || !emailConfig.senderEmail || !emailConfig.authCode) {
+      showToast('请填写完整的邮箱配置', 'warning')
+      return
+    }
+
+    setEmailTestLoading(true)
+    try {
+      const result = await settingsService.testSmtpConnection({
+        host: emailConfig.smtpServer,
+        port: emailConfig.port,
+        secure: emailConfig.enableSsl,
+        user: emailConfig.senderEmail,
+        pass: emailConfig.authCode,
+      })
+
+      if (result.success) {
+        await settingsService.updateSmtpConfig({
+          host: emailConfig.smtpServer,
+          port: emailConfig.port,
+          secure: emailConfig.enableSsl,
+          user: emailConfig.senderEmail,
+          pass: emailConfig.authCode,
+        })
+        setEmailConfigured(true)
+        showToast('邮箱登录已生效', 'success')
+      } else {
+        setEmailConfigured(false)
+        showToast(result.error || '连接失败', 'error')
+      }
+    } catch (error: any) {
+      setEmailConfigured(false)
+      showToast(error.message || '测试失败', 'error')
+    } finally {
+      setEmailTestLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -370,6 +429,20 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
       showToast(t('alerts.updateRoleFailed'), 'error')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleDeleteUser = async () => {
+    if (!deleteConfirm.user) return
+
+    try {
+      await userProfileService.deleteUser(deleteConfirm.user.id)
+      showToast(t('alerts.deleteSuccess') || '用户已删除', 'success')
+      setDeleteConfirm({ show: false, user: null })
+      loadUsers()
+    } catch (error) {
+      console.error('Error deleting user:', error)
+      showToast(t('alerts.deleteFailed') || '删除失败', 'error')
     }
   }
 
@@ -558,9 +631,29 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400">
-                        必选
-                      </span>
+                      <div
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleEmailConfigChange(
+                            'enableVerification',
+                            !emailConfig.enableVerification,
+                          )
+                        }}
+                        className={cn(
+                          'w-10 h-6 rounded-full p-1 cursor-pointer transition-colors duration-300',
+                          emailConfig.enableVerification
+                            ? 'bg-green-500'
+                            : isDarkMode
+                              ? 'bg-neutral-800'
+                              : 'bg-gray-200',
+                        )}
+                      >
+                        <motion.div
+                          className="w-4 h-4 bg-white rounded-full shadow-sm"
+                          animate={{ x: emailConfig.enableVerification ? 16 : 0 }}
+                          transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                        />
+                      </div>
                       <motion.div
                         animate={{ rotate: expandedCard === 'email' ? 180 : 0 }}
                         transition={{ duration: 0.2 }}
@@ -581,9 +674,6 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
                         <div className="p-4 pt-0 border-t border-dashed border-gray-200 dark:border-gray-800">
                           <div className="grid grid-cols-2 gap-4 mt-4">
                             <div className="space-y-3">
-                              <h4 className="text-xs font-medium text-gray-500 mb-2">
-                                SMTP 服务器
-                              </h4>
                               <FloatingLabelInput
                                 label={t('admin.email.smtp.server')}
                                 value={emailConfig.smtpServer}
@@ -630,7 +720,6 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
                               </div>
                             </div>
                             <div className="space-y-3">
-                              <h4 className="text-xs font-medium text-gray-500 mb-2">发送账号</h4>
                               <FloatingLabelInput
                                 label={t('admin.email.auth.email')}
                                 value={emailConfig.senderEmail}
@@ -650,14 +739,18 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
                               />
                             </div>
                           </div>
-                          <div className="flex justify-end mt-3">
+                          <div className="flex justify-end mt-3 items-center gap-2">
+                            {emailConfigured && (
+                              <span className="text-xs text-emerald-500">✓ 已生效</span>
+                            )}
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={handleTestEmailConnection}
+                              disabled={emailTestLoading}
                               className="text-xs h-7"
                             >
-                              测试连接
+                              {emailTestLoading ? '测试中...' : '测试连接'}
                             </Button>
                           </div>
                         </div>
@@ -672,10 +765,10 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
                   className={cn(
                     'rounded-xl border transition-all duration-300 overflow-hidden',
                     isDarkMode
-                      ? 'border-neutral-800 bg-neutral-900/50 hover:border-emerald-500/20 hover:shadow-lg hover:shadow-emerald-500/5'
-                      : 'border-neutral-200 bg-neutral-50 hover:border-emerald-300 hover:shadow-lg hover:shadow-emerald-500/10',
+                      ? 'border-neutral-800 bg-neutral-900/50 hover:border-violet-500/20 hover:shadow-lg hover:shadow-violet-500/5'
+                      : 'border-neutral-200 bg-neutral-50 hover:border-violet-300 hover:shadow-lg hover:shadow-violet-500/10',
                     expandedCard === 'phone' &&
-                      (isDarkMode ? 'border-emerald-500/30' : 'border-emerald-200'),
+                      (isDarkMode ? 'border-violet-500/30' : 'border-violet-200'),
                   )}
                 >
                   <div
@@ -687,7 +780,7 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
                         className={cn(
                           'w-10 h-10 rounded-full flex items-center justify-center transition-colors',
                           isDarkMode ? 'bg-neutral-800' : 'bg-white shadow-sm border',
-                          expandedCard === 'phone' && 'text-emerald-500',
+                          expandedCard === 'phone' && 'text-violet-500',
                         )}
                       >
                         <MessageSquare className="w-5 h-5" />
@@ -716,7 +809,7 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
                         className={cn(
                           'w-10 h-6 rounded-full p-1 cursor-pointer transition-colors duration-300',
                           loginConfig.phone.enabled
-                            ? 'bg-emerald-500'
+                            ? 'bg-green-500'
                             : isDarkMode
                               ? 'bg-neutral-800'
                               : 'bg-gray-200',
@@ -1113,7 +1206,7 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
                         className={cn(
                           'w-10 h-6 rounded-full p-1 cursor-pointer transition-colors duration-300',
                           loginConfig.google.enabled
-                            ? 'bg-orange-500'
+                            ? 'bg-green-500'
                             : isDarkMode
                               ? 'bg-neutral-800'
                               : 'bg-gray-200',
@@ -1354,7 +1447,23 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
                       </div>
 
                       {canManageUser(userItem) && userItem.id !== user?.id && (
-                        <div className="relative">
+                        <div className="relative flex items-center gap-1">
+                          {profile?.user_level === '超级' && (
+                            <motion.button
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                              onClick={() => setDeleteConfirm({ show: true, user: userItem })}
+                              className={cn(
+                                'p-1.5 rounded-lg transition-colors',
+                                isDarkMode
+                                  ? 'hover:bg-red-500/20 text-gray-400 hover:text-red-400'
+                                  : 'hover:bg-red-50 text-gray-500 hover:text-red-600',
+                              )}
+                              title={t('common.delete') || '删除用户'}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </motion.button>
+                          )}
                           <button
                             onClick={() =>
                               setShowRoleDropdown(
@@ -2261,6 +2370,22 @@ const AdminPanelModal: React.FC<AdminPanelModalProps> = ({ onClose, onBack }) =>
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={deleteConfirm.show}
+        onClose={() => setDeleteConfirm({ show: false, user: null })}
+        onConfirm={handleDeleteUser}
+        title={t('admin.deleteUser.title')}
+        message={
+          t('admin.deleteUser.message') +
+          (deleteConfirm.user
+            ? `\n\n${deleteConfirm.user.full_name || deleteConfirm.user.username || deleteConfirm.user.email}`
+            : '')
+        }
+        confirmText={t('admin.deleteUser.confirm')}
+        cancelText={t('admin.deleteUser.cancel')}
+        type="danger"
+      />
     </Modal>
   )
 }

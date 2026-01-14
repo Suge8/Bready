@@ -1,19 +1,19 @@
 # 主进程 (Main Process)
 
-Electron 主进程，承载所有业务核心逻辑。
+Electron 主进程，承载窗口管理、AI 服务和原生音频集成。
 
 ## 结构
 
 ```
 main/
 ├── index.ts              # 入口，启动优化/窗口/AI/DB 初始化
-├── doubao-service.ts     # 字节豆包 AI (ASR + Chat)
-├── gemini-service.ts     # Google Gemini 服务
+├── doubao-service.ts     # 字节豆包 AI (ASR + Chat) [1222行]
+├── gemini-service.ts     # Google Gemini 服务 [1141行]
 ├── ipc-handlers.ts       # IPC 处理中枢 (导出索引)
 ├── ipc-handlers/         # 分模块 IPC 处理器
 ├── security/             # IPC 签名验证、加密
-├── performance/          # 启动优化、内存监控
-├── audio/                # 原生音频管理
+├── performance/          # 启动优化、内存监控、GC 触发
+├── audio/                # 原生音频管理 (SystemAudioDump)
 ├── services/             # 支付、设置等业务服务
 └── utils/                # 日志、错误处理、清理
 ```
@@ -26,6 +26,7 @@ main/
 | 新增 IPC 频道 | `ipc-handlers/` 对应模块                 |
 | 安全校验      | `security/IPCSecurityManager.ts`         |
 | 性能指标      | `performance/PerformanceMonitor.ts`      |
+| 内存优化      | `performance/memory-optimizer.ts`        |
 | 全局错误      | `utils/error-handler.ts`                 |
 | 支付集成      | `services/payment/`                      |
 
@@ -35,6 +36,7 @@ main/
 - **IPC 命名**: `namespace:action` (如 `auth:sign-in`)
 - **清理机制**: 使用 `registerCleanup()` 注册退出回调
 - **日志**: 使用 `utils/logging.ts` 的 `createLogger`
+- **GC**: 开发模式 `--expose-gc`，手动触发垃圾回收
 
 ## 反模式
 
@@ -46,6 +48,7 @@ main/
 
 ## 技术债务
 
-- `doubao-service.ts`: 6 个未使用变量 (已标记)
+- `doubao-service.ts`: 1222 行，6 个未使用变量
+- `gemini-service.ts`: 1141 行
 - `ipc-handlers.ts` + `ipc-handlers/`: 重构过渡态
-- `audio-manager.ts`: 3 个未使用变量
+- `audio-manager.ts`: 626 行，3 个未使用变量

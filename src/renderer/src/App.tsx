@@ -1,6 +1,6 @@
-// 更新 App.tsx 以支持主题提供者
 import React, { useState, useEffect } from 'react'
 import { HashRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
 import { OnboardingTour } from './components/onboarding/OnboardingTour'
 import MainPage from './components/MainPage'
 import FloatingWindow from './components/FloatingWindow'
@@ -130,25 +130,52 @@ const CollaborationModeWrapper: React.FC = () => {
   return <CollaborationMode onExit={handleExit} />
 }
 
-// 受保护的路由组件
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, loading } = useAuth()
+  const { user, loading, isSigningOut } = useAuth()
 
-  if (!user) {
-    return <LoginPage />
-  }
+  const showLoadingScreen = loading && !isSigningOut
 
-  if (loading) {
-    return <div className="h-screen w-screen bg-[var(--bready-bg)]" />
-  }
-
-  return <>{children}</>
+  return (
+    <AnimatePresence mode="wait">
+      {showLoadingScreen ? (
+        <motion.div
+          key="auth-loading"
+          className="h-screen w-screen bg-[var(--bready-bg)]"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+        />
+      ) : user ? (
+        <motion.div
+          key="main"
+          className="h-full w-full"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+        >
+          {children}
+        </motion.div>
+      ) : (
+        <motion.div
+          key="login"
+          className="h-full w-full"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+        >
+          <LoginPage />
+        </motion.div>
+      )}
+    </AnimatePresence>
+  )
 }
 
 function AppContent() {
-  const { user } = useAuth()
+  const { user, profile, completeOnboarding } = useAuth()
   const { t } = useI18n()
-  const [isFirstTime, setIsFirstTime] = useState(true)
   const [preparations, setPreparations] = useState<Preparation[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [showPermissionGuide, setShowPermissionGuide] = useState(false)
@@ -157,16 +184,15 @@ function AppContent() {
     microphone: false,
   })
 
-  // 移除全局音频初始化，改为在协作模式组件中按需初始化
+  const isFirstTime = !profile?.has_completed_onboarding
 
-  const handleWelcomeComplete = () => {
-    // 标记欢迎流程已完成
-    localStorage.setItem('bready-welcome-completed', 'true')
-    setIsFirstTime(false)
+  const handleWelcomeComplete = async () => {
+    await completeOnboarding()
   }
 
   // 加载准备项数据
   const loadPreparations = async () => {
+    setIsLoading(true)
     try {
       // 只加载当前用户的准备项
       const data = await preparationService.getAll(user?.id)
@@ -211,21 +237,10 @@ function AppContent() {
   }
 
   useEffect(() => {
-    // 检查是否已经完成欢迎流程
-    const hasCompletedWelcome = localStorage.getItem('bready-welcome-completed')
-    if (hasCompletedWelcome === 'true') {
-      setIsFirstTime(false)
-    }
-  }, [])
-
-  // 当用户变化时重新加载数据
-  useEffect(() => {
     if (user) {
       loadPreparations()
-      // 用户登录后检查权限
       checkSystemPermissions()
     } else {
-      // 如果没有用户，直接设置加载完成
       setIsLoading(false)
     }
   }, [user])
@@ -297,7 +312,7 @@ function AppContent() {
         </div>
 
         {/* 权限引导模态框 */}
-        {showPermissionGuide && (
+        {showPermissionGuide && !isFirstTime && (
           <div
             className="fixed inset-0 bg-white/30 dark:bg-black/30 backdrop-blur-md flex items-center justify-center z-[9999] p-4 cursor-pointer"
             onClick={() => setShowPermissionGuide(false)}

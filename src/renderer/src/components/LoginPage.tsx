@@ -75,6 +75,9 @@ const LoginPage: React.FC = () => {
   const [otp, setOtp] = useState('')
 
   const [showOtpInput, setShowOtpInput] = useState(false)
+  const [showEmailOtpInput, setShowEmailOtpInput] = useState(false)
+  const [emailOtp, setEmailOtp] = useState('')
+  const [emailVerificationEnabled, setEmailVerificationEnabled] = useState(false)
   const [showLangMenu, setShowLangMenu] = useState(false)
   const [showForgotModal, setShowForgotModal] = useState(false)
   const [loginConfig, setLoginConfig] = useState({
@@ -89,6 +92,9 @@ const LoginPage: React.FC = () => {
 
   useEffect(() => {
     authService.getLoginConfigPublic().then(setLoginConfig)
+    authService.getEmailVerificationConfig().then((config) => {
+      setEmailVerificationEnabled(config.enabled)
+    })
   }, [])
 
   const validateEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
@@ -110,7 +116,7 @@ const LoginPage: React.FC = () => {
     }
     setIsSubmitting(true)
     try {
-      const { error } = await signIn(email, password, 1200)
+      const { error } = await signIn(email, password, 600)
       if (error) {
         const msg = (error.message || '').toLowerCase()
         if (
@@ -135,9 +141,7 @@ const LoginPage: React.FC = () => {
         setIsSubmitting(false)
       } else {
         toast(t('login.success.login'), 'success')
-        setTimeout(() => {
-          setIsExiting(true)
-        }, 500)
+        setIsExiting(true)
       }
     } catch {
       toast(t('login.errors.serverError'), 'error')
@@ -147,6 +151,7 @@ const LoginPage: React.FC = () => {
 
   const handleEmailSignup = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (isSubmitting || isExiting) return
     if (!fullName.trim()) {
       toast(t('login.errors.nicknameRequired'), 'error')
       return
@@ -163,13 +168,73 @@ const LoginPage: React.FC = () => {
       toast(t('login.errors.passwordRequired'), 'error')
       return
     }
+
+    if (emailVerificationEnabled && !showEmailOtpInput) {
+      setIsSubmitting(true)
+      try {
+        const result = await authService.sendEmailCode(email)
+        if (result.success) {
+          setShowEmailOtpInput(true)
+          toast(t('login.success.codeSent') || '验证码已发送', 'success')
+        } else {
+          toast(result.error || t('login.errors.sendCodeFailed'), 'error')
+        }
+      } catch (err: any) {
+        toast(err.message || t('login.errors.sendCodeFailed'), 'error')
+      } finally {
+        setIsSubmitting(false)
+      }
+      return
+    }
+
+    if (emailVerificationEnabled && showEmailOtpInput) {
+      if (!emailOtp || emailOtp.length < 6) {
+        toast(t('login.errors.otpRequired') || '请输入验证码', 'error')
+        return
+      }
+      setIsSubmitting(true)
+      try {
+        const verifyResult = await authService.verifyEmailCode(email, emailOtp)
+        if (!verifyResult.success) {
+          toast(verifyResult.error || t('login.errors.verifyFailed'), 'error')
+          setIsSubmitting(false)
+          return
+        }
+      } catch (err: any) {
+        toast(err.message || t('login.errors.verifyFailed'), 'error')
+        setIsSubmitting(false)
+        return
+      }
+    } else {
+      setIsSubmitting(true)
+    }
+
     try {
       const { error } = await signUp(email, password, { full_name: fullName })
       if (error) {
-        toast(error.message, 'error')
+        const msg = (error.message || '').toLowerCase()
+        if (
+          msg.includes('already') ||
+          msg.includes('exist') ||
+          msg.includes('duplicate') ||
+          msg.includes('已注册') ||
+          msg.includes('已存在')
+        ) {
+          toast(t('login.errors.emailAlreadyExists'), 'error')
+        } else {
+          toast(error.message, 'error')
+        }
+        setIsSubmitting(false)
       } else {
         toast(t('login.success.signup'), 'success')
-        setTimeout(() => signIn(email, password), 1000)
+        await new Promise((resolve) => setTimeout(resolve, 800))
+        const { error: signInError } = await signIn(email, password, 600)
+        if (signInError) {
+          toast(signInError.message, 'error')
+          setIsSubmitting(false)
+        } else {
+          setIsExiting(true)
+        }
       }
     } catch (err: any) {
       const msg = err.message || ''
@@ -178,6 +243,7 @@ const LoginPage: React.FC = () => {
       } else {
         toast(msg || t('login.errors.signupFailed'), 'error')
       }
+      setIsSubmitting(false)
     }
   }
 
@@ -659,6 +725,29 @@ const LoginPage: React.FC = () => {
                         </div>
                       )}
                     </motion.div>
+
+                    <AnimatePresence mode="popLayout" initial={false}>
+                      {mode === 'signup' && emailVerificationEnabled && showEmailOtpInput && (
+                        <motion.div
+                          key="email-otp-field"
+                          layout
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="overflow-hidden"
+                        >
+                          <FloatingLabelInput
+                            label={t('login.verificationCode') || '验证码'}
+                            value={emailOtp}
+                            onChange={setEmailOtp}
+                            placeholder={
+                              t('login.placeholders.verificationCode') || '请输入6位验证码'
+                            }
+                          />
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
 
                     <motion.button
                       layout

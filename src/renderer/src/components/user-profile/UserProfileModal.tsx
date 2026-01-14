@@ -31,6 +31,7 @@ interface UserProfileModalProps {
   isOpen: boolean
   onClose: () => void
   onOpenAdminPanel?: () => void
+  onSignOutStart?: () => void
 }
 
 const tabs: Array<{ id: TabId; icon: typeof CreditCard; labelKey: string }> = [
@@ -135,6 +136,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
   isOpen,
   onClose,
   onOpenAdminPanel,
+  onSignOutStart,
 }) => {
   const { user, signOut } = useAuth()
   const { resolvedTheme } = useTheme()
@@ -177,17 +179,26 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
   }, [])
 
   const executeSignOut = useCallback(async () => {
+    if (signingOut) return
     setSigningOut(true)
+
+    setShowLogoutConfirm(false)
+    await new Promise((resolve) => setTimeout(resolve, 100))
+
+    onClose()
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    onSignOutStart?.()
+    await new Promise((resolve) => setTimeout(resolve, 400))
+
     try {
       await signOut()
-      onClose()
     } catch (error) {
       console.error('Error signing out:', error)
     } finally {
       setSigningOut(false)
-      setShowLogoutConfirm(false)
     }
-  }, [signOut, onClose])
+  }, [signOut, onClose, onSignOutStart, signingOut])
 
   const handlePurchase = useCallback(
     async (packageId: string) => {
@@ -217,10 +228,10 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
     async (oldPassword: string, newPassword: string) => {
       const result = await authService.changePassword(oldPassword, newPassword)
       if (result.success) {
+        onClose()
         try {
-          await signOut()
+          await signOut(600)
         } finally {
-          onClose()
         }
       }
       return result
@@ -404,20 +415,15 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.4 }}
             className="absolute inset-0 z-[100] flex items-center justify-center bg-black/50"
-            onClick={() => setShowLogoutConfirm(false)}
+            onClick={() => !signingOut && setShowLogoutConfirm(false)}
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              transition={{
-                type: 'spring',
-                stiffness: 500,
-                damping: 32,
-                mass: 0.8,
-              }}
+              exit={{ scale: 0.85, opacity: 0, y: -30 }}
+              transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
               className={cn(
                 'w-[340px] rounded-2xl overflow-hidden relative',
                 isDarkMode ? 'bg-[#0a0a0a] text-white' : 'bg-white text-black',

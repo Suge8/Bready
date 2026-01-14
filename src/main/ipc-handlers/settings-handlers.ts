@@ -306,3 +306,68 @@ ipcMain.handle('settings:update-sms-config', async (_, token: string, config: an
     return { success: false, error: error.message }
   }
 })
+
+ipcMain.handle('settings:get-smtp-config', async (_, token?: string) => {
+  try {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+    if (token) headers['Authorization'] = `Bearer ${token}`
+
+    const response = await fetch(`${API_SERVER_URL}/api/settings/smtp-config`, {
+      headers,
+      signal: AbortSignal.timeout(15000),
+    })
+
+    if (!response.ok) {
+      return { host: '', port: '465', secure: true, user: '', hasPassword: false }
+    }
+
+    const data = await response.json()
+    return data?.data || {}
+  } catch {
+    return { host: '', port: '465', secure: true, user: '', hasPassword: false }
+  }
+})
+
+ipcMain.handle('settings:update-smtp-config', async (_, token: string, config: any) => {
+  try {
+    const response = await fetch(`${API_SERVER_URL}/api/settings/smtp-config`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(config),
+      signal: AbortSignal.timeout(15000),
+    })
+
+    if (!response.ok) {
+      return { success: false, error: '保存失败' }
+    }
+    return { success: true }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+})
+
+ipcMain.handle('settings:test-smtp-connection', async (_, token: string, config: any) => {
+  try {
+    const response = await fetch(`${API_SERVER_URL}/api/settings/smtp-test`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(config),
+      signal: AbortSignal.timeout(30000),
+    })
+
+    if (!response.ok) {
+      const text = await response.text()
+      try {
+        const json = JSON.parse(text)
+        return { success: false, error: json.error || '请求失败' }
+      } catch {
+        return { success: false, error: `服务器错误 (${response.status})` }
+      }
+    }
+
+    const data = await response.json()
+    return data
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+})

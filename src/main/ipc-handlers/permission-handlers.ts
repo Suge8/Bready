@@ -155,17 +155,17 @@ async function openSystemPreferences(pane: string): Promise<boolean> {
     switch (pane) {
       case 'screen-recording':
         command =
-          'open "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture"'
+          'open "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_ScreenCapture"'
         break
       case 'microphone':
         command =
-          'open "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"'
+          'open "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_Microphone"'
         break
       case 'privacy':
-        command = 'open "x-apple.systempreferences:com.apple.preference.security?Privacy"'
+        command = 'open "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension"'
         break
       default:
-        command = 'open "x-apple.systempreferences:com.apple.preference.security"'
+        command = 'open "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension"'
     }
 
     await execAsync(command)

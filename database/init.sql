@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS user_profiles (
     remaining_interview_minutes INTEGER DEFAULT 0,
     total_purchased_minutes INTEGER DEFAULT 0,
     discount_rate NUMERIC DEFAULT 1.00,
+    has_completed_onboarding BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

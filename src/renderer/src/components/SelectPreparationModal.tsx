@@ -61,6 +61,10 @@ const SelectPreparationModal: React.FC<SelectPreparationModalProps> = ({
       opacity: 1,
       transition: { staggerChildren: 0.05, delayChildren: 0.1 },
     },
+    exit: {
+      opacity: 0,
+      transition: { staggerChildren: 0.03, staggerDirection: -1 },
+    },
   }
 
   const itemVariants = {
@@ -69,6 +73,11 @@ const SelectPreparationModal: React.FC<SelectPreparationModalProps> = ({
       opacity: 1,
       y: 0,
       transition: { duration: 0.3 },
+    },
+    exit: {
+      opacity: 0,
+      y: -10,
+      transition: { duration: 0.2 },
     },
   }
 

@@ -11,6 +11,7 @@ import settingsRoutes from './routes/settings'
 import aiRoutes from './routes/ai'
 import paymentRoutes from './routes/payment'
 import usageRoutes from './routes/usage'
+import collabRoutes from './routes/collab'
 
 const app = express()
 
@@ -39,6 +40,7 @@ app.use('/api/settings', settingsRoutes)
 app.use('/api/ai', aiRoutes)
 app.use('/api/payment', paymentRoutes)
 app.use('/api/usage', usageRoutes)
+app.use('/api/collab', collabRoutes)
 
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error('Server error:', err)

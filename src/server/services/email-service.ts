@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer'
-import { getSetting } from '../routes/settings'
+import { getSetting, setSetting } from '../routes/settings'
 
 export interface SmtpConfig {
   host: string
@@ -33,6 +33,52 @@ export async function getSmtpConfig(): Promise<SmtpConfig> {
   }
 }
 
+export async function saveSmtpConfig(config: {
+  host: string
+  port: string
+  secure: boolean
+  user: string
+  pass: string
+}): Promise<void> {
+  await Promise.all([
+    setSetting('smtp_host', config.host, false),
+    setSetting('smtp_port', config.port, false),
+    setSetting('smtp_secure', String(config.secure), false),
+    setSetting('smtp_user', config.user, false),
+    setSetting('smtp_pass', config.pass, true),
+    setSetting('smtp_from_email', config.user, false),
+  ])
+}
+
+export async function testSmtpConnection(config: {
+  host: string
+  port: number
+  secure: boolean
+  user: string
+  pass: string
+}): Promise<{ success: boolean; error?: string }> {
+  if (!config.host || !config.user || !config.pass) {
+    return { success: false, error: '请填写完整的 SMTP 配置' }
+  }
+
+  const transporter = nodemailer.createTransport({
+    host: config.host,
+    port: config.port,
+    secure: config.secure,
+    auth: {
+      user: config.user,
+      pass: config.pass,
+    },
+  })
+
+  try {
+    await transporter.verify()
+    return { success: true }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
 export async function sendEmail(
   to: string,
   subject: string,
@@ -41,7 +87,7 @@ export async function sendEmail(
   const config = await getSmtpConfig()
 
   if (!config.host || !config.user || !config.pass) {
-    return { success: false, error: 'SMTP not configured' }
+    return { success: false, error: '邮箱注册还未开通' }
   }
 
   const transporter = nodemailer.createTransport({
@@ -121,4 +167,56 @@ export async function sendPasswordResetEmail(
 </html>`
 
   return sendEmail(to, 'Reset Your Password - Bready', html)
+}
+
+export async function sendVerificationEmail(
+  to: string,
+  code: string,
+): Promise<{ success: boolean; error?: string }> {
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="100%" style="max-width:480px;background:#fff;border-radius:12px;overflow:hidden;">
+          <tr>
+            <td style="padding:32px 32px 24px;text-align:center;background:#000;">
+              <h1 style="margin:0;color:#fff;font-size:24px;font-weight:600;">Bready</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:32px;">
+              <h2 style="margin:0 0 16px;color:#111;font-size:20px;font-weight:600;">验证您的邮箱</h2>
+              <p style="margin:0 0 24px;color:#666;font-size:14px;line-height:1.6;">
+                您的验证码是：
+              </p>
+              <div style="text-align:center;padding:20px;background:#f5f5f5;border-radius:8px;margin-bottom:24px;">
+                <span style="font-size:32px;font-weight:700;letter-spacing:8px;color:#000;">${code}</span>
+              </div>
+              <p style="margin:0;color:#999;font-size:12px;line-height:1.5;">
+                验证码有效期为 5 分钟。如果您没有请求此验证码，请忽略此邮件。
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:24px 32px;background:#fafafa;border-top:1px solid #eee;">
+              <p style="margin:0;color:#999;font-size:11px;text-align:center;">
+                &copy; 2026 Bready. All rights reserved.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`
+
+  return sendEmail(to, '验证码 - Bready', html)
 }

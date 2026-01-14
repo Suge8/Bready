@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { query } from '../services/database'
 import { authMiddleware, adminMiddleware, type AuthenticatedRequest } from '../middleware/auth'
 import crypto from 'crypto'
+import { testSmtpConnection, saveSmtpConfig, getSmtpConfig } from '../services/email-service'
 
 const router = Router()
 
@@ -507,6 +508,64 @@ router.get('/login-config-public', async (_req, res) => {
     })
   }
 })
+
+router.get(
+  '/smtp-config',
+  authMiddleware,
+  adminMiddleware,
+  async (_req: AuthenticatedRequest, res) => {
+    try {
+      const config = await getSmtpConfig()
+      res.json({
+        data: {
+          host: config.host,
+          port: String(config.port),
+          secure: config.secure,
+          user: config.user,
+          hasPassword: !!config.pass,
+        },
+      })
+    } catch (error: any) {
+      res.status(400).json({ error: error.message })
+    }
+  },
+)
+
+router.put(
+  '/smtp-config',
+  authMiddleware,
+  adminMiddleware,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const { host, port, secure, user, pass } = req.body
+      await saveSmtpConfig({ host, port, secure, user, pass })
+      res.json({ success: true })
+    } catch (error: any) {
+      res.status(400).json({ success: false, error: error.message })
+    }
+  },
+)
+
+router.post(
+  '/smtp-test',
+  authMiddleware,
+  adminMiddleware,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const { host, port, secure, user, pass } = req.body
+      const result = await testSmtpConnection({
+        host,
+        port: parseInt(port || '465', 10),
+        secure: secure !== false,
+        user,
+        pass,
+      })
+      res.json(result)
+    } catch (error: any) {
+      res.status(400).json({ success: false, error: error.message })
+    }
+  },
+)
 
 export { getSetting, setSetting }
 export default router

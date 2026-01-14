@@ -68,17 +68,17 @@ export const Modal: React.FC<ModalProps> = ({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
+            transition={{ duration: 0.35, ease: 'easeOut' }}
             className="fixed inset-0 bg-black/40 cursor-pointer"
             onClick={handleOverlayClick}
           />
 
           <motion.div
             data-modal
-            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            initial={{ opacity: 0, scale: 0.92, y: 24 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 10 }}
-            transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+            exit={{ opacity: 0, scale: 0.88, y: 40 }}
+            transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
             className={cn(
               'relative w-full flex flex-col rounded-2xl border border-[var(--bready-border)] bg-[var(--bready-surface)] shadow-2xl cursor-auto p-6 max-h-[90vh]',
               sizeClasses[size],
@@ -159,15 +159,57 @@ export const ConfirmDialog: React.FC<{
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="sm" title={title}>
       <div className="text-center">
-        <div className="mb-4 text-4xl">{typeStyles[type].icon}</div>
-        <p className="mb-6 text-[var(--bready-text-muted)]">{message}</p>
+        <motion.div
+          className="mb-4 text-4xl inline-block"
+          initial={{ scale: 0.5, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{
+            type: 'spring',
+            stiffness: 260,
+            damping: 20,
+            delay: 0.1,
+          }}
+        >
+          <motion.div
+            animate={
+              type === 'danger'
+                ? {
+                    rotate: [0, -15, 15, -15, 15, 0],
+                    scale: [1, 1.2, 1],
+                  }
+                : {
+                    scale: [1, 1.1, 1],
+                  }
+            }
+            transition={{
+              delay: 0.3,
+              duration: type === 'danger' ? 0.5 : 2,
+              repeat: type === 'danger' ? 0 : Infinity,
+              repeatDelay: 1,
+            }}
+          >
+            {typeStyles[type].icon}
+          </motion.div>
+        </motion.div>
+        <motion.p
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="mb-6 text-[var(--bready-text-muted)]"
+        >
+          {message}
+        </motion.p>
         <div className="flex justify-center gap-3">
-          <Button variant="outline" onClick={onClose}>
-            {cancelText}
-          </Button>
-          <Button className={typeStyles[type].confirmClass} onClick={handleConfirm}>
-            {confirmText}
-          </Button>
+          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+            <Button variant="outline" onClick={onClose}>
+              {cancelText}
+            </Button>
+          </motion.div>
+          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+            <Button className={typeStyles[type].confirmClass} onClick={handleConfirm}>
+              {confirmText}
+            </Button>
+          </motion.div>
         </div>
       </div>
     </Modal>

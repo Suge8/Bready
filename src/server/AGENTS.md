@@ -8,7 +8,7 @@ Express 5 + WebSocket 后端，提供 REST API 和音频代理。
 server/
 ├── index.ts          # 入口，Express + WS 初始化
 ├── app.ts            # Express 应用配置
-├── routes/           # REST API 路由
+├── routes/           # REST API 路由 (9 文件)
 ├── middleware/       # 认证中间件
 ├── services/         # 业务服务 (数据库)
 └── websocket/        # 音频代理 WebSocket
@@ -25,7 +25,7 @@ server/
 
 ## 模式
 
-- **路由分离**: 按领域拆分 (auth, user, payment, ai)
+- **路由分离**: 按领域拆分 (auth, user, payment, ai, settings)
 - **JWT 认证**: 使用 `middleware/auth.ts`
 - **启动**: `npm run dev:server` 或 `npm run dev:full`
 
@@ -35,3 +35,9 @@ server/
 | -------------- | --------------------------- |
 | 路由内直接 SQL | 使用 `services/database.ts` |
 | 跳过认证中间件 | 安全风险                    |
+
+## 技术债务
+
+- `routes/settings.ts`: 571 行
+- `routes/auth.ts`: 561 行
+- 67+ 直接 SQL 查询散落在路由文件中

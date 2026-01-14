@@ -28,6 +28,9 @@ export const translations: Record<SupportedLanguage, any> = {
       minutes: '{{count}}分钟',
       remaining: '剩余',
       collapse: '收起',
+      allow: '允许',
+      refresh: '刷新状态',
+      next: '下一步',
     },
     form: {
       validation: {
@@ -48,12 +51,20 @@ export const translations: Record<SupportedLanguage, any> = {
       subhead: 'AI 协作，稳住节奏',
       start: '开始',
       myPreparations: '我的准备',
-      emptyTitle: '开启你的第一次面试准备',
-      emptyDescription: '创建一个准备项，上传你的简历或职位描述，让 AI 帮你分析并进行模拟面试。',
+      emptyTitle: '开启你的第一次准备',
+      emptyDescription: '创建准备项，上传相关资料，让 AI 帮你分析并提供实时协作支持。',
       createNow: '立即创建',
       viewAll: '查看全部 {{count}} 个',
       analyzing: '分析中',
       notAnalyzed: '未分析',
+      stats: {
+        preparations: '准备记录',
+        preparationsUnit: '个',
+        remaining: '剩余时长',
+        minutesUnit: '分钟',
+        lastActive: '最近活跃',
+      },
+      noJobDescription: '无职位描述',
     },
     slogans: {
       main: ['面试紧张？放轻松', '面宝协作，胜券在握', '面试？小意思'],
@@ -118,6 +129,7 @@ export const translations: Record<SupportedLanguage, any> = {
       phone: '手机号',
       sendCode: '发送验证码',
       code: '验证码',
+      verificationCode: '验证码',
       verify: '验证登录',
       resend: '重新发送验证码',
       codeSentTo: '验证码已发送至',
@@ -135,6 +147,7 @@ export const translations: Record<SupportedLanguage, any> = {
         password: '密码',
         phone: '手机号',
         code: '请输入6位验证码',
+        verificationCode: '请输入6位验证码',
       },
       wechat: '微信登录',
       forgotPassword: '忘记密码?',
@@ -152,8 +165,8 @@ export const translations: Record<SupportedLanguage, any> = {
         loginFailed: '登录失败',
         signupFailed: '注册失败',
         googleFailed: 'Google 登录失败',
-        sendCodeFailed: '发送验证码失败',
-        verifyFailed: '验证码验证失败',
+        sendCodeFailed: '验证码发送失败',
+        verifyFailed: '验证码错误',
         testLoginFailed: '测试登录失败',
         signupSuccess: '注册成功！正在为您登录...',
         wechatUnavailable: '微信登录暂不支持，请使用邮箱或手机登录',
@@ -169,17 +182,20 @@ export const translations: Record<SupportedLanguage, any> = {
         userNotFound: '用户不存在',
         serverError: '服务器开小差了，请稍后再试',
         generic: '出错了，请稍后重试',
+        emailAlreadyExists: '该邮箱已被注册',
+        codeExpired: '验证码已过期，请重新获取',
       },
       success: {
         login: '登录成功，欢迎回来！',
         signup: '注册成功！正在为您登录...',
+        codeSent: '验证码已发送到您的邮箱',
       },
       hero: {
-        title: '你的\n智能副驾驶',
+        title: '你的\n专业副驾驶',
         subtitle: 'AI 实时辅助你的每一次对话',
         features: {
           analysis: '场景分析',
-          transcription: '实时转写',
+          transcription: '精确语音识别',
           suggestions: '实时回答建议',
           summary: '会议记录',
           sales: '销售成单',
@@ -431,6 +447,13 @@ export const translations: Record<SupportedLanguage, any> = {
     collaboration: {
       title: '协作模式',
       copySuccess: '已复制',
+      main: {
+        ready: '面宝已准备好协助你',
+        listeningPrompt: '正在聆听...',
+      },
+      header: {
+        inputDevice: '输入设备',
+      },
       status: {
         initializing: '初始化中...',
         checkingPermissions: '检查权限中...',
@@ -495,6 +518,9 @@ export const translations: Record<SupportedLanguage, any> = {
         thinking: '思考中...',
         responding: '回复中...',
         bready: '面宝',
+        you: '你',
+        listening: '聆听中',
+        readyStatus: '就绪',
       },
       input: {
         placeholder: '输入你的问题...',
@@ -531,6 +557,10 @@ export const translations: Record<SupportedLanguage, any> = {
         connectionFailed: 'AI 连接失败，已返回主页',
         deviceSwitched: '麦克风已切换到：{{device}}',
         audioInterrupted: '音频流中断，已返回主页',
+        timeWarning10min: '协作时长还剩 10 分钟',
+        timeWarning5min: '协作时长还剩 5 分钟',
+        timeWarning30s: '协作时长还剩 30 秒',
+        timeExpired: '协作时长已用完',
       },
       actions: {
         copy: '复制',
@@ -723,11 +753,20 @@ export const translations: Record<SupportedLanguage, any> = {
           publicKey: '支付宝公钥',
         },
       },
+      deleteUser: {
+        title: '确认删除用户',
+        message: '此操作不可逆，将永久删除该用户及其所有数据。',
+        confirm: '确认删除',
+        cancel: '取消',
+      },
+      totalUsers: '位用户',
     },
     alerts: {
       deletePreparation: '确定要删除这个准备项吗？此操作无法撤销。',
       deleteFailed: '删除失败，请稍后重试',
+      deleteSuccess: '删除成功',
       startCollabFailed: '无法启动协作模式，请检查应用权限',
+      noRemainingTime: '没有协作时长啦',
       aiNotConfigured: 'AI 服务未配置，请先在管理后台完成配置',
       aiServiceUnavailable: 'AI 服务暂不可用，请检查网络连接或稍后重试',
       serverError: '服务器故障，请稍后再试',
@@ -736,6 +775,9 @@ export const translations: Record<SupportedLanguage, any> = {
       loadUsersFailed: '加载用户列表失败',
       purchaseFailed: '购买失败，请稍后重试',
       signOutFailed: '退出登录失败',
+      saveSuccess: '保存成功',
+      saveFailed: '保存失败',
+      testSuccess: '测试成功',
     },
     profile: {
       title: '个人中心',
@@ -852,55 +894,56 @@ export const translations: Record<SupportedLanguage, any> = {
       start: '开始体验',
       welcome: {
         title: '欢迎使用面宝',
-        description: '你的 AI 面试协作助手。实时捕获音频，获取智能提示，自信应对每一场面试。',
+        description: '我会随时帮助你，无论是面试、销售还是会议，都能更加自信应对哦！',
       },
       features: {
         title: '核心功能',
-        subtitle: '助你面试成功的一切所需',
+        subtitle: '助你成功的一切所需',
         1: {
-          title: '实时语音转写',
-          desc: '面试过程中即时将语音转换为文字，不错过任何细节。',
+          title: '提前分析',
+          desc: '根据任务背景、个人信息，面宝提前分析做好准备',
         },
         2: {
-          title: 'AI 智能提示',
-          desc: '实时获取面试问题的智能建议和参考答案。',
+          title: '精准协作',
+          desc: '语音识别配合准备好的资料，实时个性化回答',
         },
         3: {
-          title: '无缝集成',
-          desc: '支持任何会议平台，直接在桌面端使用。',
+          title: '隐私安全',
+          desc: '应用无法被屏幕捕捉，一键显示或隐藏窗口',
         },
       },
       workflow: {
         title: '使用流程',
         subtitle: '三步轻松上手',
         1: {
-          title: '加入会议',
-          desc: '打开腾讯会议、Zoom 或 Teams 等会议软件。',
+          title: '创建准备项',
+          desc: '填写目标场景与背景信息，我会为你智能分析',
         },
         2: {
-          title: '开始转写',
-          desc: '点击面宝的「开始」按钮，开始捕获音频。',
+          title: '进入协作模式',
+          desc: '打开协作模式，我随时待命',
         },
         3: {
-          title: '获取提示',
-          desc: '实时查看转写内容和 AI 智能建议。',
+          title: '开始会议',
+          desc: '实时提示帮助',
         },
       },
       permissions: {
         title: '权限设置',
         subtitle: '为了更好地帮助你，我们需要以下权限',
+        allSet: '都设置好啦！',
         mic: {
           title: '麦克风权限',
-          desc: '用于捕获面试官的问题。',
+          desc: '捕获声音',
         },
         screen: {
           title: '屏幕录制权限',
-          desc: '用于捕获系统音频。',
+          desc: '捕获对方的音频',
         },
       },
       finish: {
-        title: '准备就绪！',
-        desc: '面宝已准备好助你在下一场面试中大放异彩。',
+        title: '就绪',
+        desc: '在下一次重要对话中大放异彩吧！',
         cta: '开始使用面宝',
       },
     },
@@ -930,6 +973,9 @@ export const translations: Record<SupportedLanguage, any> = {
       minutes: '{{count}} min',
       remaining: 'left',
       collapse: 'Collapse',
+      allow: 'Allow',
+      refresh: 'Refresh Status',
+      next: 'Next',
     },
     form: {
       validation: {
@@ -950,13 +996,21 @@ export const translations: Record<SupportedLanguage, any> = {
       subhead: 'AI collaboration, stay in rhythm',
       start: 'Start',
       myPreparations: 'My Preparations',
-      emptyTitle: 'Start your first interview prep',
+      emptyTitle: 'Start your first prep',
       emptyDescription:
-        'Create a prep item, add your resume or job description, and let AI analyze and simulate interviews.',
+        'Create a prep item, add your materials, and let AI analyze and provide real-time collaboration support.',
       createNow: 'Create now',
       viewAll: 'View all {{count}}',
       analyzing: 'Analyzing',
       notAnalyzed: 'Not analyzed',
+      stats: {
+        preparations: 'Preparations',
+        preparationsUnit: '',
+        remaining: 'Remaining',
+        minutesUnit: 'min',
+        lastActive: 'Last Active',
+      },
+      noJobDescription: 'No job description',
     },
     slogans: {
       main: [
@@ -1069,6 +1123,13 @@ export const translations: Record<SupportedLanguage, any> = {
     collaboration: {
       title: 'Collaboration Mode',
       copySuccess: 'Copied',
+      main: {
+        ready: 'Bready is ready to assist you',
+        listeningPrompt: 'Listening...',
+      },
+      header: {
+        inputDevice: 'Input Device',
+      },
       status: {
         initializing: 'Initializing...',
         checkingPermissions: 'Checking permissions...',
@@ -1133,6 +1194,9 @@ export const translations: Record<SupportedLanguage, any> = {
         thinking: 'Thinking...',
         responding: 'Responding...',
         bready: 'Bready',
+        you: 'You',
+        listening: 'Listening',
+        readyStatus: 'Ready',
       },
       input: {
         placeholder: 'Type your question...',
@@ -1168,6 +1232,10 @@ export const translations: Record<SupportedLanguage, any> = {
       toasts: {
         connectionFailed: 'AI connection failed, returned home',
         deviceSwitched: 'Microphone switched to: {{device}}',
+        timeWarning10min: '10 minutes of collaboration time left',
+        timeWarning5min: '5 minutes of collaboration time left',
+        timeWarning30s: '30 seconds of collaboration time left',
+        timeExpired: 'Collaboration time has run out',
       },
       actions: {
         copy: 'Copy',
@@ -1364,6 +1432,13 @@ export const translations: Record<SupportedLanguage, any> = {
           publicKey: 'Alipay Public Key',
         },
       },
+      deleteUser: {
+        title: 'Delete User',
+        message: 'This action cannot be undone. All user data will be permanently deleted.',
+        confirm: 'Delete',
+        cancel: 'Cancel',
+      },
+      totalUsers: 'users',
     },
     profile: {
       title: 'Profile',
@@ -1516,8 +1591,8 @@ export const translations: Record<SupportedLanguage, any> = {
         loginFailed: 'Login failed',
         signupFailed: 'Signup failed',
         googleFailed: 'Google sign-in failed',
-        sendCodeFailed: 'Failed to send code',
-        verifyFailed: 'Verification failed',
+        sendCodeFailed: 'Failed to send verification code',
+        verifyFailed: 'Incorrect verification code',
         testLoginFailed: 'Test login failed',
         signupSuccess: 'Signup successful! Logging you in...',
         wechatUnavailable: 'WeChat login is not available. Please use email or phone.',
@@ -1533,10 +1608,13 @@ export const translations: Record<SupportedLanguage, any> = {
         userNotFound: 'User not found',
         serverError: 'Server is taking a break. Please try again later.',
         generic: 'Something went wrong. Please try again.',
+        emailAlreadyExists: 'This email is already registered',
+        codeExpired: 'Verification code expired. Please request a new one.',
       },
       success: {
         login: 'Welcome back!',
         signup: 'Signup successful! Logging you in...',
+        codeSent: 'Verification code sent to your email',
       },
       hero: {
         title: 'Your Smart\nReal-time Copilot',
@@ -1796,7 +1874,9 @@ export const translations: Record<SupportedLanguage, any> = {
     alerts: {
       deletePreparation: 'Delete this preparation? This cannot be undone.',
       deleteFailed: 'Delete failed. Please try again.',
+      deleteSuccess: 'Deleted successfully',
       startCollabFailed: 'Unable to start collaboration. Check app permissions.',
+      noRemainingTime: 'No collaboration time left',
       aiNotConfigured: 'AI service not configured. Please complete setup in admin panel.',
       aiServiceUnavailable: 'AI service unavailable. Check network or try again later.',
       serverError: 'Server error. Please try again later.',
@@ -1805,6 +1885,9 @@ export const translations: Record<SupportedLanguage, any> = {
       loadUsersFailed: 'Failed to load user list',
       purchaseFailed: 'Purchase failed. Please try again.',
       signOutFailed: 'Sign out failed',
+      saveSuccess: 'Saved successfully',
+      saveFailed: 'Save failed',
+      testSuccess: 'Test successful',
     },
     onboarding: {
       skip: 'Skip',
@@ -1812,46 +1895,47 @@ export const translations: Record<SupportedLanguage, any> = {
       welcome: {
         title: 'Welcome to Bready',
         description:
-          'Your AI-powered interview copilot. Capture audio, get real-time insights, and ace your interviews with confidence.',
+          'Your AI-powered real-time copilot. Whether for interviews, sales, or meetings — capture audio, get instant insights, and ace every important conversation.',
       },
       features: {
         title: 'Powerful Features',
         subtitle: 'Everything you need to succeed.',
         1: {
-          title: 'Real-time Transcription',
-          desc: 'Instantly converts speech to text during your interviews.',
+          title: 'AI Smart Analysis',
+          desc: 'Analyzes your task background, resume, or personal info to prepare you in advance.',
         },
         2: {
-          title: 'AI-Powered Hints',
-          desc: 'Get smart suggestions and answers to interview questions on the fly.',
+          title: 'Real-time Personalized Hints',
+          desc: 'Voice transcription combined with context for precise, personalized answers.',
         },
         3: {
-          title: 'Seamless Integration',
-          desc: 'Works with any meeting platform directly from your desktop.',
+          title: 'Privacy Safe Mode',
+          desc: 'App is invisible to screen capture, with customizable show/hide shortcuts.',
         },
       },
       workflow: {
         title: 'How It Works',
         subtitle: 'Three simple steps to mastery.',
         1: {
-          title: 'Join a Meeting',
-          desc: 'Open Google Meet, Zoom, or Teams.',
+          title: 'Create Preparation',
+          desc: 'Fill in your target scenario and goals, Bready will analyze for you.',
         },
         2: {
-          title: 'Start Transcription',
-          desc: 'Click "Start" in Bready to capture audio.',
+          title: 'Enter Collaboration Mode',
+          desc: 'Start real-time collaboration, Bready stands by.',
         },
         3: {
-          title: 'Get Insights',
-          desc: 'See real-time hints and answers.',
+          title: 'Start Meeting',
+          desc: 'Bready provides personalized hints and suggestions in real-time.',
         },
       },
       permissions: {
         title: 'Permissions',
         subtitle: 'We need access to help you.',
+        allSet: 'All set!',
         mic: {
           title: 'Microphone',
-          desc: 'To hear interview questions.',
+          desc: "To capture the other party's voice.",
         },
         screen: {
           title: 'Screen Recording',
@@ -1860,7 +1944,7 @@ export const translations: Record<SupportedLanguage, any> = {
       },
       finish: {
         title: "You're All Set!",
-        desc: 'Bready is ready to help you shine in your next interview.',
+        desc: 'Bready is ready to help you shine in your next important conversation.',
         cta: 'Start Using Bready',
       },
     },
@@ -1910,11 +1994,19 @@ export const translations: Record<SupportedLanguage, any> = {
       start: '開始',
       myPreparations: '準備リスト',
       emptyTitle: '最初の準備を始めましょう',
-      emptyDescription: '準備項目を作成し、履歴書や職務内容を追加してください。',
+      emptyDescription: '準備項目を作成し、資料を追加してAIにリアルタイムサポートを受けましょう。',
       createNow: '今すぐ作成',
       viewAll: 'すべて表示 {{count}}',
       analyzing: '分析中',
       notAnalyzed: '未分析',
+      stats: {
+        preparations: '準備記録',
+        preparationsUnit: '件',
+        remaining: '残り時間',
+        minutesUnit: '分',
+        lastActive: '最終活動',
+      },
+      noJobDescription: '職務内容なし',
     },
     slogans: {
       main: ['面接が不安？落ち着いて。', 'Breadyと一緒に自信を。', '面接？大丈夫。'],
@@ -2023,6 +2115,13 @@ export const translations: Record<SupportedLanguage, any> = {
     collaboration: {
       title: '協作モード',
       copySuccess: 'コピーしました',
+      main: {
+        ready: 'Breadyがサポートします',
+        listeningPrompt: '聞き取り中...',
+      },
+      header: {
+        inputDevice: '入力デバイス',
+      },
       status: {
         initializing: '初期化中...',
         checkingPermissions: '権限を確認中...',
@@ -2087,6 +2186,9 @@ export const translations: Record<SupportedLanguage, any> = {
         thinking: '考え中...',
         responding: '返信中...',
         bready: 'Bready',
+        you: 'あなた',
+        listening: '聞き取り中',
+        readyStatus: '準備完了',
       },
       input: {
         placeholder: '質問を入力...',
@@ -2121,6 +2223,10 @@ export const translations: Record<SupportedLanguage, any> = {
       },
       toasts: {
         connectionFailed: 'AI接続に失敗しました',
+        timeWarning10min: '協作時間が残り10分です',
+        timeWarning5min: '協作時間が残り5分です',
+        timeWarning30s: '協作時間が残り30秒です',
+        timeExpired: '協作時間が終了しました',
       },
       actions: {
         copy: 'コピー',
@@ -2634,6 +2740,7 @@ export const translations: Record<SupportedLanguage, any> = {
       deletePreparation: '準備を削除しますか？',
       deleteFailed: '削除に失敗しました',
       startCollabFailed: '協作モードを開始できません',
+      noRemainingTime: '協作時間がありません',
       aiNotConfigured: 'AIサービスが未設定です。管理画面で設定してください',
       aiServiceUnavailable: 'AIサービスが利用できません。ネットワークを確認してください',
       serverError: 'サーバーエラーが発生しました。しばらくしてから再試行してください',
@@ -2686,6 +2793,7 @@ export const translations: Record<SupportedLanguage, any> = {
       permissions: {
         title: '権限設定',
         subtitle: 'サポートのために以下の権限が必要です',
+        allSet: '設定完了！',
         mic: {
           title: 'マイク',
           desc: '面接の質問を聞くため。',
@@ -2748,10 +2856,19 @@ export const translations: Record<SupportedLanguage, any> = {
       myPreparations: 'Mes préparations',
       emptyTitle: 'Commencez votre première préparation',
       emptyDescription:
-        "Créez une préparation, ajoutez CV ou description de poste, et laissez l'IA analyser.",
+        "Créez une préparation, ajoutez vos documents, et laissez l'IA vous accompagner en temps réel.",
       createNow: 'Créer',
       viewAll: 'Voir tout {{count}}',
       analyzing: 'Analyse',
+      notAnalyzed: 'Non analysé',
+      stats: {
+        preparations: 'Préparations',
+        preparationsUnit: '',
+        remaining: 'Restant',
+        minutesUnit: 'min',
+        lastActive: 'Dernière activité',
+      },
+      noJobDescription: 'Pas de description',
     },
     slogans: {
       main: ['Stressé ? Respirez.', 'Bready à vos côtés.', 'Entretien ? Facile.'],
@@ -2863,6 +2980,13 @@ export const translations: Record<SupportedLanguage, any> = {
     collaboration: {
       title: 'Mode collaboration',
       copySuccess: 'Copié',
+      main: {
+        ready: 'Bready est prêt à vous aider',
+        listeningPrompt: 'Écoute en cours...',
+      },
+      header: {
+        inputDevice: 'Périphérique',
+      },
       status: {
         initializing: 'Initialisation...',
         checkingPermissions: 'Vérification des autorisations...',
@@ -2927,6 +3051,9 @@ export const translations: Record<SupportedLanguage, any> = {
         thinking: 'Réflexion...',
         responding: 'Réponse...',
         bready: 'Bready',
+        you: 'Vous',
+        listening: 'Écoute',
+        readyStatus: 'Prêt',
       },
       input: {
         placeholder: 'Tapez votre question...',
@@ -2961,6 +3088,10 @@ export const translations: Record<SupportedLanguage, any> = {
       },
       toasts: {
         connectionFailed: "Connexion IA échouée, retour à l'accueil",
+        timeWarning10min: 'Il reste 10 minutes de collaboration',
+        timeWarning5min: 'Il reste 5 minutes de collaboration',
+        timeWarning30s: 'Il reste 30 secondes de collaboration',
+        timeExpired: 'Le temps de collaboration est écoulé',
       },
       actions: {
         copy: 'Copier',
@@ -3473,6 +3604,7 @@ export const translations: Record<SupportedLanguage, any> = {
       deletePreparation: 'Supprimer cette préparation ? Cette action est définitive.',
       deleteFailed: 'Suppression échouée',
       startCollabFailed: 'Impossible de démarrer la collaboration',
+      noRemainingTime: 'Plus de temps de collaboration',
       aiNotConfigured: 'Service IA non configuré. Veuillez configurer dans le panneau admin.',
       aiServiceUnavailable: 'Service IA indisponible. Vérifiez la connexion réseau.',
       serverError: 'Erreur serveur. Veuillez réessayer plus tard.',
@@ -3525,6 +3657,7 @@ export const translations: Record<SupportedLanguage, any> = {
       permissions: {
         title: 'Autorisations',
         subtitle: "Nous avons besoin d'accès pour vous aider.",
+        allSet: 'Tout est prêt !',
         mic: {
           title: 'Microphone',
           desc: "Pour entendre les questions d'entretien.",

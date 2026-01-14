@@ -9,7 +9,7 @@ router.get('/profile', authMiddleware, async (req: AuthenticatedRequest, res) =>
     const result = await query(
       `SELECT id, username, email, full_name, avatar_url, role, user_level, 
        membership_expires_at, remaining_interview_minutes, total_purchased_minutes, 
-       discount_rate, created_at, updated_at 
+       discount_rate, has_completed_onboarding, created_at, updated_at 
        FROM user_profiles WHERE id = $1`,
       [req.user!.id],
     )
@@ -66,7 +66,7 @@ router.get('/all', authMiddleware, async (req: AuthenticatedRequest, res) => {
     const result = await query(
       `SELECT id, username, email, full_name, avatar_url, role, user_level,
        membership_expires_at, remaining_interview_minutes, total_purchased_minutes,
-       discount_rate, created_at, updated_at 
+       discount_rate, has_completed_onboarding, created_at, updated_at 
        FROM user_profiles ORDER BY created_at DESC`,
     )
     res.json({ data: result.rows })
@@ -80,7 +80,7 @@ router.get('/all-internal', async (_req, res) => {
     const result = await query(
       `SELECT id, username, email, full_name, avatar_url, role, user_level,
        membership_expires_at, remaining_interview_minutes, total_purchased_minutes,
-       discount_rate, created_at, updated_at 
+       discount_rate, has_completed_onboarding, created_at, updated_at 
        FROM user_profiles ORDER BY created_at DESC`,
     )
     res.json({ data: result.rows })
@@ -94,7 +94,7 @@ router.get('/profile/:userId', async (req, res) => {
     const result = await query(
       `SELECT id, username, email, full_name, avatar_url, role, user_level,
        membership_expires_at, remaining_interview_minutes, total_purchased_minutes,
-       discount_rate, created_at, updated_at 
+       discount_rate, has_completed_onboarding, created_at, updated_at 
        FROM user_profiles WHERE id = $1`,
       [req.params.userId],
     )
@@ -108,7 +108,14 @@ router.put('/profile/:userId', async (req, res) => {
   try {
     const { userId } = req.params
     const updates = req.body
-    const allowedFields = ['username', 'full_name', 'avatar_url', 'user_level', 'role']
+    const allowedFields = [
+      'username',
+      'full_name',
+      'avatar_url',
+      'user_level',
+      'role',
+      'has_completed_onboarding',
+    ]
     const setClause: string[] = []
     const values: any[] = [userId]
     let paramIndex = 2
@@ -158,6 +165,25 @@ router.put('/role/:userId', async (req, res) => {
       [req.params.userId, role],
     )
     res.json({ data: result.rows[0] })
+  } catch (error: any) {
+    res.status(400).json({ error: error.message })
+  }
+})
+
+router.delete('/:userId', authMiddleware, async (req: AuthenticatedRequest, res) => {
+  try {
+    if (req.user!.user_level !== '超级') {
+      res.status(403).json({ error: '只有超级管理员可以删除用户' })
+      return
+    }
+
+    if (req.params.userId === req.user!.id) {
+      res.status(400).json({ error: '不能删除自己' })
+      return
+    }
+
+    await query('DELETE FROM user_profiles WHERE id = $1', [req.params.userId])
+    res.json({ success: true })
   } catch (error: any) {
     res.status(400).json({ error: error.message })
   }

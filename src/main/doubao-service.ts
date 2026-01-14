@@ -317,32 +317,19 @@ class DoubaoService {
     let text = ''
     let isFinal = false
 
-    // 提取文本
-    if (typeof result.text === 'string') {
+    if (typeof result.text === 'string' && result.text.trim()) {
       text = result.text
-    } else if (typeof result === 'string') {
-      text = result
-    } else if (typeof payload.text === 'string') {
-      text = payload.text
-    } else if (Array.isArray(result)) {
-      text = result.map((item: any) => item?.text || item?.transcript || '').join('')
-    } else if (Array.isArray(result.utterances)) {
-      text = result.utterances.map((item: any) => item?.text || '').join('')
-    } else if (Array.isArray(result.segments)) {
-      text = result.segments.map((item: any) => item?.text || '').join('')
-    } else if (Array.isArray(payload.data)) {
-      text = payload.data.map((item: any) => item?.text || '').join('')
+    } else if (Array.isArray(result.utterances) && result.utterances.length > 0) {
+      const lastUtterance = result.utterances[result.utterances.length - 1]
+      text = lastUtterance?.text || ''
     }
 
-    // 单独检查 utterances 里的 definite 字段
     if (Array.isArray(result.utterances) && result.utterances.length > 0) {
-      // 只要有任意一个 utterance 的 definite 为 true，就认为是最终结果
       if (result.utterances.some((item: any) => item?.definite === true)) {
         isFinal = true
       }
     }
 
-    // 兜底检查其他 final 字段
     if (
       result.final === true ||
       result.is_final === true ||
@@ -360,36 +347,10 @@ class DoubaoService {
   }
 
   private normalizeTranscription(text: string): string {
-    let normalized = text.trim()
+    const normalized = text.trim()
     if (!normalized) {
       return ''
     }
-
-    const now = Date.now()
-    this.pruneRecentFinals(now)
-
-    let stripped = false
-    let changed = true
-    while (changed) {
-      changed = false
-      for (const entry of this.recentFinalTranscriptions) {
-        if (normalized.length > entry.text.length && normalized.startsWith(entry.text)) {
-          normalized = normalized.slice(entry.text.length)
-          normalized = normalized.replace(/^[\s，,。！？!?：:]+/, '').trim()
-          stripped = true
-          changed = true
-        }
-      }
-    }
-
-    if (stripped) {
-      for (const entry of this.recentFinalTranscriptions) {
-        if (normalized === entry.text) {
-          return ''
-        }
-      }
-    }
-
     return normalized
   }
 
@@ -477,7 +438,10 @@ class DoubaoService {
   private async finalizeCurrentTranscription(
     reason: 'debounce' | 'final' | 'silence',
   ): Promise<void> {
+    log('debug', '🔍 [DEBUG] finalizeCurrentTranscription 被调用 - reason:', reason, 'isProcessing:', this.isProcessingVoiceInput)
+
     if (this.isProcessingVoiceInput) {
+      log('debug', '🔍 [DEBUG] 已经在处理中，跳过')
       return
     }
 
@@ -486,8 +450,10 @@ class DoubaoService {
       this.transcriptionDebounceTimer = null
     }
 
+    log('debug', '🔍 [DEBUG] 读取currentTranscription:', this.currentTranscription)
     const transcribedText = this.currentTranscription.trim()
     if (!transcribedText) {
+      log('debug', '🔍 [DEBUG] transcribedText 为空，跳过')
       return
     }
 
@@ -511,7 +477,8 @@ class DoubaoService {
 
     // bigmodel_async 模式：不需要发送负包，连接持续使用
     const reasonTag = reason === 'silence' ? '(静音触发)' : reason === 'final' ? '(VAD判停)' : ''
-    log('info', `🎤 语音转录完成${reasonTag}，调用文本模型:`, transcribedText.substring(0, 100))
+    log('info', `🎤 语音转录完成${reasonTag}，调用文本模型:`, transcribedText)
+    log('debug', '🔍 [DEBUG] 完整的transcribedText长度:', transcribedText.length, '内容:', transcribedText)
     this.onMessageToRenderer('transcription-complete', transcribedText)
 
     try {
@@ -529,20 +496,21 @@ class DoubaoService {
     }
 
     log('info', '📝 收到豆包转录结果:', trimmed.substring(0, 50), isFinal ? '(definite)' : '')
+    log('debug', '🔍 [DEBUG] handleTranscriptionUpdate - 传入text长度:', trimmed.length, '当前currentTranscription长度:', this.currentTranscription.length)
 
-    // bigmodel_async 模式：实时显示转录结果
-    const nextTranscription = this.mergeTranscription(this.currentTranscription, trimmed)
-
-    if (nextTranscription !== this.currentTranscription) {
-      this.currentTranscription = nextTranscription
+    if (trimmed !== this.currentTranscription) {
+      log('debug', '🔍 [DEBUG] 更新currentTranscription - 旧值:', this.currentTranscription.substring(0, 30), '新值:', trimmed.substring(0, 30))
+      this.currentTranscription = trimmed
       this.onMessageToRenderer('transcription-update', this.currentTranscription)
     }
 
     // 只有在豆包判停（definite: true）时才启动防抖计时器
     if (isFinal) {
       if (this.transcriptionDebounceTimer) {
+        log('debug', '🔍 [DEBUG] 清除旧的防抖计时器')
         clearTimeout(this.transcriptionDebounceTimer)
       }
+      log('debug', '🔍 [DEBUG] 启动新的防抖计时器，当前currentTranscription:', this.currentTranscription.substring(0, 50))
       this.transcriptionDebounceTimer = setTimeout(() => {
         void this.finalizeCurrentTranscription('final')
       }, FINAL_DEBOUNCE_MS)

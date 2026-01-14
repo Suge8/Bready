@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, type Variants } from 'framer-motion'
 import {
   Target,
   TrendingUp,
@@ -42,7 +42,6 @@ const PreparationDetailModal: React.FC<PreparationDetailModalProps> = ({
   const [isAnalyzing, setIsAnalyzing] = useState(preparation.is_analyzing || false)
   const [currentPreparation, setCurrentPreparation] = useState(preparation)
   const [displayScore, setDisplayScore] = useState(0)
-  const [cardsVisible, setCardsVisible] = useState([false, false, false, false])
 
   const mockStrengths = list('prepEditor.mockAnalysis.strengths')
   const mockWeaknesses = list('prepEditor.mockAnalysis.weaknesses')
@@ -50,48 +49,143 @@ const PreparationDetailModal: React.FC<PreparationDetailModalProps> = ({
 
   const isDarkMode = resolvedTheme === 'dark'
 
+  // Header animation variants
+  const headerContainerVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.08,
+        delayChildren: 0.1,
+      },
+    },
+  }
+
+  const titleVariants: Variants = {
+    hidden: { opacity: 0, x: -20, scale: 0.95 },
+    visible: {
+      opacity: 1,
+      x: 0,
+      scale: 1,
+      transition: {
+        type: 'spring',
+        damping: 25,
+        stiffness: 300,
+      },
+    },
+  }
+
+  const scoreVariants: Variants = {
+    hidden: { opacity: 0, y: 16, scale: 0.9 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      transition: {
+        type: 'spring',
+        damping: 22,
+        stiffness: 280,
+      },
+    },
+  }
+
+  const buttonsVariants: Variants = {
+    hidden: { opacity: 0, x: 20, scale: 0.95 },
+    visible: {
+      opacity: 1,
+      x: 0,
+      scale: 1,
+      transition: {
+        type: 'spring',
+        damping: 25,
+        stiffness: 300,
+      },
+    },
+  }
+
+  // Empty state animation variants
+  const emptyStateContainerVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+        delayChildren: 0.15,
+      },
+    },
+  }
+
+  const emptyIconVariants: Variants = {
+    hidden: { opacity: 0, scale: 0.5, rotate: -15 },
+    visible: {
+      opacity: 1,
+      scale: 1,
+      rotate: 0,
+      transition: {
+        type: 'spring',
+        damping: 18,
+        stiffness: 250,
+      },
+    },
+  }
+
+  const emptyTextVariants: Variants = {
+    hidden: { opacity: 0, y: 12 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        type: 'spring',
+        damping: 25,
+        stiffness: 300,
+      },
+    },
+  }
+
+  const emptyButtonVariants: Variants = {
+    hidden: { opacity: 0, y: 16, scale: 0.9 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      transition: {
+        type: 'spring',
+        damping: 20,
+        stiffness: 280,
+      },
+    },
+  }
+
   useEffect(() => {
     if (currentPreparation?.analysis?.matchScore && !isAnalyzing) {
       const targetScore = currentPreparation.analysis.matchScore
       const duration = 800
-      const steps = 30
-      const increment = targetScore / steps
-      let current = 0
-      const timer = setInterval(() => {
-        current += increment
-        if (current >= targetScore) {
-          setDisplayScore(targetScore)
-          clearInterval(timer)
-        } else {
-          setDisplayScore(Math.floor(current))
+      const startTime = performance.now()
+      let animationId: number
+
+      const animate = (now: number) => {
+        const elapsed = now - startTime
+        const progress = Math.min(elapsed / duration, 1)
+        const eased = 1 - Math.pow(1 - progress, 3)
+        setDisplayScore(Math.round(eased * targetScore))
+        if (progress < 1) {
+          animationId = requestAnimationFrame(animate)
         }
-      }, duration / steps)
-      return () => clearInterval(timer)
+      }
+
+      const timeout = setTimeout(() => {
+        animationId = requestAnimationFrame(animate)
+      }, 250)
+
+      return () => {
+        clearTimeout(timeout)
+        if (animationId) cancelAnimationFrame(animationId)
+      }
     }
   }, [currentPreparation?.analysis?.matchScore, isAnalyzing])
 
   useEffect(() => {
-    if (currentPreparation?.analysis && !isAnalyzing) {
-      setCardsVisible([false, false, false, false])
-      const timers = [0, 1, 2, 3].map((index) =>
-        setTimeout(
-          () => {
-            setCardsVisible((prev) => {
-              const newState = [...prev]
-              newState[index] = true
-              return newState
-            })
-          },
-          80 * index + 150,
-        ),
-      )
-      return () => timers.forEach(clearTimeout)
-    }
-  }, [currentPreparation?.analysis, isAnalyzing])
-
-  useEffect(() => {
     if (isAnalyzing) {
-      setCardsVisible([false, false, false, false])
       setDisplayScore(0)
     }
   }, [isAnalyzing])
@@ -254,81 +348,107 @@ const PreparationDetailModal: React.FC<PreparationDetailModalProps> = ({
       className="p-0 w-[90vw] max-w-[1100px] max-h-[88vh] relative flex flex-col"
     >
       <div className="relative flex flex-col flex-1 min-h-0">
-        {/* 背景装饰 */}
-        <div
-          className={`absolute top-0 right-0 w-60 h-60 ${isDarkMode ? 'bg-blue-500/5' : 'bg-blue-500/10'} rounded-full blur-[80px] pointer-events-none`}
-        />
-        <div
-          className={`absolute bottom-0 left-0 w-48 h-48 ${isDarkMode ? 'bg-purple-500/5' : 'bg-purple-500/10'} rounded-full blur-[80px] pointer-events-none`}
-        />
-
         {/* Header */}
-        <div className="relative flex items-center justify-between px-6 py-4 flex-shrink-0 gap-3">
-          {/* 左侧：标题 */}
-          <h1
+        <motion.div
+          className="relative flex items-center justify-between px-6 py-4 flex-shrink-0 gap-3"
+          variants={headerContainerVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          <motion.h1
+            variants={titleVariants}
             className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'} truncate flex-shrink-0 max-w-[180px]`}
           >
             {currentPreparation.name}
-          </h1>
+          </motion.h1>
 
-          {/* 中间：分数气泡 */}
           {hasAnalysis && (
-            <div
+            <motion.div
+              variants={scoreVariants}
               className={`flex items-center gap-2.5 px-3 py-1.5 rounded-xl ${isDarkMode ? 'bg-zinc-800/80' : 'bg-gray-100/80'} flex-shrink-0`}
             >
-              <Target className={`w-3.5 h-3.5 ${isDarkMode ? 'text-zinc-400' : 'text-gray-500'}`} />
-              <span
-                className={`text-xl font-bold ${getScoreColor(currentPreparation.analysis!.matchScore)}`}
+              <motion.div
+                initial={{ rotate: -180, scale: 0 }}
+                animate={{ rotate: 0, scale: 1 }}
+                transition={{ type: 'spring', damping: 15, stiffness: 200, delay: 0.3 }}
+              >
+                <Target
+                  className={`w-3.5 h-3.5 ${isDarkMode ? 'text-zinc-400' : 'text-gray-500'}`}
+                />
+              </motion.div>
+              <motion.span
+                initial={{ opacity: 0, scale: 0.5 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ type: 'spring', damping: 20, stiffness: 300, delay: 0.35 }}
+                className={`text-xl font-bold tabular-nums ${getScoreColor(currentPreparation.analysis!.matchScore)}`}
               >
                 {displayScore}
-              </span>
-              <span className={`text-xs ${isDarkMode ? 'text-zinc-500' : 'text-gray-400'}`}>
+              </motion.span>
+              <motion.span
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3, delay: 0.4 }}
+                className={`text-xs ${isDarkMode ? 'text-zinc-500' : 'text-gray-400'}`}
+              >
                 / 100
-              </span>
+              </motion.span>
               <div
                 className={`w-16 h-1.5 rounded-full ${isDarkMode ? 'bg-zinc-700' : 'bg-gray-200'} overflow-hidden`}
               >
-                <div
-                  className={`h-full rounded-full transition-all duration-700 ${getScoreBarColor(currentPreparation.analysis!.matchScore)}`}
-                  style={{ width: `${displayScore}%` }}
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${displayScore}%` }}
+                  transition={{ duration: 0.8, ease: [0.25, 0.1, 0.25, 1], delay: 0.4 }}
+                  className={`h-full rounded-full ${getScoreBarColor(currentPreparation.analysis!.matchScore)}`}
                 />
               </div>
-              <span
+              <motion.span
+                initial={{ opacity: 0, x: -8, scale: 0.8 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                transition={{ type: 'spring', damping: 20, stiffness: 280, delay: 0.5 }}
                 className={`text-xs font-medium px-1.5 py-0.5 rounded ${getScoreBarColor(currentPreparation.analysis!.matchScore)} text-white`}
               >
                 {getScoreLabel(currentPreparation.analysis!.matchScore)}
-              </span>
-            </div>
+              </motion.span>
+            </motion.div>
           )}
 
-          {/* 右侧：按钮 */}
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <Button onClick={onEdit} size="sm" variant="outline" className="h-7 px-2.5 text-xs">
-              <Edit className="w-3 h-3 mr-1" />
-              {t('prep.actions.edit')}
-            </Button>
-            <Button
-              onClick={handleAnalyze}
-              disabled={isAnalyzing}
-              size="sm"
-              className="h-7 px-2.5 text-xs"
-            >
-              {isAnalyzing ? (
-                <>
-                  <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                  {t('prepEditor.actions.analyzing')}
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="w-3 h-3 mr-1" />
-                  {currentPreparation.analysis
-                    ? t('prepEditor.actions.reanalyze')
-                    : t('prepEditor.actions.analyze')}
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
+          <motion.div variants={buttonsVariants} className="flex items-center gap-2 flex-shrink-0">
+            <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.95 }}>
+              <Button
+                onClick={onEdit}
+                size="sm"
+                variant="outline"
+                className="h-7 px-2.5 text-xs cursor-pointer"
+              >
+                <Edit className="w-3 h-3 mr-1" />
+                {t('prep.actions.edit')}
+              </Button>
+            </motion.div>
+            <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.95 }}>
+              <Button
+                onClick={handleAnalyze}
+                disabled={isAnalyzing}
+                size="sm"
+                className="h-7 px-2.5 text-xs cursor-pointer"
+              >
+                {isAnalyzing ? (
+                  <>
+                    <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                    {t('prepEditor.actions.analyzing')}
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-3 h-3 mr-1" />
+                    {currentPreparation.analysis
+                      ? t('prepEditor.actions.reanalyze')
+                      : t('prepEditor.actions.analyze')}
+                  </>
+                )}
+              </Button>
+            </motion.div>
+          </motion.div>
+        </motion.div>
 
         {/* Content */}
         <div className="relative flex-1 min-h-0 overflow-y-auto px-6 pb-6 scrollbar-thin">
@@ -379,13 +499,31 @@ const PreparationDetailModal: React.FC<PreparationDetailModalProps> = ({
                 </div>
               </motion.div>
             ) : hasAnalysis ? (
-              <div className="grid grid-cols-2 gap-4 pt-1">
-                {cardConfigs.map((config, index) => (
-                  <div
+              <motion.div
+                className="grid grid-cols-2 gap-4 pt-1"
+                initial="hidden"
+                animate="visible"
+                variants={{
+                  hidden: { opacity: 0 },
+                  visible: {
+                    opacity: 1,
+                    transition: { staggerChildren: 0.08, delayChildren: 0.15 },
+                  },
+                }}
+              >
+                {cardConfigs.map((config) => (
+                  <motion.div
                     key={config.key}
-                    className={`rounded-xl bg-gradient-to-br ${config.gradient} p-4 flex flex-col transition-all duration-500 hover:scale-[1.01] min-h-[160px] ${
-                      cardsVisible[index] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-                    }`}
+                    variants={{
+                      hidden: { opacity: 0, y: 16 },
+                      visible: {
+                        opacity: 1,
+                        y: 0,
+                        transition: { duration: 0.35, ease: 'easeOut' },
+                      },
+                    }}
+                    whileHover={{ scale: 1.01 }}
+                    className={`rounded-xl bg-gradient-to-br ${config.gradient} p-4 flex flex-col cursor-default min-h-[160px]`}
                   >
                     <div className="flex items-center gap-2 mb-2.5 flex-shrink-0">
                       <div className={`p-1.5 rounded-lg ${config.iconBg}`}>
@@ -405,10 +543,16 @@ const PreparationDetailModal: React.FC<PreparationDetailModalProps> = ({
                     <ul className="space-y-2 flex-1 overflow-y-auto">
                       {config.data.length > 0 ? (
                         config.data.map((item: string, idx: number) => (
-                          <li
+                          <motion.li
                             key={idx}
-                            className="flex items-start text-[13px] animate-fadeIn"
-                            style={{ animationDelay: `${idx * 50 + index * 60}ms` }}
+                            initial={{ opacity: 0, x: -8 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{
+                              duration: 0.25,
+                              delay: idx * 0.05 + 0.2,
+                              ease: 'easeOut',
+                            }}
+                            className="flex items-start text-[13px]"
                           >
                             <div
                               className={`w-1.5 h-1.5 rounded-full ${config.dotColor} mt-1.5 mr-2 flex-shrink-0`}
@@ -418,7 +562,7 @@ const PreparationDetailModal: React.FC<PreparationDetailModalProps> = ({
                             >
                               {item}
                             </span>
-                          </li>
+                          </motion.li>
                         ))
                       ) : (
                         <li
@@ -431,47 +575,64 @@ const PreparationDetailModal: React.FC<PreparationDetailModalProps> = ({
                         </li>
                       )}
                     </ul>
-                  </div>
+                  </motion.div>
                 ))}
-              </div>
+              </motion.div>
             ) : (
-              <div className="h-full min-h-[250px] flex items-center justify-center">
+              <motion.div
+                className="h-full min-h-[250px] flex items-center justify-center"
+                variants={emptyStateContainerVariants}
+                initial="hidden"
+                animate="visible"
+              >
                 <div className="flex flex-col items-center text-center max-w-xs">
-                  <div
+                  <motion.div
+                    variants={emptyIconVariants}
                     className={`w-14 h-14 ${isDarkMode ? 'bg-zinc-800' : 'bg-gray-100'} rounded-xl flex items-center justify-center mb-3 relative`}
                   >
                     <Brain
                       className={`w-7 h-7 ${isDarkMode ? 'text-zinc-600' : 'text-gray-400'}`}
                     />
-                    <Sparkles
-                      className={`w-3.5 h-3.5 ${isDarkMode ? 'text-amber-400' : 'text-amber-500'} absolute -top-1 -right-1 animate-pulse`}
-                    />
-                  </div>
-                  <h3
+                    <motion.div
+                      animate={{ scale: [1, 1.2, 1], rotate: [0, 10, 0] }}
+                      transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                    >
+                      <Sparkles
+                        className={`w-3.5 h-3.5 ${isDarkMode ? 'text-amber-400' : 'text-amber-500'} absolute -top-1 -right-1`}
+                      />
+                    </motion.div>
+                  </motion.div>
+                  <motion.h3
+                    variants={emptyTextVariants}
                     className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-1.5`}
                   >
                     {t('prep.noAnalysisTitle')}
-                  </h3>
-                  <p className={`${isDarkMode ? 'text-zinc-500' : 'text-gray-500'} text-xs mb-4`}>
+                  </motion.h3>
+                  <motion.p
+                    variants={emptyTextVariants}
+                    className={`${isDarkMode ? 'text-zinc-500' : 'text-gray-500'} text-xs mb-4`}
+                  >
                     {t('prep.report.completeInfo')}
-                  </p>
-                  <Button onClick={handleAnalyze} size="sm" className="h-8 px-4 text-xs">
-                    <Brain className="w-3.5 h-3.5 mr-1.5" />
-                    {t('prep.actions.startAnalysis')}
-                  </Button>
+                  </motion.p>
+                  <motion.div
+                    variants={emptyButtonVariants}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <Button
+                      onClick={handleAnalyze}
+                      size="sm"
+                      className="h-8 px-4 text-xs cursor-pointer"
+                    >
+                      <Brain className="w-3.5 h-3.5 mr-1.5" />
+                      {t('prep.actions.startAnalysis')}
+                    </Button>
+                  </motion.div>
                 </div>
-              </div>
+              </motion.div>
             )}
           </AnimatePresence>
         </div>
-
-        <style>{`
-          @keyframes fadeIn {
-            from { opacity: 0; transform: translateX(-6px); }
-            to { opacity: 1; transform: translateX(0); }
-          }
-          .animate-fadeIn { animation: fadeIn 0.3s ease-out forwards; opacity: 0; }
-        `}</style>
       </div>
     </Modal>
   )

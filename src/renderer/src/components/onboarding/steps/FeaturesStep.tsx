@@ -2,7 +2,7 @@ import React from 'react'
 import { motion } from 'framer-motion'
 import { useI18n } from '../../../contexts/I18nContext'
 import { Button } from '../../ui/button'
-import { Mic, Sparkles, Zap, ArrowRight, ArrowLeft } from 'lucide-react'
+import { AudioLines, Sparkles, Shield, ArrowRight, ArrowLeft } from 'lucide-react'
 
 interface OnboardingStepProps {
   onNext: () => void
@@ -10,30 +10,27 @@ interface OnboardingStepProps {
   onSkip: () => void
 }
 
-export const FeaturesStep: React.FC<OnboardingStepProps> = ({ onNext, onPrevious, onSkip }) => {
+export const FeaturesStep: React.FC<OnboardingStepProps> = ({ onNext, onPrevious }) => {
   const { t } = useI18n()
 
   const features = [
     {
-      icon: <Mic className="w-6 h-6" />,
-      title: t('onboarding.features.1.title') || 'Real-time Transcription',
-      desc:
-        t('onboarding.features.1.desc') ||
-        'Instantly converts speech to text during your interviews.',
+      icon: <Sparkles className="w-5 h-5" />,
+      title: t('onboarding.features.1.title') || 'AI 智能分析',
+      desc: t('onboarding.features.1.desc') || '根据任务背景、简历或个人信息，提前为你分析准备',
+      color: 'text-violet-500',
     },
     {
-      icon: <Sparkles className="w-6 h-6" />,
-      title: t('onboarding.features.2.title') || 'AI-Powered Hints',
-      desc:
-        t('onboarding.features.2.desc') ||
-        'Get smart suggestions and answers to interview questions on the fly.',
+      icon: <AudioLines className="w-5 h-5" />,
+      title: t('onboarding.features.2.title') || '实时个性化提示',
+      desc: t('onboarding.features.2.desc') || '语音转写配合背景信息，给予精准个性化回答',
+      color: 'text-amber-500',
     },
     {
-      icon: <Zap className="w-6 h-6" />,
-      title: t('onboarding.features.3.title') || 'Seamless Integration',
-      desc:
-        t('onboarding.features.3.desc') ||
-        'Works with any meeting platform directly from your desktop.',
+      icon: <Shield className="w-5 h-5" />,
+      title: t('onboarding.features.3.title') || '隐私安全模式',
+      desc: t('onboarding.features.3.desc') || '应用无法被屏幕捕捉，支持自定义显示隐藏快捷键',
+      color: 'text-cyan-500',
     },
   ]
 
@@ -41,47 +38,53 @@ export const FeaturesStep: React.FC<OnboardingStepProps> = ({ onNext, onPrevious
     hidden: { opacity: 0 },
     show: {
       opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-      },
+      transition: { staggerChildren: 0.1, delayChildren: 0.1 },
     },
   }
 
   const item = {
     hidden: { y: 20, opacity: 0 },
-    show: { y: 0, opacity: 1 },
+    show: {
+      y: 0,
+      opacity: 1,
+      transition: { type: 'spring' as const, stiffness: 300, damping: 25 },
+    },
   }
 
   return (
-    <div className="flex flex-col h-full w-full max-w-2xl mx-auto px-6 py-4">
+    <div className="flex flex-col h-full w-full max-w-lg mx-auto px-4">
       <motion.div
-        initial={{ y: -20, opacity: 0 }}
+        initial={{ y: -15, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="text-center mb-8"
+        transition={{ type: 'spring', stiffness: 300 }}
+        className="text-center mb-6"
       >
-        <h2 className="text-3xl font-bold mb-2 text-[var(--bready-text)]">
+        <h2 className="text-2xl font-semibold mb-2 text-[var(--bready-text)]">
           {t('onboarding.features.title') || 'Powerful Features'}
         </h2>
-        <p className="text-[var(--bready-text-muted)]">
+        <p className="text-[var(--bready-text-muted)] text-sm">
           {t('onboarding.features.subtitle') || 'Everything you need to succeed.'}
         </p>
       </motion.div>
 
-      <motion.div variants={container} initial="hidden" animate="show" className="grid gap-4 mb-8">
+      <motion.div variants={container} initial="hidden" animate="show" className="grid gap-3 mb-6">
         {features.map((feature, idx) => (
           <motion.div
             key={idx}
             variants={item}
-            className="flex items-start p-4 rounded-xl border border-[var(--bready-border)] bg-[var(--bready-surface)] hover:border-[var(--bready-text-muted)] transition-colors"
+            whileHover={{ x: 4 }}
+            className="flex items-start p-4 rounded-xl border border-[var(--bready-border)] bg-[var(--bready-surface)] hover:border-[var(--bready-text-muted)]/30 transition-all cursor-pointer"
           >
-            <div className="p-3 rounded-lg bg-[var(--bready-bg)] border border-[var(--bready-border)] mr-4 text-[var(--bready-text)]">
+            <div
+              className={`p-2.5 rounded-lg bg-[var(--bready-bg)] border border-[var(--bready-border)] mr-4 ${feature.color}`}
+            >
               {feature.icon}
             </div>
             <div>
-              <h3 className="font-semibold text-lg mb-1 text-[var(--bready-text)]">
+              <h3 className="font-medium text-sm mb-0.5 text-[var(--bready-text)]">
                 {feature.title}
               </h3>
-              <p className="text-sm text-[var(--bready-text-muted)] leading-relaxed">
+              <p className="text-xs text-[var(--bready-text-muted)] leading-relaxed">
                 {feature.desc}
               </p>
             </div>
@@ -92,31 +95,31 @@ export const FeaturesStep: React.FC<OnboardingStepProps> = ({ onNext, onPrevious
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 0.5 }}
-        className="mt-auto flex justify-between items-center pt-4"
+        transition={{ delay: 0.4 }}
+        className="mt-auto flex justify-between items-center"
       >
-        <Button
-          variant="ghost"
-          onClick={onPrevious}
-          className="text-[var(--bready-text-muted)] hover:text-[var(--bready-text)] cursor-pointer"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" /> {t('common.back') || 'Back'}
-        </Button>
-        <div className="flex gap-2">
+        <motion.div whileHover={{ x: -3 }} whileTap={{ scale: 0.97 }}>
           <Button
             variant="ghost"
-            onClick={onSkip}
-            className="text-[var(--bready-text-muted)] hover:text-[var(--bready-text)] cursor-pointer"
+            size="icon"
+            onClick={onPrevious}
+            className="text-[var(--bready-text-muted)] hover:text-[var(--bready-text)] cursor-pointer !rounded-full"
           >
-            {t('onboarding.skip') || 'Skip'}
+            <ArrowLeft className="h-4 w-4" />
           </Button>
+        </motion.div>
+        <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.98 }}>
           <Button
             onClick={onNext}
-            className="bg-[var(--bready-text)] text-[var(--bready-bg)] hover:bg-[var(--bready-text)]/90 px-6 rounded-xl cursor-pointer"
+            style={{
+              backgroundColor: 'var(--bready-accent)',
+              color: 'var(--bready-accent-contrast)',
+            }}
+            className="hover:opacity-90 px-6 rounded-xl cursor-pointer text-sm"
           >
-            {t('common.next') || 'Next'} <ArrowRight className="ml-2 h-4 w-4" />
+            {t('common.next') || 'Next'} <ArrowRight className="ml-1.5 h-4 w-4" />
           </Button>
-        </div>
+        </motion.div>
       </motion.div>
     </div>
   )
