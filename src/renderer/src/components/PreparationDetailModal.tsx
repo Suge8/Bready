@@ -45,6 +45,12 @@ const PreparationDetailModal: React.FC<PreparationDetailModalProps> = ({
   const [currentPreparation, setCurrentPreparation] = useState(preparation)
   const [displayScore, setDisplayScore] = useState(0)
 
+  // 当 preparation prop 变化时同步状态（切换卡片或外部更新时）
+  useEffect(() => {
+    setIsAnalyzing(preparation.is_analyzing || false)
+    setCurrentPreparation(preparation)
+  }, [preparation.id, preparation.is_analyzing, preparation.analysis])
+
   const mockStrengths = list('prepEditor.mockAnalysis.strengths')
   const mockWeaknesses = list('prepEditor.mockAnalysis.weaknesses')
   const mockSuggestions = list('prepEditor.mockAnalysis.suggestions')
