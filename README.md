@@ -28,6 +28,7 @@ Bready 是桌面端 AI 面试协作助手，提供实时提示、语音协作与
 - **隐私优先**：本地运行与权限可控
 - **主题与体验**：明暗主题切换、现代化动效与极简布局
 - **多语言支持**：中文 / 英文 / 中英混合 / 日语 / 法语
+- **多种登录方式**：支持 Google 登录、邮箱注册与密码重置
 
 ### 快速开始
 
@@ -107,6 +108,7 @@ Bready is a desktop AI interview copilot that delivers live prompts, dual-channe
 - **Preparation flow**: resume & JD analysis, key talking points
 - **Privacy-first**: local runtime and explicit permissions
 - **Themes & motion**: light/dark themes with modern UI polish
+- **Multiple login options**: Google sign-in, email registration, and password reset
 
 ### Quick Start
 
@@ -186,6 +188,7 @@ Bready はデスクトップ向けの AI 面接アシスタントです。リア
 - **準備フロー**：履歴書・職務内容の分析
 - **プライバシー重視**：ローカル実行と権限制御
 - **テーマ**：ライト/ダーク切替
+- **複数のログイン方法**：Google ログイン、メール登録、パスワードリセット
 
 ### クイックスタート
 
@@ -212,6 +215,7 @@ Bready est un copilote d’entretien IA pour desktop, avec prompts en direct et 
 - **Préparation** : analyse CV et description de poste
 - **Confidentialité** : exécution locale et permissions contrôlées
 - **Thèmes** : clair / sombre
+- **Connexion multiple** : Google, inscription par e-mail, réinitialisation du mot de passe
 
 ### Démarrage rapide
 

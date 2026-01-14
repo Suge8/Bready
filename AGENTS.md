@@ -1,7 +1,7 @@
 # BREADY 项目知识库
 
-**Generated:** 2026-01-14
-**Commit:** 936ce94
+**Generated:** 2026-01-15
+**Commit:** 270326f
 **Branch:** main
 
 ## 概述
