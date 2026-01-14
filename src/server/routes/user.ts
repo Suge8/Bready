@@ -1,19 +1,13 @@
 import { Router } from 'express'
-import { query } from '../services/database'
+import { UserService } from '../services/database'
 import { authMiddleware, type AuthenticatedRequest } from '../middleware/auth'
 
 const router = Router()
 
 router.get('/profile', authMiddleware, async (req: AuthenticatedRequest, res) => {
   try {
-    const result = await query(
-      `SELECT id, username, email, full_name, avatar_url, role, user_level, 
-       membership_expires_at, remaining_interview_minutes, total_purchased_minutes, 
-       discount_rate, has_completed_onboarding, created_at, updated_at 
-       FROM user_profiles WHERE id = $1`,
-      [req.user!.id],
-    )
-    res.json({ data: result.rows[0] || null })
+    const profile = await UserService.getProfile(req.user!.id)
+    res.json({ data: profile })
   } catch (error: any) {
     res.status(400).json({ error: error.message })
   }
@@ -21,31 +15,12 @@ router.get('/profile', authMiddleware, async (req: AuthenticatedRequest, res) =>
 
 router.put('/profile', authMiddleware, async (req: AuthenticatedRequest, res) => {
   try {
-    const updates = req.body
-    const allowedFields = ['username', 'full_name', 'avatar_url']
-    const setClause: string[] = []
-    const values: any[] = [req.user!.id]
-    let paramIndex = 2
-
-    for (const field of allowedFields) {
-      if (updates[field] !== undefined) {
-        setClause.push(`${field} = $${paramIndex}`)
-        values.push(updates[field])
-        paramIndex++
-      }
-    }
-
-    if (setClause.length === 0) {
+    const result = await UserService.updateProfile(req.user!.id, req.body)
+    if (!result) {
       res.status(400).json({ error: '没有可更新的字段' })
       return
     }
-
-    setClause.push('updated_at = NOW()')
-    const result = await query(
-      `UPDATE user_profiles SET ${setClause.join(', ')} WHERE id = $1 RETURNING *`,
-      values,
-    )
-    res.json({ data: result.rows[0] })
+    res.json({ data: result })
   } catch (error: any) {
     res.status(400).json({ error: error.message })
   }
@@ -63,13 +38,8 @@ router.get('/all', authMiddleware, async (req: AuthenticatedRequest, res) => {
       return
     }
 
-    const result = await query(
-      `SELECT id, username, email, full_name, avatar_url, role, user_level,
-       membership_expires_at, remaining_interview_minutes, total_purchased_minutes,
-       discount_rate, has_completed_onboarding, created_at, updated_at 
-       FROM user_profiles ORDER BY created_at DESC`,
-    )
-    res.json({ data: result.rows })
+    const users = await UserService.getAllUsers()
+    res.json({ data: users })
   } catch (error: any) {
     res.status(400).json({ error: error.message })
   }
@@ -77,13 +47,8 @@ router.get('/all', authMiddleware, async (req: AuthenticatedRequest, res) => {
 
 router.get('/all-internal', async (_req, res) => {
   try {
-    const result = await query(
-      `SELECT id, username, email, full_name, avatar_url, role, user_level,
-       membership_expires_at, remaining_interview_minutes, total_purchased_minutes,
-       discount_rate, has_completed_onboarding, created_at, updated_at 
-       FROM user_profiles ORDER BY created_at DESC`,
-    )
-    res.json({ data: result.rows })
+    const users = await UserService.getAllUsers()
+    res.json({ data: users })
   } catch (error: any) {
     res.status(400).json({ error: error.message })
   }
@@ -91,14 +56,8 @@ router.get('/all-internal', async (_req, res) => {
 
 router.get('/profile/:userId', async (req, res) => {
   try {
-    const result = await query(
-      `SELECT id, username, email, full_name, avatar_url, role, user_level,
-       membership_expires_at, remaining_interview_minutes, total_purchased_minutes,
-       discount_rate, has_completed_onboarding, created_at, updated_at 
-       FROM user_profiles WHERE id = $1`,
-      [req.params.userId],
-    )
-    res.json({ data: result.rows[0] || null })
+    const profile = await UserService.getProfile(req.params.userId)
+    res.json({ data: profile })
   } catch (error: any) {
     res.status(400).json({ error: error.message })
   }
@@ -106,8 +65,6 @@ router.get('/profile/:userId', async (req, res) => {
 
 router.put('/profile/:userId', async (req, res) => {
   try {
-    const { userId } = req.params
-    const updates = req.body
     const allowedFields = [
       'username',
       'full_name',
@@ -116,29 +73,12 @@ router.put('/profile/:userId', async (req, res) => {
       'role',
       'has_completed_onboarding',
     ]
-    const setClause: string[] = []
-    const values: any[] = [userId]
-    let paramIndex = 2
-
-    for (const field of allowedFields) {
-      if (updates[field] !== undefined) {
-        setClause.push(`${field} = $${paramIndex}`)
-        values.push(updates[field])
-        paramIndex++
-      }
-    }
-
-    if (setClause.length === 0) {
+    const result = await UserService.updateProfile(req.params.userId, req.body, allowedFields)
+    if (!result) {
       res.status(400).json({ error: '没有可更新的字段' })
       return
     }
-
-    setClause.push('updated_at = NOW()')
-    const result = await query(
-      `UPDATE user_profiles SET ${setClause.join(', ')} WHERE id = $1 RETURNING *`,
-      values,
-    )
-    res.json({ data: result.rows[0] })
+    res.json({ data: result })
   } catch (error: any) {
     res.status(400).json({ error: error.message })
   }
@@ -146,12 +86,8 @@ router.put('/profile/:userId', async (req, res) => {
 
 router.put('/level/:userId', async (req, res) => {
   try {
-    const { userLevel } = req.body
-    const result = await query(
-      'UPDATE user_profiles SET user_level = $2, updated_at = NOW() WHERE id = $1 RETURNING *',
-      [req.params.userId, userLevel],
-    )
-    res.json({ data: result.rows[0] })
+    const result = await UserService.updateUserLevel(req.params.userId, req.body.userLevel)
+    res.json({ data: result })
   } catch (error: any) {
     res.status(400).json({ error: error.message })
   }
@@ -159,12 +95,8 @@ router.put('/level/:userId', async (req, res) => {
 
 router.put('/role/:userId', async (req, res) => {
   try {
-    const { role } = req.body
-    const result = await query(
-      'UPDATE user_profiles SET role = $2, updated_at = NOW() WHERE id = $1 RETURNING *',
-      [req.params.userId, role],
-    )
-    res.json({ data: result.rows[0] })
+    const result = await UserService.updateUserRole(req.params.userId, req.body.role)
+    res.json({ data: result })
   } catch (error: any) {
     res.status(400).json({ error: error.message })
   }
@@ -182,7 +114,7 @@ router.delete('/:userId', authMiddleware, async (req: AuthenticatedRequest, res)
       return
     }
 
-    await query('DELETE FROM user_profiles WHERE id = $1', [req.params.userId])
+    await UserService.deleteUser(req.params.userId)
     res.json({ success: true })
   } catch (error: any) {
     res.status(400).json({ error: error.message })

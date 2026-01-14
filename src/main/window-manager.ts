@@ -44,7 +44,7 @@ function createWindow(): BrowserWindow {
 
     // 生产环境调试：按 Cmd/Ctrl + Shift + D 打开 DevTools
     if (!is.dev) {
-      mainWindow?.webContents.on('before-input-event', (event, input) => {
+      mainWindow?.webContents.on('before-input-event', (_event, input) => {
         if (
           input.type === 'keyDown' &&
           input.key === 'D' &&

@@ -7,6 +7,7 @@ import { useI18n } from '../contexts/I18nContext'
 import { useTheme } from './ui/theme-provider'
 
 interface AllPreparationsModalProps {
+  isOpen: boolean
   preparations: Preparation[]
   onClose: () => void
   onDelete: (id: string) => void
@@ -37,6 +38,7 @@ const getScoreBadgeColor = (score: number, isDark: boolean) => {
 }
 
 const AllPreparationsModal: React.FC<AllPreparationsModalProps> = ({
+  isOpen,
   preparations,
   onClose,
   onDelete,
@@ -64,7 +66,7 @@ const AllPreparationsModal: React.FC<AllPreparationsModalProps> = ({
 
   return (
     <Modal
-      isOpen
+      isOpen={isOpen}
       onClose={onClose}
       size="lg"
       className="p-0 max-h-[70vh] flex flex-col overflow-hidden"

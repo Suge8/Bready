@@ -572,6 +572,9 @@ export const translations: Record<SupportedLanguage, any> = {
       tabs: {
         users: '用户管理',
         usage: '使用记录',
+        ai: 'AI 设置',
+        payment: '支付设置',
+        login: '登录设置',
         email: '邮箱设置',
         sms: '短信设置',
         wechatLogin: '微信登录',
@@ -1247,6 +1250,9 @@ export const translations: Record<SupportedLanguage, any> = {
       tabs: {
         users: 'Users',
         usage: 'Usage',
+        ai: 'AI Settings',
+        payment: 'Payment',
+        login: 'Login Settings',
         email: 'Email',
         sms: 'SMS',
         wechatLogin: 'WeChat Login',
@@ -2238,6 +2244,9 @@ export const translations: Record<SupportedLanguage, any> = {
       tabs: {
         users: 'ユーザー',
         usage: '使用状況',
+        ai: 'AI設定',
+        payment: '決済設定',
+        login: 'ログイン設定',
         email: 'メール',
         sms: 'SMS',
         wechatLogin: 'WeChat',
@@ -3103,6 +3112,9 @@ export const translations: Record<SupportedLanguage, any> = {
       tabs: {
         users: 'Utilisateurs',
         usage: 'Usage',
+        ai: 'Paramètres IA',
+        payment: 'Paiement',
+        login: 'Connexion',
         email: 'Email',
         sms: 'SMS',
         wechatLogin: 'WeChat',

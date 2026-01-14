@@ -22,6 +22,7 @@ import { useI18n } from '../contexts/I18nContext'
 import { Modal } from './ui/Modal'
 
 interface SelectPreparationModalProps {
+  isOpen: boolean
   preparations: Preparation[]
   onClose: () => void
   onSelect: (preparation: Preparation | null, language: string, purpose: string) => void
@@ -29,6 +30,7 @@ interface SelectPreparationModalProps {
 }
 
 const SelectPreparationModal: React.FC<SelectPreparationModalProps> = ({
+  isOpen,
   preparations,
   onClose,
   onSelect,
@@ -137,7 +139,7 @@ const SelectPreparationModal: React.FC<SelectPreparationModalProps> = ({
 
   return (
     <Modal
-      isOpen
+      isOpen={isOpen}
       onClose={!isLoading ? onClose : () => undefined}
       size="lg"
       className="max-w-3xl flex flex-col overflow-hidden bg-[var(--bready-surface)]"
@@ -146,6 +148,7 @@ const SelectPreparationModal: React.FC<SelectPreparationModalProps> = ({
         variants={containerVariants}
         initial="hidden"
         animate="visible"
+        exit="exit"
         className="relative p-2"
       >
         <motion.div variants={itemVariants} className="mb-4 text-center relative">

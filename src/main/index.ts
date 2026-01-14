@@ -12,6 +12,9 @@ import {
 import { registerCleanup, runCleanup } from './utils/cleanup'
 import { shortcutService } from './services/shortcut-service'
 import { getFloatingWindow } from './window-manager'
+import { createLogger } from './utils/logging'
+
+const logger = createLogger('main')
 
 // 加载环境变量（支持开发和生产环境）
 const envPaths = [
@@ -23,7 +26,7 @@ const envPaths = [
 for (const envPath of envPaths) {
   const result = config({ path: envPath, override: false })
   if (result.parsed) {
-    console.log('✅ 成功加载环境变量:', envPath)
+    logger.info('成功加载环境变量', { path: envPath })
     break // 找到第一个就停止
   }
 }
@@ -80,7 +83,7 @@ app.whenReady().then(async () => {
     const { window: mainWindowInstance, metrics } = await optimizedStartup(createWindow)
 
     if (debugStartup) {
-      console.log('🚀 应用启动性能报告:', metrics)
+      logger.debug('应用启动性能报告', { metrics })
     }
 
     // 设置主窗口引用到音频管理器
@@ -106,7 +109,7 @@ app.whenReady().then(async () => {
     // 监听内存事件
     memoryOptimizer.on('warning-memory', (metrics) => {
       if (shouldLogMemory) {
-        console.warn('⚠️ 内存使用警告:', metrics)
+        logger.warn('内存使用警告', { metrics })
       }
       // 检查主窗口是否仍然存在且未被销毁
       if (mainWindowInstance && !mainWindowInstance.isDestroyed()) {
@@ -116,7 +119,7 @@ app.whenReady().then(async () => {
 
     memoryOptimizer.on('critical-memory', (metrics) => {
       if (shouldLogMemory) {
-        console.error('🚨 内存使用严重超标:', metrics)
+        logger.error('内存使用严重超标', { metrics })
       }
       // 检查主窗口是否仍然存在且未被销毁
       if (mainWindowInstance && !mainWindowInstance.isDestroyed()) {
@@ -131,16 +134,16 @@ app.whenReady().then(async () => {
         // 移除所有监听器避免内存泄漏
         memoryOptimizer.removeAllListeners()
         if (process.env.DEBUG_MEMORY === '1') {
-          console.log('✅ 内存优化器已清理')
+          logger.info('内存优化器已清理')
         }
       } catch (error) {
-        console.error('❌ 清理内存优化器失败:', error)
+        logger.error('清理内存优化器失败', { error })
       }
     }
 
     registerCleanup(cleanupMemoryOptimizer)
   } catch (error) {
-    console.error('❌ 优化启动失败，回退到标准启动:', error)
+    logger.error('优化启动失败，回退到标准启动', { error })
 
     // 创建主窗口
     const mainWindow = createWindow()

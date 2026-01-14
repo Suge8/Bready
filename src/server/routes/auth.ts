@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { randomInt, randomBytes, createHash } from 'crypto'
-import { AuthService, query, pool } from '../services/database'
+import { AuthService } from '../services/database'
 import { sendSms } from '../services/sms'
 import { sendPasswordResetEmail, sendVerificationEmail } from '../services/email-service'
 import {
@@ -471,22 +471,17 @@ router.post('/forgot-password', async (req, res) => {
       return
     }
 
-    const userResult = await query('SELECT id FROM user_profiles WHERE email = $1', [email])
-    if (userResult.rows.length === 0) {
+    const userId = await AuthService.getUserIdByEmail(email)
+    if (!userId) {
       res.json({ success: true })
       return
     }
 
-    const userId = userResult.rows[0].id
     const token = randomBytes(32).toString('hex')
     const tokenHash = createHash('sha256').update(token).digest('hex')
     const expiresAt = new Date(Date.now() + PASSWORD_RESET_TTL_MS)
 
-    await query('DELETE FROM password_reset_tokens WHERE user_id = $1', [userId])
-    await query(
-      'INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES ($1, $2, $3)',
-      [userId, tokenHash, expiresAt],
-    )
+    await AuthService.createPasswordResetToken(userId, tokenHash, expiresAt)
 
     const baseUrl = process.env.APP_BASE_URL || `http://localhost:${process.env.PORT || 3001}`
     const emailResult = await sendPasswordResetEmail(email, token, baseUrl)
@@ -515,43 +510,14 @@ router.post('/reset-password', async (req, res) => {
     }
 
     const tokenHash = createHash('sha256').update(token).digest('hex')
-    const client = await pool.connect()
+    const success = await AuthService.resetPasswordWithToken(tokenHash, password)
 
-    try {
-      await client.query('BEGIN')
-
-      const tokenResult = await client.query(
-        `SELECT user_id FROM password_reset_tokens 
-         WHERE token = $1 AND expires_at > NOW() AND used_at IS NULL`,
-        [tokenHash],
-      )
-
-      if (tokenResult.rows.length === 0) {
-        await client.query('ROLLBACK')
-        res.status(400).json({ error: '链接已失效或已被使用，请重新申请' })
-        return
-      }
-
-      const userId = tokenResult.rows[0].user_id
-      const passwordHash = await AuthService.hashPassword(password)
-
-      await client.query(
-        'UPDATE user_profiles SET password_hash = $2, updated_at = NOW() WHERE id = $1',
-        [userId, passwordHash],
-      )
-      await client.query('UPDATE password_reset_tokens SET used_at = NOW() WHERE token = $1', [
-        tokenHash,
-      ])
-      await client.query('DELETE FROM user_sessions WHERE user_id = $1', [userId])
-
-      await client.query('COMMIT')
-      res.json({ success: true })
-    } catch (error) {
-      await client.query('ROLLBACK')
-      throw error
-    } finally {
-      client.release()
+    if (!success) {
+      res.status(400).json({ error: '链接已失效或已被使用，请重新申请' })
+      return
     }
+
+    res.json({ success: true })
   } catch (error: any) {
     console.error('Reset password error:', error)
     res.status(500).json({ error: '服务器错误，请稍后重试' })

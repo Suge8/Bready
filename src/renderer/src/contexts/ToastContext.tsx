@@ -56,7 +56,11 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
     const id = Math.random().toString(36).substring(2, 9)
     const effectiveDuration = duration ?? (type === 'error' ? 5000 : 3000)
 
-    setToasts((prev) => [...prev, { id, message, type, duration: effectiveDuration }])
+    setToasts((prev) => {
+      const hasSameToast = prev.some((t) => t.message === message && t.type === type)
+      if (hasSameToast) return prev
+      return [...prev, { id, message, type, duration: effectiveDuration }]
+    })
   }, [])
 
   const removeToast = useCallback((id: string) => {

@@ -170,6 +170,7 @@ const MainPage: React.FC<MainPageProps> = ({
 
   const [isEnteringMode, setIsEnteringMode] = useState(false)
   const [viewingPreparation, setViewingPreparation] = useState<Preparation | null>(null)
+  const [lastViewedPreparation, setLastViewedPreparation] = useState<Preparation | null>(null)
 
   const [editingPreparation, setEditingPreparation] = useState<Preparation | null | undefined>(
     undefined,
@@ -744,83 +745,76 @@ const MainPage: React.FC<MainPageProps> = ({
         </div>
       </main>
 
-      <AnimatePresence>
-        {showSelectModal && (
-          <SelectPreparationModal
-            preparations={preparations}
-            isLoading={isEnteringMode}
-            onClose={() => !isEnteringMode && setShowSelectModal(false)}
-            onSelect={async (preparation, language, purpose) => {
-              if ((profile?.remaining_interview_minutes ?? 0) <= 0) {
-                showToast(t('alerts.noRemainingTime'), 'error')
+      <SelectPreparationModal
+        isOpen={showSelectModal}
+        preparations={preparations}
+        isLoading={isEnteringMode}
+        onClose={() => !isEnteringMode && setShowSelectModal(false)}
+        onSelect={async (preparation, language, purpose) => {
+          if ((profile?.remaining_interview_minutes ?? 0) <= 0) {
+            showToast(t('alerts.noRemainingTime'), 'error')
+            return
+          }
+
+          setIsEnteringMode(true)
+          if (preparation) {
+            localStorage.setItem('bready-selected-preparation', JSON.stringify(preparation))
+          } else {
+            localStorage.removeItem('bready-selected-preparation')
+          }
+          localStorage.setItem('bready-selected-language', language)
+          localStorage.setItem('bready-selected-purpose', purpose)
+
+          try {
+            if (window.bready) {
+              const permissions = await window.bready.checkPermissions()
+              const corePermissionsGranted =
+                permissions.screenRecording.granted && permissions.microphone.granted
+
+              if (!corePermissionsGranted) {
+                setPendingCollaboration({ preparation, language, purpose })
+                setShowPermissionsSetup(true)
+                setShowSelectModal(false)
+                setIsEnteringMode(false)
                 return
               }
 
-              setIsEnteringMode(true)
-              if (preparation) {
-                localStorage.setItem('bready-selected-preparation', JSON.stringify(preparation))
-              } else {
-                localStorage.removeItem('bready-selected-preparation')
-              }
-              localStorage.setItem('bready-selected-language', language)
-              localStorage.setItem('bready-selected-purpose', purpose)
-
-              try {
-                if (window.bready) {
-                  const permissions = await window.bready.checkPermissions()
-                  const corePermissionsGranted =
-                    permissions.screenRecording.granted && permissions.microphone.granted
-
-                  if (!corePermissionsGranted) {
-                    setPendingCollaboration({ preparation, language, purpose })
-                    setShowPermissionsSetup(true)
-                    setShowSelectModal(false)
-                    setIsEnteringMode(false)
-                    return
-                  }
-
-                  const aiStatus = await window.bready.checkAiReady()
-                  if (!aiStatus.ready) {
-                    const isAdmin =
-                      profile?.role === 'admin' ||
-                      profile?.user_level === '管理' ||
-                      profile?.user_level === '超级'
-                    showToast(
-                      isAdmin ? t('alerts.aiNotConfigured') : t('alerts.serverError'),
-                      'error',
-                    )
-                    setIsEnteringMode(false)
-                    return
-                  }
-
-                  const success = await window.bready.enterCollaborationMode()
-                  if (!success) throw new Error('Failed to enter collaboration mode')
-                } else {
-                  console.log('🌐 Running in browser mode - skipping window management')
-                }
-
-                await new Promise((resolve) => setTimeout(resolve, 300))
-                navigate('/collaboration')
-                setShowSelectModal(false)
+              const aiStatus = await window.bready.checkAiReady()
+              if (!aiStatus.ready) {
+                const isAdmin =
+                  profile?.role === 'admin' ||
+                  profile?.user_level === '管理' ||
+                  profile?.user_level === '超级'
+                showToast(isAdmin ? t('alerts.aiNotConfigured') : t('alerts.serverError'), 'error')
                 setIsEnteringMode(false)
-              } catch (error) {
-                console.error('Failed to enter collaboration mode:', error)
-                alert(t('alerts.startCollabFailed'))
-                setIsEnteringMode(false)
+                return
               }
-            }}
-          />
-        )}
-      </AnimatePresence>
 
-      {showAllPreparationsModal && (
-        <AllPreparationsModal
-          preparations={filteredPreparations}
-          onClose={() => setShowAllPreparationsModal(false)}
-          onDelete={handleDeletePreparation}
-          onView={(preparation) => setViewingPreparation(preparation)}
-        />
-      )}
+              const success = await window.bready.enterCollaborationMode()
+              if (!success) throw new Error('Failed to enter collaboration mode')
+            } else {
+              console.log('🌐 Running in browser mode - skipping window management')
+            }
+
+            await new Promise((resolve) => setTimeout(resolve, 300))
+            navigate('/collaboration')
+            setShowSelectModal(false)
+            setIsEnteringMode(false)
+          } catch (error) {
+            console.error('Failed to enter collaboration mode:', error)
+            alert(t('alerts.startCollabFailed'))
+            setIsEnteringMode(false)
+          }
+        }}
+      />
+
+      <AllPreparationsModal
+        isOpen={showAllPreparationsModal}
+        preparations={filteredPreparations}
+        onClose={() => setShowAllPreparationsModal(false)}
+        onDelete={handleDeletePreparation}
+        onView={(preparation) => setViewingPreparation(preparation)}
+      />
 
       <UserProfileModal
         isOpen={showUserProfileModal}
@@ -875,13 +869,17 @@ const MainPage: React.FC<MainPageProps> = ({
         />
       )}
 
-      {viewingPreparation && (
+      {(viewingPreparation || lastViewedPreparation) && (
         <PreparationDetailModal
-          preparation={viewingPreparation}
+          isOpen={!!viewingPreparation}
+          preparation={(viewingPreparation || lastViewedPreparation)!}
           preparations={preparations}
           setPreparations={setPreparations}
           onReloadData={onReloadData}
-          onClose={() => setViewingPreparation(null)}
+          onClose={() => {
+            setLastViewedPreparation(viewingPreparation)
+            setViewingPreparation(null)
+          }}
           onEdit={() => {
             setEditingPreparation(viewingPreparation)
             setViewingPreparation(null)

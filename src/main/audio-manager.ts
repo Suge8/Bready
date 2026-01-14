@@ -11,8 +11,6 @@ import type { AudioMode, AudioStatus } from '../shared/ipc'
 // 状态变量
 let systemAudioProc: ChildProcess | null = null
 let mainWindow: BrowserWindow | null = null
-let lastSystemNonSilentAt = 0
-let hasSystemSpeech = false
 
 // 调试标志
 const debugAudio = process.env.DEBUG_AUDIO === '1'
@@ -89,22 +87,6 @@ function sendAudioToAI(base64Data: string, mimeType?: string): void {
   } catch (error) {
     log('error', '发送音频到 AI 服务失败:', error)
   }
-}
-
-function isLikelySilence(buffer: Buffer, threshold = 200): boolean {
-  const sampleCount = Math.floor(buffer.length / 2)
-  if (sampleCount === 0) return true
-  const view = new Int16Array(buffer.buffer, buffer.byteOffset, sampleCount)
-  const stride = 8
-  let silent = 0
-  let checked = 0
-  for (let i = 0; i < sampleCount; i += stride) {
-    checked++
-    if (Math.abs(view[i]) < threshold) {
-      silent++
-    }
-  }
-  return silent / checked > 0.8
 }
 
 // 辅助函数

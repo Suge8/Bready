@@ -10,10 +10,8 @@ import ErrorBoundary from './components/ErrorBoundary'
 
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { preparationService, type Preparation } from './lib/api-client'
-import { Volume2, Mic, CheckCircle } from 'lucide-react'
 import { ThemeProvider } from './components/ui/theme-provider'
-import { Button } from './components/ui/button'
-import { I18nProvider, useI18n } from './contexts/I18nContext'
+import { I18nProvider } from './contexts/I18nContext'
 import { ToastProvider } from './contexts/ToastContext'
 
 // 声明全局类型
@@ -175,14 +173,8 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
 function AppContent() {
   const { user, profile, completeOnboarding } = useAuth()
-  const { t } = useI18n()
   const [preparations, setPreparations] = useState<Preparation[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [showPermissionGuide, setShowPermissionGuide] = useState(false)
-  const [permissionStatus, setPermissionStatus] = useState({
-    screenRecording: false,
-    microphone: false,
-  })
 
   const isFirstTime = !profile?.has_completed_onboarding
 
@@ -209,37 +201,9 @@ function AppContent() {
     }
   }
 
-  // 检查系统权限
-  const checkSystemPermissions = async () => {
-    if (!window.bready) return
-
-    try {
-      const permissions = await window.bready.checkPermissions()
-      console.log('🔐 权限检查结果:', permissions)
-
-      // 更新权限状态
-      setPermissionStatus({
-        screenRecording: permissions.screenRecording?.granted || false,
-        microphone: permissions.microphone?.granted || false,
-      })
-
-      // 检查是否所有必要权限都已授予
-      const allPermissionsGranted =
-        permissions.screenRecording?.granted && permissions.microphone?.granted
-
-      // 只有当权限未全部授予时才显示引导
-      if (!allPermissionsGranted) {
-        setShowPermissionGuide(true)
-      }
-    } catch (error) {
-      console.error('权限检查失败:', error)
-    }
-  }
-
   useEffect(() => {
     if (user) {
       loadPreparations()
-      checkSystemPermissions()
     } else {
       setIsLoading(false)
     }
@@ -310,109 +274,6 @@ function AppContent() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>
-
-        {/* 权限引导模态框 */}
-        {showPermissionGuide && !isFirstTime && (
-          <div
-            className="fixed inset-0 bg-white/30 dark:bg-black/30 backdrop-blur-md flex items-center justify-center z-[9999] p-4 cursor-pointer"
-            onClick={() => setShowPermissionGuide(false)}
-          >
-            <div
-              className="bg-[var(--bready-surface)] border border-[var(--bready-border)] rounded-2xl w-full max-w-md shadow-2xl cursor-auto"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="p-6">
-                <div className="mb-6">
-                  <h2 className="text-xl font-bold text-black dark:text-white">
-                    {t('permissionsGuide.title')}
-                  </h2>
-                </div>
-
-                <div className="mb-6">
-                  <p className="text-gray-600 dark:text-gray-400 mb-4">
-                    {t('permissionsGuide.description')}
-                  </p>
-
-                  <div className="space-y-3">
-                    {/* 屏幕录制权限卡片 - 可点击 */}
-                    <div
-                      onClick={async () => {
-                        if (window.bready) {
-                          await window.bready.openSystemPreferences('security')
-                        }
-                      }}
-                      className="bg-[var(--bready-surface-2)] rounded-lg p-4 cursor-pointer hover:bg-[var(--bready-surface-3)] transition-colors"
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center space-x-2">
-                          <Volume2 className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                          <span className="font-medium text-black dark:text-white">
-                            {t('permissionsGuide.screen')}
-                          </span>
-                        </div>
-                        <CheckCircle
-                          className={`w-5 h-5 ${
-                            permissionStatus.screenRecording
-                              ? 'text-green-500 dark:text-green-400'
-                              : 'text-gray-400'
-                          }`}
-                        />
-                      </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {t('permissionsGuide.screenDesc')}
-                      </p>
-                    </div>
-
-                    {/* 麦克风权限卡片 - 可点击 */}
-                    <div
-                      onClick={async () => {
-                        if (window.bready) {
-                          await window.bready.openSystemPreferences('security')
-                        }
-                      }}
-                      className="bg-[var(--bready-surface-2)] rounded-lg p-4 cursor-pointer hover:bg-[var(--bready-surface-3)] transition-colors"
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center space-x-2">
-                          <Mic className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                          <span className="font-medium text-black dark:text-white">
-                            {t('permissionsGuide.mic')}
-                          </span>
-                        </div>
-                        <CheckCircle
-                          className={`w-5 h-5 ${
-                            permissionStatus.microphone
-                              ? 'text-green-500 dark:text-green-400'
-                              : 'text-gray-400'
-                          }`}
-                        />
-                      </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {t('permissionsGuide.micDesc')}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex flex-col space-y-3">
-                  <Button
-                    onClick={() => {
-                      setShowPermissionGuide(false)
-                    }}
-                    variant="outline"
-                    className="w-full border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 cursor-pointer"
-                  >
-                    {t('permissionsGuide.later')}
-                  </Button>
-                </div>
-
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-4 text-center">
-                  {t('permissionsGuide.note')}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
       </Router>
     </ErrorBoundary>
   )

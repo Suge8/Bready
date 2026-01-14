@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 import { resolve } from 'path'
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react()] as any,
 
   test: {
     // 测试环境
@@ -52,14 +52,18 @@ export default defineConfig({
     testTimeout: 10000,
 
     // 并发执行
-    threads: true,
-    maxThreads: 4,
+    pool: 'threads',
+    poolOptions: {
+      threads: {
+        maxThreads: 4,
+      },
+    },
 
     // 监听模式
     watch: false,
 
     // 报告器
-    reporter: ['verbose', 'json', 'html'],
+    reporters: ['verbose', 'json', 'html'],
   },
 
   // 路径解析

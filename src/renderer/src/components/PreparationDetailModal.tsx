@@ -20,6 +20,7 @@ import { useTheme } from './ui/theme-provider'
 import { Modal } from './ui/Modal'
 
 interface PreparationDetailModalProps {
+  isOpen: boolean
   preparation: Preparation
   preparations: Preparation[]
   setPreparations: React.Dispatch<React.SetStateAction<Preparation[]>>
@@ -29,6 +30,7 @@ interface PreparationDetailModalProps {
 }
 
 const PreparationDetailModal: React.FC<PreparationDetailModalProps> = ({
+  isOpen,
   preparation,
   preparations,
   setPreparations,
@@ -342,7 +344,7 @@ const PreparationDetailModal: React.FC<PreparationDetailModalProps> = ({
 
   return (
     <Modal
-      isOpen
+      isOpen={isOpen}
       onClose={onClose}
       size="xl"
       className="p-0 w-[90vw] max-w-[1100px] max-h-[88vh] relative flex flex-col"
@@ -542,7 +544,7 @@ const PreparationDetailModal: React.FC<PreparationDetailModalProps> = ({
                     </div>
                     <ul className="space-y-2 flex-1 overflow-y-auto">
                       {config.data.length > 0 ? (
-                        config.data.map((item: string, idx: number) => (
+                        [...new Set(config.data)].map((item: string, idx: number) => (
                           <motion.li
                             key={idx}
                             initial={{ opacity: 0, x: -8 }}

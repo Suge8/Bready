@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { X, Settings, Volume2, Send, RefreshCw, Wifi, WifiOff, Trash2 } from 'lucide-react'
+import DOMPurify from 'dompurify'
 import { useI18n } from '../contexts/I18nContext'
 
 const FloatingWindow: React.FC = () => {
@@ -310,7 +311,11 @@ const FloatingWindow: React.FC = () => {
                     }`}
                   >
                     {entry.type === 'ai' ? (
-                      <div dangerouslySetInnerHTML={{ __html: entry.content }} />
+                      <div
+                        dangerouslySetInnerHTML={{
+                          __html: DOMPurify.sanitize(entry.content),
+                        }}
+                      />
                     ) : (
                       <p>{entry.content}</p>
                     )}
@@ -325,7 +330,11 @@ const FloatingWindow: React.FC = () => {
                     {t('floating.labels.aiAssistant')} • {t('floating.labels.responding')}
                   </div>
                   <div className="p-2 rounded-lg text-sm bg-vercel-gray-100 text-vercel-black">
-                    <div dangerouslySetInnerHTML={{ __html: aiResponse }} />
+                    <div
+                      dangerouslySetInnerHTML={{
+                        __html: DOMPurify.sanitize(aiResponse),
+                      }}
+                    />
                   </div>
                 </div>
               )}

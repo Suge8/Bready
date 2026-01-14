@@ -61,7 +61,6 @@ class DoubaoService {
   private lastFinalTranscriptionAt = 0
   private recentFinalTranscriptions: { text: string; at: number }[] = []
   private suppressCloseEvent = false
-  private pendingAsrReconnect = false // 标记是否需要在下一个音频包时重连 ASR
   private audioReceiveCount = 0 // 调试用：记录收到的音频包数量
   private onMessageToRenderer: (event: string, data?: any) => void
   private asrAppId = ''
@@ -113,15 +112,6 @@ class DoubaoService {
       log('error', '加载豆包配置失败:', error)
       return { ok: false, error: '加载 AI 配置失败，请检查数据库连接' }
     }
-  }
-
-  private mapLanguage(language: string): string {
-    if (!language) return 'zh-CN'
-    const normalized = language.toLowerCase()
-    if (normalized.startsWith('cmn') || normalized.startsWith('zh')) {
-      return 'zh-CN'
-    }
-    return language
   }
 
   private buildFrame(params: {
@@ -371,41 +361,6 @@ class DoubaoService {
     this.recentFinalTranscriptions.push({ text, at: now })
   }
 
-  private mergeTranscription(current: string, incoming: string): string {
-    if (!current) return incoming
-    if (!incoming) return current
-
-    // 完全相同
-    if (current === incoming) return current
-
-    // incoming 包含 current（incoming 是更完整的版本）
-    if (incoming.includes(current)) return incoming
-
-    // current 包含 incoming（current 已经更完整）
-    if (current.includes(incoming)) return current
-
-    // incoming 以 current 开头（incoming 是 current 的扩展）
-    if (incoming.startsWith(current)) return incoming
-
-    // current 以 incoming 开头（current 是 incoming 的扩展，保持 current）
-    if (current.startsWith(incoming)) return current
-
-    // 检查 current 末尾是否与 incoming 开头有重叠
-    // 例如: current="...然后", incoming="然后讲一讲" → 结果应该是 "...然后讲一讲"
-    // 从长到短尝试找重叠
-    const maxOverlap = Math.min(current.length, incoming.length)
-    for (let i = maxOverlap; i >= 1; i--) {
-      const suffix = current.slice(-i)
-      if (incoming.startsWith(suffix)) {
-        // 找到重叠，用 incoming 替换重叠部分
-        return current.slice(0, -i) + incoming
-      }
-    }
-
-    // 没有任何重叠关系，说明是全新的 utterance，追加
-    return current + incoming
-  }
-
   // 计算两个字符串的相似度（基于最长公共子序列）
   private calculateSimilarity(a: string, b: string): number {
     if (!a || !b) return 0
@@ -438,7 +393,13 @@ class DoubaoService {
   private async finalizeCurrentTranscription(
     reason: 'debounce' | 'final' | 'silence',
   ): Promise<void> {
-    log('debug', '🔍 [DEBUG] finalizeCurrentTranscription 被调用 - reason:', reason, 'isProcessing:', this.isProcessingVoiceInput)
+    log(
+      'debug',
+      '🔍 [DEBUG] finalizeCurrentTranscription 被调用 - reason:',
+      reason,
+      'isProcessing:',
+      this.isProcessingVoiceInput,
+    )
 
     if (this.isProcessingVoiceInput) {
       log('debug', '🔍 [DEBUG] 已经在处理中，跳过')
@@ -478,7 +439,13 @@ class DoubaoService {
     // bigmodel_async 模式：不需要发送负包，连接持续使用
     const reasonTag = reason === 'silence' ? '(静音触发)' : reason === 'final' ? '(VAD判停)' : ''
     log('info', `🎤 语音转录完成${reasonTag}，调用文本模型:`, transcribedText)
-    log('debug', '🔍 [DEBUG] 完整的transcribedText长度:', transcribedText.length, '内容:', transcribedText)
+    log(
+      'debug',
+      '🔍 [DEBUG] 完整的transcribedText长度:',
+      transcribedText.length,
+      '内容:',
+      transcribedText,
+    )
     this.onMessageToRenderer('transcription-complete', transcribedText)
 
     try {
@@ -496,10 +463,22 @@ class DoubaoService {
     }
 
     log('info', '📝 收到豆包转录结果:', trimmed.substring(0, 50), isFinal ? '(definite)' : '')
-    log('debug', '🔍 [DEBUG] handleTranscriptionUpdate - 传入text长度:', trimmed.length, '当前currentTranscription长度:', this.currentTranscription.length)
+    log(
+      'debug',
+      '🔍 [DEBUG] handleTranscriptionUpdate - 传入text长度:',
+      trimmed.length,
+      '当前currentTranscription长度:',
+      this.currentTranscription.length,
+    )
 
     if (trimmed !== this.currentTranscription) {
-      log('debug', '🔍 [DEBUG] 更新currentTranscription - 旧值:', this.currentTranscription.substring(0, 30), '新值:', trimmed.substring(0, 30))
+      log(
+        'debug',
+        '🔍 [DEBUG] 更新currentTranscription - 旧值:',
+        this.currentTranscription.substring(0, 30),
+        '新值:',
+        trimmed.substring(0, 30),
+      )
       this.currentTranscription = trimmed
       this.onMessageToRenderer('transcription-update', this.currentTranscription)
     }
@@ -510,44 +489,14 @@ class DoubaoService {
         log('debug', '🔍 [DEBUG] 清除旧的防抖计时器')
         clearTimeout(this.transcriptionDebounceTimer)
       }
-      log('debug', '🔍 [DEBUG] 启动新的防抖计时器，当前currentTranscription:', this.currentTranscription.substring(0, 50))
+      log(
+        'debug',
+        '🔍 [DEBUG] 启动新的防抖计时器，当前currentTranscription:',
+        this.currentTranscription.substring(0, 50),
+      )
       this.transcriptionDebounceTimer = setTimeout(() => {
         void this.finalizeCurrentTranscription('final')
       }, FINAL_DEBOUNCE_MS)
-    }
-  }
-
-  /**
-   * 处理收到的转录结果（发送给文本模型）
-   */
-  private async processReceivedTranscription(transcribedText: string): Promise<void> {
-    const now = Date.now()
-    if (
-      transcribedText === this.lastFinalTranscription &&
-      now - this.lastFinalTranscriptionAt < 3000
-    ) {
-      this.currentTranscription = ''
-      this.isProcessingVoiceInput = false
-      return
-    }
-
-    this.lastFinalTranscription = transcribedText
-    this.lastFinalTranscriptionAt = now
-    this.recordFinalTranscription(transcribedText)
-    this.currentTranscription = ''
-
-    log('info', '🎤 语音转录完成(静音触发)，调用文本模型:', transcribedText.substring(0, 50))
-    this.onMessageToRenderer('transcription-complete', transcribedText)
-
-    try {
-      await this.generateTextResponse(transcribedText)
-    } finally {
-      this.isProcessingVoiceInput = false
-      // bigmodel_nostream: 只有当连接未就绪时才标记需要重连
-      // 如果在生成响应期间连接已经被重建，就不需要再次重连
-      if (!this.sessionReady && !this.isInitializingSession) {
-        this.pendingAsrReconnect = true
-      }
     }
   }
 
@@ -559,32 +508,6 @@ class DoubaoService {
   finalizeTranscriptionBySilence(): void {
     log('warn', '⚠️ finalizeTranscriptionBySilence 在 bigmodel_async 模式下不应被调用')
     // bigmodel_async 模式下，服务端 VAD 会自动判停，不需要客户端发送负包
-  }
-
-  /**
-   * 发送结束包（负包）给豆包，表示这句话结束
-   * bigmodel_nostream 模式下，发送负包后服务端会返回最终识别结果
-   */
-  private sendEndOfSpeechPacket(): void {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      return
-    }
-
-    try {
-      // flags = 0x2 表示这是最后一包（负包）
-      const emptyPayload = gzipSync(Buffer.alloc(0))
-      const frame = this.buildFrame({
-        messageType: 0x2,
-        flags: 0x2,
-        serialization: 0x0,
-        compression: 0x1,
-        payload: emptyPayload,
-      })
-      this.ws.send(frame)
-      log('info', '📤 已发送结束包给豆包 ASR')
-    } catch (error) {
-      log('warn', '发送结束包失败:', error)
-    }
   }
 
   private async connectAsr(): Promise<boolean> {
@@ -1072,43 +995,6 @@ class DoubaoService {
 
   sendAudio(base64Data: string, mimeType = 'audio/pcm;rate=24000'): void {
     return this.sendAudioToGemini(base64Data, mimeType)
-  }
-
-  /**
-   * 为新一句话重新建立 ASR 连接
-   * bigmodel_nostream 模式下，每句话是一个独立的 ASR 会话
-   */
-  private async reconnectForNewSentence(): Promise<void> {
-    if (this.isInitializingSession) {
-      return
-    }
-    this.isInitializingSession = true
-
-    // 清理旧连接
-    if (this.ws) {
-      this.suppressCloseEvent = true
-      try {
-        this.ws.close()
-      } catch {
-        // ignore
-      }
-      this.ws = null
-    }
-    this.sessionReady = false
-    this.currentTranscription = ''
-    // 清除 pendingAsrReconnect，避免重复重连
-    this.pendingAsrReconnect = false
-
-    // 重新建立连接
-    const connected = await this.connectAsr()
-    this.isInitializingSession = false
-
-    if (connected) {
-      log('info', '✅ 新句子 ASR 连接已建立')
-    } else {
-      log('warn', '⚠️ 新句子 ASR 连接失败')
-      this.onMessageToRenderer('session-error', 'ASR 重连失败，请检查网络')
-    }
   }
 
   async analyzePreparation(

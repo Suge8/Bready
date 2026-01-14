@@ -67,7 +67,7 @@ export const Modal: React.FC<ModalProps> = ({
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            exit={{ opacity: 0, transition: { duration: 0.4 } }}
             transition={{ duration: 0.35, ease: 'easeOut' }}
             className="fixed inset-0 bg-black/40 cursor-pointer"
             onClick={handleOverlayClick}
@@ -77,7 +77,13 @@ export const Modal: React.FC<ModalProps> = ({
             data-modal
             initial={{ opacity: 0, scale: 0.92, y: 24 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.88, y: 40 }}
+            exit={{
+              opacity: 0,
+              scale: 0.92,
+              y: 60,
+              rotate: 2,
+              transition: { duration: 0.4, ease: [0.4, 0, 0.2, 1] },
+            }}
             transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
             className={cn(
               'relative w-full flex flex-col rounded-2xl border border-[var(--bready-border)] bg-[var(--bready-surface)] shadow-2xl cursor-auto p-6 max-h-[90vh]',

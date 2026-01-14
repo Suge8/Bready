@@ -92,59 +92,6 @@ ipcMain.handle('manual-reconnect', async () => {
 
 // 优化的音频内容发送处理器
 let audioContentCount = 0
-let micHasSpeech = false // 麦克风模式：是否检测到语音
-let micLastNonSilentAt = 0 // 麦克风模式：最后非静音时间
-
-// RMS 能量检测的滑动窗口
-const rmsHistory: number[] = []
-const RMS_WINDOW_SIZE = 10 // 保留最近 10 个 RMS 值（约 1 秒）
-const MIN_RMS_FOR_SPEECH = 100 // 最低 RMS 阈值，低于这个值肯定是静音
-
-// 计算音频块的 RMS 值
-function calculateRMSFromBase64(base64Data: string): number {
-  try {
-    const buffer = Buffer.from(base64Data, 'base64')
-    const sampleCount = Math.floor(buffer.length / 2)
-    if (sampleCount === 0) return 0
-
-    const view = new Int16Array(buffer.buffer, buffer.byteOffset, sampleCount)
-    let sumOfSquares = 0
-    const stride = 4 // 采样以提高性能
-
-    for (let i = 0; i < sampleCount; i += stride) {
-      sumOfSquares += view[i] * view[i]
-    }
-
-    return Math.sqrt(sumOfSquares / (sampleCount / stride))
-  } catch {
-    return 0
-  }
-}
-
-// 判断是否停止说话（基于 RMS 能量的动态检测）
-function isLikelySpeechEnded(rms: number): boolean {
-  // 更新 RMS 历史记录
-  rmsHistory.push(rms)
-  if (rmsHistory.length > RMS_WINDOW_SIZE) {
-    rmsHistory.shift()
-  }
-
-  // 需要足够的历史数据
-  if (rmsHistory.length < 3) {
-    return false
-  }
-
-  // 计算平均 RMS
-  const avgRms = rmsHistory.reduce((a, b) => a + b, 0) / rmsHistory.length
-
-  // 如果平均 RMS 太低，说明一直没有语音，不触发结束
-  if (avgRms < MIN_RMS_FOR_SPEECH) {
-    return false
-  }
-
-  // 如果当前 RMS 低于平均值的 30%，判断为停止说话
-  return rms < avgRms * 0.3
-}
 
 try {
   ipcMain.handle('send-audio-content-optimized', async (event, { data, mimeType }) => {
@@ -164,7 +111,6 @@ try {
         return { success: false, error: '无效的音频数据' }
       }
 
-      const provider = getAiProvider()
       const service = getAiService()
       if (!service) {
         return { success: false, error: 'AI 服务未初始化' }

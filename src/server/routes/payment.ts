@@ -1,40 +1,42 @@
 import { Router } from 'express'
-import { query } from '../services/database'
+import { PaymentService } from '../services/database'
 import { authMiddleware, type AuthenticatedRequest } from '../middleware/auth'
 import { randomUUID } from 'crypto'
 
 const router = Router()
+
+function generateOrderNo(): string {
+  return `PAY${Date.now()}${randomUUID().slice(0, 8).toUpperCase()}`
+}
+
+function calculateDiscount(userLevel: string): number {
+  if (userLevel === '螺丝钉') return 0.9
+  if (userLevel === '大牛') return 0.8
+  return 1.0
+}
 
 router.post('/create-order', authMiddleware, async (req: AuthenticatedRequest, res) => {
   try {
     const { packageId, channel } = req.body
     const userId = req.user!.id
 
-    const pkgResult = await query(
-      'SELECT * FROM membership_packages WHERE id = $1 AND is_active = true',
-      [packageId],
-    )
-    if (pkgResult.rows.length === 0) {
+    const pkg = await PaymentService.getActivePackage(packageId)
+    if (!pkg) {
       res.status(404).json({ success: false, error: '套餐不存在' })
       return
     }
 
-    const pkg = pkgResult.rows[0]
-    const orderNo = `PAY${Date.now()}${randomUUID().slice(0, 8).toUpperCase()}`
-
-    await query(
-      `INSERT INTO payment_orders 
-       (order_no, user_id, package_id, amount, status, payment_provider, payment_channel) 
-       VALUES ($1, $2, $3, $4, 'pending', $5, $6)`,
-      [orderNo, userId, packageId, pkg.price, 'epay', channel || 'alipay'],
+    const orderNo = generateOrderNo()
+    await PaymentService.createOrder(
+      orderNo,
+      userId,
+      packageId,
+      pkg.price,
+      'epay',
+      channel || 'alipay',
     )
 
-    res.json({
-      success: true,
-      orderNo,
-      amount: pkg.price,
-      payUrl: `/pay/${orderNo}`,
-    })
+    res.json({ success: true, orderNo, amount: pkg.price, payUrl: `/pay/${orderNo}` })
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message })
   }
@@ -42,17 +44,12 @@ router.post('/create-order', authMiddleware, async (req: AuthenticatedRequest, r
 
 router.get('/query/:orderNo', authMiddleware, async (req: AuthenticatedRequest, res) => {
   try {
-    const result = await query(
-      'SELECT * FROM payment_orders WHERE order_no = $1 AND user_id = $2',
-      [req.params.orderNo, req.user!.id],
-    )
-
-    if (result.rows.length === 0) {
+    const order = await PaymentService.getOrderByNo(req.params.orderNo, req.user!.id)
+    if (!order) {
       res.status(404).json({ success: false, error: '订单不存在' })
       return
     }
 
-    const order = result.rows[0]
     res.json({
       success: true,
       orderNo: order.order_no,
@@ -66,16 +63,8 @@ router.get('/query/:orderNo', authMiddleware, async (req: AuthenticatedRequest, 
 
 router.get('/orders', authMiddleware, async (req: AuthenticatedRequest, res) => {
   try {
-    const result = await query(
-      `SELECT po.*, mp.name as package_name 
-       FROM payment_orders po 
-       LEFT JOIN membership_packages mp ON po.package_id = mp.id 
-       WHERE po.user_id = $1 
-       ORDER BY po.created_at DESC 
-       LIMIT 50`,
-      [req.user!.id],
-    )
-    res.json({ success: true, orders: result.rows })
+    const orders = await PaymentService.getUserOrders(req.user!.id)
+    res.json({ success: true, orders })
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message })
   }
@@ -85,40 +74,31 @@ router.post('/create-order-internal', async (req, res) => {
   try {
     const { userId, packageId, channel } = req.body
 
-    const pkgResult = await query(
-      'SELECT * FROM membership_packages WHERE id = $1 AND is_active = true',
-      [packageId],
-    )
-    if (pkgResult.rows.length === 0) {
+    const pkg = await PaymentService.getActivePackage(packageId)
+    if (!pkg) {
       res.status(404).json({ success: false, error: '套餐不存在' })
       return
     }
 
-    const userResult = await query(
-      'SELECT user_level, discount_rate FROM user_profiles WHERE id = $1',
-      [userId],
-    )
-    if (userResult.rows.length === 0) {
+    const userInfo = await PaymentService.getUserDiscountInfo(userId)
+    if (!userInfo) {
       res.status(404).json({ success: false, error: '用户不存在' })
       return
     }
 
-    const pkg = pkgResult.rows[0]
-    const user = userResult.rows[0]
-
-    let discountRate = 1.0
-    if (user.user_level === '螺丝钉') discountRate = 0.9
-    else if (user.user_level === '大牛') discountRate = 0.8
-
+    const discountRate = calculateDiscount(userInfo.user_level)
     const amount = Math.round(pkg.price * discountRate * 100) / 100
-    const orderNo = `PAY${Date.now()}${randomUUID().slice(0, 8).toUpperCase()}`
+    const orderNo = generateOrderNo()
     const expiredAt = new Date(Date.now() + 30 * 60 * 1000)
 
-    await query(
-      `INSERT INTO payment_orders 
-       (order_no, user_id, package_id, amount, status, payment_provider, payment_channel, expired_at) 
-       VALUES ($1, $2, $3, $4, 'pending', $5, $6, $7)`,
-      [orderNo, userId, packageId, amount, 'epay', channel || 'alipay', expiredAt],
+    await PaymentService.createOrder(
+      orderNo,
+      userId,
+      packageId,
+      amount,
+      'epay',
+      channel || 'alipay',
+      expiredAt,
     )
 
     res.json({ success: true, orderNo, amount, payUrl: `/pay/${orderNo}` })
@@ -129,22 +109,18 @@ router.post('/create-order-internal', async (req, res) => {
 
 router.get('/query-internal/:orderNo', async (req, res) => {
   try {
-    const result = await query('SELECT * FROM payment_orders WHERE order_no = $1', [
-      req.params.orderNo,
-    ])
-
-    if (result.rows.length === 0) {
+    const order = await PaymentService.getOrderByNo(req.params.orderNo)
+    if (!order) {
       res.status(404).json({ success: false, error: '订单不存在' })
       return
     }
 
-    const order = result.rows[0]
-
-    if (order.status === 'expired' || new Date(order.expired_at) < new Date()) {
+    if (
+      order.status === 'expired' ||
+      (order.expired_at && new Date(order.expired_at) < new Date())
+    ) {
       if (order.status !== 'expired') {
-        await query("UPDATE payment_orders SET status = 'expired' WHERE order_no = $1", [
-          req.params.orderNo,
-        ])
+        await PaymentService.updateOrderExpired(req.params.orderNo)
       }
       res.json({ success: true, orderNo: order.order_no, status: 'expired' })
       return
@@ -166,16 +142,8 @@ router.get('/query-internal/:orderNo', async (req, res) => {
 
 router.get('/orders-internal/:userId', async (req, res) => {
   try {
-    const result = await query(
-      `SELECT po.*, mp.name as package_name 
-       FROM payment_orders po 
-       LEFT JOIN membership_packages mp ON po.package_id = mp.id 
-       WHERE po.user_id = $1 
-       ORDER BY po.created_at DESC 
-       LIMIT 20`,
-      [req.params.userId],
-    )
-    res.json({ success: true, orders: result.rows })
+    const orders = await PaymentService.getUserOrders(req.params.userId, 20)
+    res.json({ success: true, orders })
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message })
   }
@@ -185,59 +153,39 @@ router.post('/process-success', async (req, res) => {
   try {
     const { orderNo, tradeNo, paidAt } = req.body
 
-    const orderResult = await query('SELECT * FROM payment_orders WHERE order_no = $1', [orderNo])
-    if (orderResult.rows.length === 0) {
+    const order = await PaymentService.getOrderByNo(orderNo)
+    if (!order) {
       res.status(404).json({ success: false, error: '订单不存在' })
       return
     }
 
-    const order = orderResult.rows[0]
     if (order.status === 'paid') {
       res.json({ success: true, message: '订单已处理' })
       return
     }
 
-    await query(
-      "UPDATE payment_orders SET status = 'paid', trade_no = $2, paid_at = $3 WHERE order_no = $1",
-      [orderNo, tradeNo, paidAt || new Date()],
-    )
+    await PaymentService.markOrderPaid(orderNo, tradeNo, paidAt || new Date())
 
-    const pkgResult = await query('SELECT * FROM membership_packages WHERE id = $1', [
-      order.package_id,
-    ])
-    if (pkgResult.rows.length === 0) {
+    const pkg = await PaymentService.getActivePackage(order.package_id)
+    if (!pkg) {
       res.json({ success: true, message: '订单已更新但套餐不存在' })
       return
     }
 
-    const pkg = pkgResult.rows[0]
     const expiresAt = new Date()
     expiresAt.setDate(expiresAt.getDate() + pkg.validity_days)
 
-    await query(
-      `INSERT INTO purchase_records 
-       (user_id, package_id, original_price, actual_price, discount_rate, interview_minutes, expires_at, status, payment_method)
-       VALUES ($1, $2, $3, $4, 1.0, $5, $6, 'completed', $7)`,
-      [
-        order.user_id,
-        order.package_id,
-        pkg.price,
-        order.amount,
-        pkg.interview_minutes,
-        expiresAt,
-        order.payment_provider,
-      ],
+    await PaymentService.createPurchaseRecord(
+      order.user_id,
+      order.package_id,
+      pkg.price,
+      order.amount,
+      pkg.interview_minutes,
+      expiresAt,
+      order.payment_provider,
     )
 
-    await query(
-      `UPDATE user_profiles SET 
-       membership_expires_at = $2,
-       remaining_interview_minutes = remaining_interview_minutes + $3,
-       total_purchased_minutes = total_purchased_minutes + $3,
-       updated_at = NOW()
-       WHERE id = $1`,
-      [order.user_id, expiresAt, pkg.interview_minutes],
-    )
+    await PaymentService.updateUserMembership(order.user_id, expiresAt, pkg.interview_minutes)
 
     res.json({ success: true })
   } catch (error: any) {

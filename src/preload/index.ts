@@ -101,8 +101,22 @@ interface BreadyAPI {
   onAudioDeviceChanged: (
     callback: (data: { deviceId: string; deviceLabel: string }) => void,
   ) => () => void
-  onPerformanceMetrics: (callback: (metrics: any) => void) => () => void
-  onCrashReport: (callback: (report: any) => void) => () => void
+  onPerformanceMetrics: (callback: (metrics: PerformanceMetrics) => void) => () => void
+  onCrashReport: (callback: (report: CrashReport) => void) => () => void
+}
+
+interface PerformanceMetrics {
+  heapUsed: number
+  heapTotal: number
+  external: number
+  rss: number
+}
+
+interface CrashReport {
+  type: string
+  message: string
+  stack?: string
+  timestamp: number
 }
 
 // 暴露给渲染进程的API
@@ -158,31 +172,32 @@ const breadyAPI: BreadyAPI = {
   setShortcut: (shortcut: string) => ipcRenderer.invoke('shortcut:set', shortcut),
 
   onStatusUpdate: (callback) => {
-    const listener = (_: any, status: string) => callback(status)
+    const listener = (_event: Electron.IpcRendererEvent, status: string) => callback(status)
     ipcRenderer.on('update-status', listener)
     return () => ipcRenderer.removeListener('update-status', listener)
   },
 
   onTranscriptionUpdate: (callback) => {
-    const listener = (_: any, text: string) => callback(text)
+    const listener = (_event: Electron.IpcRendererEvent, text: string) => callback(text)
     ipcRenderer.on('transcription-update', listener)
     return () => ipcRenderer.removeListener('transcription-update', listener)
   },
 
   onAIResponse: (callback) => {
-    const listener = (_: any, response: string) => callback(response)
+    const listener = (_event: Electron.IpcRendererEvent, response: string) => callback(response)
     ipcRenderer.on('ai-response', listener)
     return () => ipcRenderer.removeListener('ai-response', listener)
   },
 
   onAIResponseUpdate: (callback: (response: string) => void) => {
-    const listener = (_: any, response: string) => callback(response)
+    const listener = (_event: Electron.IpcRendererEvent, response: string) => callback(response)
     ipcRenderer.on('ai-response-update', listener)
     return () => ipcRenderer.removeListener('ai-response-update', listener)
   },
 
   onSessionInitializing: (callback) => {
-    const listener = (_: any, initializing: boolean) => callback(initializing)
+    const listener = (_event: Electron.IpcRendererEvent, initializing: boolean) =>
+      callback(initializing)
     ipcRenderer.on('session-initializing', listener)
     return () => ipcRenderer.removeListener('session-initializing', listener)
   },
@@ -194,7 +209,7 @@ const breadyAPI: BreadyAPI = {
   },
 
   onSessionError: (callback) => {
-    const listener = (_: any, error: string) => callback(error)
+    const listener = (_event: Electron.IpcRendererEvent, error: string) => callback(error)
     ipcRenderer.on('session-error', listener)
     return () => ipcRenderer.removeListener('session-error', listener)
   },
@@ -206,13 +221,15 @@ const breadyAPI: BreadyAPI = {
   },
 
   onAudioModeChanged: (callback: (modeInfo: AudioModeChangedPayload) => void) => {
-    const listener = (_: any, modeInfo: AudioModeChangedPayload) => callback(modeInfo)
+    const listener = (_event: Electron.IpcRendererEvent, modeInfo: AudioModeChangedPayload) =>
+      callback(modeInfo)
     ipcRenderer.on('audio-mode-changed', listener)
     return () => ipcRenderer.removeListener('audio-mode-changed', listener)
   },
 
   onContextCompressed: (callback) => {
-    const listener = (_event: any, data: ContextCompressedPayload) => callback(data)
+    const listener = (_event: Electron.IpcRendererEvent, data: ContextCompressedPayload) =>
+      callback(data)
     ipcRenderer.on('context-compressed', listener)
     return () => ipcRenderer.removeListener('context-compressed', listener)
   },
@@ -230,31 +247,37 @@ const breadyAPI: BreadyAPI = {
   },
 
   onTranscriptionComplete: (callback) => {
-    const listener = (_: any, transcription: string) => callback(transcription)
+    const listener = (_event: Electron.IpcRendererEvent, transcription: string) =>
+      callback(transcription)
     ipcRenderer.on('transcription-complete', listener)
     return () => ipcRenderer.removeListener('transcription-complete', listener)
   },
 
   onAudioResponse: (callback: (data: AudioResponsePayload) => void) => {
-    const listener = (_: any, data: any) => callback(data)
+    const listener = (_event: Electron.IpcRendererEvent, data: AudioResponsePayload) =>
+      callback(data)
     ipcRenderer.on('audio-response', listener)
     return () => ipcRenderer.removeListener('audio-response', listener)
   },
 
   onAudioDeviceChanged: (callback: (data: { deviceId: string; deviceLabel: string }) => void) => {
-    const listener = (_: any, data: { deviceId: string; deviceLabel: string }) => callback(data)
+    const listener = (
+      _event: Electron.IpcRendererEvent,
+      data: { deviceId: string; deviceLabel: string },
+    ) => callback(data)
     ipcRenderer.on('audio-device-changed', listener)
     return () => ipcRenderer.removeListener('audio-device-changed', listener)
   },
 
-  onPerformanceMetrics: (callback: (metrics: any) => void) => {
-    const listener = (_: any, metrics: any) => callback(metrics)
+  onPerformanceMetrics: (callback: (metrics: PerformanceMetrics) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, metrics: PerformanceMetrics) =>
+      callback(metrics)
     ipcRenderer.on('performance-metrics', listener)
     return () => ipcRenderer.removeListener('performance-metrics', listener)
   },
 
-  onCrashReport: (callback: (report: any) => void) => {
-    const listener = (_: any, report: any) => callback(report)
+  onCrashReport: (callback: (report: CrashReport) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, report: CrashReport) => callback(report)
     ipcRenderer.on('crash-report', listener)
     return () => ipcRenderer.removeListener('crash-report', listener)
   },
@@ -263,16 +286,16 @@ const breadyAPI: BreadyAPI = {
 // 使用contextBridge暴露API
 contextBridge.exposeInMainWorld('bready', {
   ...breadyAPI,
-  // 暴露 ipcRenderer 用于数据库操作和音频事件
   ipcRenderer: {
-    invoke: (channel: string, ...args: any[]) => ipcRenderer.invoke(channel, ...args),
-    send: (channel: string, ...args: any[]) => ipcRenderer.send(channel, ...args),
-    on: (channel: string, listener: (...args: any[]) => void) => {
-      const subscription = (_event: any, ...args: any[]) => listener(...args)
+    invoke: (channel: string, ...args: unknown[]) => ipcRenderer.invoke(channel, ...args),
+    send: (channel: string, ...args: unknown[]) => ipcRenderer.send(channel, ...args),
+    on: (channel: string, listener: (...args: unknown[]) => void) => {
+      const subscription = (_event: Electron.IpcRendererEvent, ...args: unknown[]) =>
+        listener(...args)
       ipcRenderer.on(channel, subscription)
       return () => ipcRenderer.removeListener(channel, subscription)
     },
-    removeListener: (channel: string, listener: (...args: any[]) => void) =>
+    removeListener: (channel: string, listener: (...args: unknown[]) => void) =>
       ipcRenderer.removeListener(channel, listener),
   },
 })
