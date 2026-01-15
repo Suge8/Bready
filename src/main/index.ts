@@ -155,7 +155,7 @@ app.whenReady().then(async () => {
   }
 
   // 注册所有 IPC 处理器
-  setupAllHandlers()
+  await setupAllHandlers()
 
   // 初始化快捷键服务
   shortcutService.setToggleWindowCallback(() => {

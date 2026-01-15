@@ -1,7 +1,7 @@
 # BREADY 项目知识库
 
 **Generated:** 2026-01-15
-**Commit:** 270326f
+**Commit:** b429eea
 **Branch:** main
 
 ## 概述
@@ -69,36 +69,34 @@ bready/
 
 ## 反模式 (禁止)
 
-| 禁止                             | 原因                                 |
-| -------------------------------- | ------------------------------------ |
-| `dangerouslySetInnerHTML` 无过滤 | XSS 风险 (FloatingWindow.tsx 已存在) |
-| 主进程直接 `console.log`         | 使用 `utils/logging.ts`              |
-| IPC 参数无类型                   | 必须在 `shared/ipc.ts` 定义          |
-| 绕过 `IPCSecurityManager`        | 安全风险                             |
-| 路由内直接 SQL                   | 使用 `services/database.ts`          |
-| 组件内直接 `ipcRenderer`         | 使用 `lib/api-client.ts`             |
-| 超过 15 个 useState              | 拆分为 Hook                          |
-
-## 技术债务
-
-| 文件                  | 问题              | 优先级 |
-| --------------------- | ----------------- | ------ |
-| `AdminPanelModal.tsx` | 2393 行           | 高     |
-| `preload/index.ts`    | 大量 `: any` 类型 | 中     |
-| `ipc-handlers/`       | 重构过渡态        | 低     |
-| `FloatingWindow.tsx`  | XSS 未过滤        | 高     |
-| `server/routes/*.ts`  | 67+ 直接 SQL 查询 | 中     |
+| 禁止                             | 原因                                                      |
+| -------------------------------- | --------------------------------------------------------- |
+| `dangerouslySetInnerHTML` 无过滤 | 必须使用 DOMPurify.sanitize() (FloatingWindow.tsx 已修复) |
+| 主进程直接 `console.log`         | 使用 `utils/logging.ts`                                   |
+| IPC 参数无类型                   | 必须在 `shared/ipc.ts` 定义                               |
+| 绕过 IPC sender 校验封装         | 安全风险                                                  |
+| 路由内直接 SQL                   | 使用 `services/database.ts`                               |
+| 组件内直接 `ipcRenderer`         | 使用 `lib/api-client.ts`                                  |
+| 超过 15 个 useState              | 拆分为 Hook                                               |
 
 ## 大文件警告 (>500 行)
 
-| 文件                   | 行数 | 说明           |
-| ---------------------- | ---- | -------------- |
-| `i18n/translations.ts` | 3677 | 多语言翻译     |
-| `AdminPanelModal.tsx`  | 2393 | 管理面板       |
-| `doubao-service.ts`    | 1222 | 豆包 AI 服务   |
-| `gemini-service.ts`    | 1141 | Gemini AI 服务 |
-| `lib/audio-capture.ts` | 1105 | 音频捕获       |
-| `lib/api-client.ts`    | 1051 | IPC 客户端     |
+| 文件                         | 行数 | 说明           |
+| ---------------------------- | ---- | -------------- |
+| `i18n/translations.ts`       | 3689 | 多语言翻译     |
+| `gemini-service.ts`          | 1141 | Gemini AI 服务 |
+| `doubao-service.ts`          | 1108 | 豆包 AI 服务   |
+| `lib/audio-capture.ts`       | 1105 | 音频捕获       |
+| `lib/api-client.ts`          | 1051 | IPC 客户端     |
+| `LoginPage.tsx`              | 1032 | 登录页面       |
+| `MainPage.tsx`               | 950  | 主页面         |
+| `PreparationDetailModal.tsx` | 649  | 准备详情       |
+| `audio-manager.ts`           | 608  | 音频管理       |
+| `ipc-handlers.ts`            | 603  | IPC 处理       |
+| `admin/LoginTab.tsx`         | 585  | 管理登录       |
+| `SecuritySettings.tsx`       | 580  | 安全设置       |
+| `UserProfileModal.tsx`       | 574  | 用户模态框     |
+| `routes/auth.ts`             | 527  | 认证路由       |
 
 ## 测试
 

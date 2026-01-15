@@ -1,75 +1,25 @@
 import { Router } from 'express'
-import crypto from 'crypto'
 import { authMiddleware, type AuthenticatedRequest } from '../middleware/auth'
-import { query } from '../services/database'
+import { SettingsService } from '../services/database'
 
 const router = Router()
 
-const ENCRYPTION_KEY =
-  process.env.ENCRYPTION_KEY || process.env.JWT_SECRET || 'default-key-32chars-long-here!!'
-
-function encrypt(text: string): string {
-  if (!text) return ''
-  const iv = crypto.randomBytes(16)
-  const key = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32)
-  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv)
-  let encrypted = cipher.update(text, 'utf8', 'hex')
-  encrypted += cipher.final('hex')
-  const authTag = cipher.getAuthTag()
-  return `${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted}`
-}
-
-function decrypt(text: string): string {
-  if (!text) return ''
-  try {
-    const parts = text.split(':')
-    if (parts.length !== 3) return ''
-    const iv = Buffer.from(parts[0], 'hex')
-    const authTag = Buffer.from(parts[1], 'hex')
-    const encrypted = parts[2]
-    const key = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32)
-    const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv)
-    decipher.setAuthTag(authTag)
-    let decrypted = decipher.update(encrypted, 'hex', 'utf8')
-    decrypted += decipher.final('utf8')
-    return decrypted
-  } catch {
-    return ''
-  }
-}
-
-async function getSetting(key: string): Promise<string> {
-  const result = await query('SELECT value, encrypted FROM system_settings WHERE key = $1', [key])
-  if (result.rows.length === 0) return ''
-  const row = result.rows[0]
-  return row.encrypted ? decrypt(row.value || '') : row.value || ''
-}
-
-async function setSetting(key: string, value: string, encrypted: boolean): Promise<void> {
-  const storedValue = encrypted ? encrypt(value) : value
-  await query(
-    `INSERT INTO system_settings (key, value, encrypted) VALUES ($1, $2, $3)
-     ON CONFLICT (key) DO UPDATE SET value = $2, encrypted = $3, updated_at = NOW()`,
-    [key, storedValue, encrypted],
-  )
-}
+const AI_CONFIG_KEYS = [
+  'ai_provider',
+  'ai_gemini_api_key',
+  'ai_doubao_chat_api_key',
+  'ai_doubao_asr_app_id',
+  'ai_doubao_asr_access_key',
+] as const
 
 async function getAiConfigFromDb() {
-  const [provider, geminiApiKey, doubaoChatApiKey, doubaoAsrAppId, doubaoAsrAccessKey] =
-    await Promise.all([
-      getSetting('ai_provider'),
-      getSetting('ai_gemini_api_key'),
-      getSetting('ai_doubao_chat_api_key'),
-      getSetting('ai_doubao_asr_app_id'),
-      getSetting('ai_doubao_asr_access_key'),
-    ])
-
+  const config = await SettingsService.getMultiple([...AI_CONFIG_KEYS])
   return {
-    provider: provider || 'doubao',
-    geminiApiKey,
-    doubaoChatApiKey,
-    doubaoAsrAppId,
-    doubaoAsrAccessKey,
+    provider: config.ai_provider || 'doubao',
+    geminiApiKey: config.ai_gemini_api_key,
+    doubaoChatApiKey: config.ai_doubao_chat_api_key,
+    doubaoAsrAppId: config.ai_doubao_asr_app_id,
+    doubaoAsrAccessKey: config.ai_doubao_asr_access_key,
   }
 }
 
@@ -166,19 +116,19 @@ router.post('/config', async (req, res) => {
     const updates: Promise<void>[] = []
 
     if (provider !== undefined) {
-      updates.push(setSetting('ai_provider', provider, false))
+      updates.push(SettingsService.set('ai_provider', provider, false))
     }
     if (geminiApiKey && geminiApiKey !== '••••••••') {
-      updates.push(setSetting('ai_gemini_api_key', geminiApiKey, true))
+      updates.push(SettingsService.set('ai_gemini_api_key', geminiApiKey, true))
     }
     if (doubaoChatApiKey && doubaoChatApiKey !== '••••••••') {
-      updates.push(setSetting('ai_doubao_chat_api_key', doubaoChatApiKey, true))
+      updates.push(SettingsService.set('ai_doubao_chat_api_key', doubaoChatApiKey, true))
     }
     if (doubaoAsrAppId && doubaoAsrAppId !== '••••••••') {
-      updates.push(setSetting('ai_doubao_asr_app_id', doubaoAsrAppId, true))
+      updates.push(SettingsService.set('ai_doubao_asr_app_id', doubaoAsrAppId, true))
     }
     if (doubaoAsrAccessKey && doubaoAsrAccessKey !== '••••••••') {
-      updates.push(setSetting('ai_doubao_asr_access_key', doubaoAsrAccessKey, true))
+      updates.push(SettingsService.set('ai_doubao_asr_access_key', doubaoAsrAccessKey, true))
     }
 
     await Promise.all(updates)

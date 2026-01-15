@@ -6,12 +6,12 @@ React 19 + Tailwind CSS 4 + Framer Motion 组件库。
 
 ```
 components/
-├── AdminPanelModal.tsx     # 管理面板 [2393行]
-├── MainPage.tsx            # 主入口页面 [946行]
+├── MainPage.tsx            # 主入口页面 [944行]
 ├── LoginPage.tsx           # 登录页面 [992行]
 ├── FloatingWindow.tsx      # AI 悬浮窗
-├── PreparationDetailModal.tsx  # 准备详情 [641行]
+├── PreparationDetailModal.tsx  # 准备详情 [649行]
 ├── ui/                     # 基础 UI 原子组件 (21 文件)
+├── admin/                  # 管理面板模块 (8 文件)
 ├── user-profile/           # 用户中心 (见子目录 AGENTS.md)
 ├── collaboration/          # 协作相关 (见子目录 AGENTS.md)
 ├── onboarding/             # 引导流程
@@ -20,14 +20,14 @@ components/
 
 ## 快速定位
 
-| 任务          | 文件                  |
-| ------------- | --------------------- |
-| 管理面板      | `AdminPanelModal.tsx` |
-| 主题切换      | `MainPage.tsx`        |
-| AI 回复渲染   | `FloatingWindow.tsx`  |
-| 基础按钮/卡片 | `ui/`                 |
-| 用户设置      | `user-profile/`       |
-| 实时协作      | `collaboration/`      |
+| 任务          | 文件                 |
+| ------------- | -------------------- |
+| 管理面板      | `admin/`             |
+| 主题切换      | `MainPage.tsx`       |
+| AI 回复渲染   | `FloatingWindow.tsx` |
+| 基础按钮/卡片 | `ui/`                |
+| 用户设置      | `user-profile/`      |
+| 实时协作      | `collaboration/`     |
 
 ## 模式
 
@@ -38,13 +38,15 @@ components/
 
 ## 反模式
 
-| 禁止                             | 原因                     |
-| -------------------------------- | ------------------------ |
-| `dangerouslySetInnerHTML` 无过滤 | XSS 风险                 |
-| 组件内直接 `ipcRenderer`         | 使用 `lib/api-client.ts` |
-| 超过 15 个 useState              | 拆分为 Hook              |
+| 禁止                             | 原因                                                      |
+| -------------------------------- | --------------------------------------------------------- |
+| `dangerouslySetInnerHTML` 无过滤 | 必须使用 DOMPurify.sanitize() (FloatingWindow.tsx 已修复) |
+| 组件内直接 `ipcRenderer`         | 使用 `lib/api-client.ts`                                  |
+| 超过 15 个 useState              | 拆分为 Hook                                               |
 
 ## 技术债务
 
-- `AdminPanelModal.tsx`: 2393 行，需拆分
-- `FloatingWindow.tsx`: XSS 未过滤 (dangerouslySetInnerHTML)
+| 文件                         | 问题   | 状态   |
+| ---------------------------- | ------ | ------ |
+| `PreparationDetailModal.tsx` | 649 行 | 待拆分 |
+| `admin/LoginTab.tsx`         | 585 行 | 待拆分 |

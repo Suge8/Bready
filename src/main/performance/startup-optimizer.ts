@@ -4,7 +4,9 @@
  */
 
 import { BrowserWindow } from 'electron'
+import { createLogger } from '../utils/logging'
 
+const logger = createLogger('startup-optimizer')
 const debugStartup = process.env.DEBUG_STARTUP === '1'
 
 interface StartupMetrics {
@@ -25,7 +27,7 @@ export class StartupOptimizer {
   recordMetric(key: keyof StartupMetrics, value?: number) {
     this.metrics[key] = value || Date.now() - this.startTime
     if (debugStartup) {
-      console.log(`🚀 启动指标: ${key} = ${this.metrics[key]}ms`)
+      logger.debug(`🚀 启动指标: ${key} = ${this.metrics[key]}ms`)
     }
   }
 
@@ -54,7 +56,7 @@ export class StartupOptimizer {
 
       await Promise.allSettled(modules.map((loader) => loader()))
       if (debugStartup) {
-        console.log('✅ 非关键模块延迟加载完成')
+        logger.debug('✅ 非关键模块延迟加载完成')
       }
     }, 1000)
   }
@@ -77,7 +79,7 @@ export class StartupOptimizer {
         )
 
         if (debugStartup) {
-          console.log('✅ 外部服务预热完成')
+          logger.debug('✅ 外部服务预热完成')
         }
       } catch (error) {
         // 预热失败不影响应用
@@ -102,13 +104,13 @@ export class StartupOptimizer {
 
     if (totalStartupTime && totalStartupTime > TARGET_STARTUP_TIME) {
       if (debugStartup) {
-        console.warn(`⚠️ 启动时间超过目标: ${totalStartupTime}ms > ${TARGET_STARTUP_TIME}ms`)
+        logger.warn(`⚠️ 启动时间超过目标: ${totalStartupTime}ms > ${TARGET_STARTUP_TIME}ms`)
       }
       return false
     }
 
     if (debugStartup) {
-      console.log(`✅ 启动时间符合目标: ${totalStartupTime}ms`)
+      logger.debug(`✅ 启动时间符合目标: ${totalStartupTime}ms`)
     }
     return true
   }

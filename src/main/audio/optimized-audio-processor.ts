@@ -5,6 +5,9 @@
 
 import { spawn, ChildProcess } from 'child_process'
 import { EventEmitter } from 'events'
+import { createLogger } from '../utils/logging'
+
+const logger = createLogger('optimized-audio-processor')
 
 interface AudioConfig {
   sampleRate: number
@@ -62,12 +65,12 @@ export class OptimizedAudioProcessor extends EventEmitter {
    */
   async startCapture(): Promise<boolean> {
     if (this.isProcessing) {
-      console.log('🎵 音频捕获已在运行')
+      logger.info('🎵 音频捕获已在运行')
       return true
     }
 
     try {
-      console.log('🚀 启动优化音频捕获...')
+      logger.info('🚀 启动优化音频捕获...')
 
       // 使用更高效的系统音频捕获
       this.audioProcess = spawn('system_profiler', ['SPAudioDataType', '-json'], {
@@ -80,10 +83,13 @@ export class OptimizedAudioProcessor extends EventEmitter {
       this.isProcessing = true
       this.emit('capture-started')
 
-      console.log('✅ 优化音频捕获启动成功')
+      logger.info('✅ 优化音频捕获启动成功')
       return true
     } catch (error) {
-      console.error('❌ 音频捕获启动失败:', error)
+      logger.error('❌ 音频捕获启动失败', {
+        error:
+          error instanceof Error ? { message: error.message, stack: error.stack } : String(error),
+      })
       this.isProcessing = false
       return false
     }
@@ -100,11 +106,11 @@ export class OptimizedAudioProcessor extends EventEmitter {
     })
 
     this.audioProcess.stderr?.on('data', (data: Buffer) => {
-      console.warn('🎵 音频进程警告:', data.toString())
+      logger.warn('🎵 音频进程警告', { message: data.toString() })
     })
 
     this.audioProcess.on('exit', (code) => {
-      console.log(`🎵 音频进程退出，代码: ${code}`)
+      logger.info(`🎵 音频进程退出，代码: ${code}`)
       this.isProcessing = false
       this.emit('capture-stopped')
     })
@@ -131,7 +137,7 @@ export class OptimizedAudioProcessor extends EventEmitter {
       // 队列管理
       if (this.audioQueue.length > this.MAX_QUEUE_SIZE) {
         this.audioQueue.shift() // 移除最旧的数据
-        console.warn('⚠️ 音频队列溢出，丢弃旧数据')
+        logger.warn('⚠️ 音频队列溢出，丢弃旧数据')
       }
 
       // 批量处理
@@ -142,7 +148,10 @@ export class OptimizedAudioProcessor extends EventEmitter {
       // 更新性能指标
       this.updateMetrics(startTime)
     } catch (error) {
-      console.error('❌ 音频块处理失败:', error)
+      logger.error('❌ 音频块处理失败', {
+        error:
+          error instanceof Error ? { message: error.message, stack: error.stack } : String(error),
+      })
     }
   }
 
@@ -181,9 +190,15 @@ export class OptimizedAudioProcessor extends EventEmitter {
       // 发送到AI处理
       this.emit('audio-data', combinedBuffer)
 
-      console.log(`🎵 处理音频批次: ${batchSize}块, ${combinedBuffer.length}字节`)
+      logger.debug('🎵 处理音频批次', {
+        batchSize,
+        size: combinedBuffer.length,
+      })
     } catch (error) {
-      console.error('❌ 批量处理失败:', error)
+      logger.error('❌ 批量处理失败', {
+        error:
+          error instanceof Error ? { message: error.message, stack: error.stack } : String(error),
+      })
     } finally {
       this.processingQueue = false
 
@@ -217,16 +232,19 @@ export class OptimizedAudioProcessor extends EventEmitter {
     const validRate = ((this.metrics.validChunks / this.metrics.totalChunks) * 100).toFixed(1)
     const silentRate = ((this.metrics.silentChunks / this.metrics.totalChunks) * 100).toFixed(1)
 
-    console.log(
-      `📊 音频性能: 总量=${this.metrics.totalChunks}, 有效=${validRate}%, 静音=${silentRate}%, 延迟=${this.metrics.avgLatency.toFixed(1)}ms`,
-    )
+    logger.debug('📊 音频性能', {
+      total: this.metrics.totalChunks,
+      validRate: `${validRate}%`,
+      silentRate: `${silentRate}%`,
+      avgLatency: this.metrics.avgLatency.toFixed(1),
+    })
   }
 
   /**
    * 停止音频捕获
    */
   stopCapture() {
-    console.log('🛑 停止音频捕获...')
+    logger.info('🛑 停止音频捕获...')
 
     if (this.audioProcess) {
       this.audioProcess.kill('SIGTERM')
@@ -238,7 +256,7 @@ export class OptimizedAudioProcessor extends EventEmitter {
     this.processingQueue = false
 
     this.emit('capture-stopped')
-    console.log('✅ 音频捕获已停止')
+    logger.info('✅ 音频捕获已停止')
   }
 
   /**
@@ -266,6 +284,6 @@ export class OptimizedAudioProcessor extends EventEmitter {
    */
   updateConfig(newConfig: Partial<AudioConfig>) {
     this.config = { ...this.config, ...newConfig }
-    console.log('🔧 音频配置已更新:', newConfig)
+    logger.info('🔧 音频配置已更新', { config: newConfig })
   }
 }

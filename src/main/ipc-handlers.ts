@@ -1,15 +1,76 @@
-import { ipcMain } from 'electron'
+import { app, ipcMain, IpcMainEvent, IpcMainInvokeEvent } from 'electron'
 import { randomInt } from 'crypto'
 import { api } from './utils/api-client'
+import { createLogger } from './utils/logging'
 
-import './ipc-handlers/window-handlers'
-import './ipc-handlers/gemini-handlers'
-import './ipc-handlers/audio-handlers'
-import './ipc-handlers/permission-handlers'
-import './ipc-handlers/debug-handlers'
-import './ipc-handlers/settings-handlers'
-import './ipc-handlers/payment-handlers'
-import './ipc-handlers/shortcut-handlers'
+const logger = createLogger('ipc-handlers')
+const devRendererOrigin = (() => {
+  if (!app.isPackaged && process.env.ELECTRON_RENDERER_URL) {
+    try {
+      return new URL(process.env.ELECTRON_RENDERER_URL).origin
+    } catch {
+      return null
+    }
+  }
+  return null
+})()
+
+function getSenderUrl(event: IpcMainInvokeEvent | IpcMainEvent): string | undefined {
+  return event.senderFrame?.url || event.sender?.getURL?.()
+}
+
+function isTrustedSender(event: IpcMainInvokeEvent | IpcMainEvent): boolean {
+  const senderUrl = getSenderUrl(event)
+  if (!senderUrl) return false
+
+  if (devRendererOrigin) {
+    try {
+      return new URL(senderUrl).origin === devRendererOrigin
+    } catch {
+      return false
+    }
+  }
+
+  return senderUrl.startsWith('file://') || senderUrl.startsWith('app://')
+}
+
+let ipcValidationEnabled = false
+
+function enableIpcValidation(): void {
+  if (ipcValidationEnabled) return
+
+  const originalHandle = ipcMain.handle.bind(ipcMain)
+  const originalOn = ipcMain.on.bind(ipcMain)
+
+  ipcMain.handle = (channel: string, listener: any) => {
+    const securedListener = async (event: IpcMainInvokeEvent, ...args: any[]) => {
+      if (!isTrustedSender(event)) {
+        logger.warn('未授权 IPC 调用', { channel, url: getSenderUrl(event) })
+        throw new Error('未授权的IPC调用来源')
+      }
+
+      return await listener(event, ...args)
+    }
+
+    return originalHandle(channel, securedListener)
+  }
+
+  ipcMain.on = (channel: string, listener: any) => {
+    const securedListener = (event: IpcMainEvent, ...args: any[]) => {
+      if (!isTrustedSender(event)) {
+        logger.warn('未授权 IPC 事件', { channel, url: getSenderUrl(event) })
+        return
+      }
+
+      return listener(event, ...args)
+    }
+
+    return originalOn(channel, securedListener)
+  }
+
+  ipcValidationEnabled = true
+  logger.info('IPC sender 校验已启用')
+}
 
 type PagedRequest = {
   userId: string
@@ -17,18 +78,20 @@ type PagedRequest = {
   offset?: number
 }
 
-const normalizePagedRequest = (payload: string | PagedRequest): PagedRequest => {
+function normalizePagedRequest(payload: string | PagedRequest): PagedRequest {
   if (typeof payload === 'string') {
     return { userId: payload }
   }
   return payload
 }
 
+type AuthUser = { id: string } & Record<string, unknown>
+
 const phoneCodeStore = new Map<string, { code: string; expiresAt: number; lastSentAt: number }>()
 const PHONE_CODE_TTL_MS = 5 * 60 * 1000
 const PHONE_CODE_COOLDOWN_MS = 60 * 1000
 
-const getUserFromToken = async (token?: string) => {
+async function getUserFromToken(token?: string): Promise<AuthUser> {
   if (!token) {
     throw new Error('未登录')
   }
@@ -39,10 +102,15 @@ const getUserFromToken = async (token?: string) => {
   return result.data
 }
 
-const isValidPhone = (phone: string) => /^1\d{10}$/.test(phone)
-const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+function isValidPhone(phone: string): boolean {
+  return /^1\d{10}$/.test(phone)
+}
 
-const purgeExpiredPhoneCodes = (now: number) => {
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+}
+
+function purgeExpiredPhoneCodes(now: number): void {
   for (const [key, entry] of phoneCodeStore.entries()) {
     if (entry.expiresAt <= now) {
       phoneCodeStore.delete(key)
@@ -50,7 +118,7 @@ const purgeExpiredPhoneCodes = (now: number) => {
   }
 }
 
-export function setupAuthHandlers() {
+export function setupAuthHandlers(): void {
   ipcMain.handle('auth:sign-up', async (event, { email, password, userData }) => {
     void event
     try {
@@ -64,14 +132,14 @@ export function setupAuthHandlers() {
 
   ipcMain.handle('auth:sign-in', async (event, { email, password }) => {
     void event
-    console.log('🔐 IPC: auth:sign-in called with:', { email, password: '***' })
+    logger.debug('auth:sign-in called', { email })
     try {
       const result = await api.auth.signIn(email, password)
       if (result.error) throw new Error(result.error)
-      console.log('✅ IPC: auth:sign-in success')
+      logger.info('auth:sign-in success')
       return result.data
     } catch (error: any) {
-      console.error('❌ IPC: auth:sign-in error:', error.message)
+      logger.error('auth:sign-in error', { error: error.message })
       throw new Error(error.message)
     }
   })
@@ -139,7 +207,7 @@ export function setupAuthHandlers() {
       })
 
       if (process.env.DEBUG_AUTH === '1') {
-        console.log('📨 手机验证码:', trimmedPhone, code)
+        logger.debug('手机验证码', { phone: trimmedPhone, code })
       }
 
       return { success: true, cooldownSeconds: Math.floor(PHONE_CODE_COOLDOWN_MS / 1000) }
@@ -342,7 +410,7 @@ export function setupAuthHandlers() {
   })
 }
 
-export function setupUserHandlers() {
+export function setupUserHandlers(): void {
   ipcMain.handle('user:get-profile', async (event, userId) => {
     void event
     try {
@@ -411,7 +479,7 @@ export function setupUserHandlers() {
   })
 }
 
-export function setupMembershipHandlers() {
+export function setupMembershipHandlers(): void {
   ipcMain.handle('membership:get-packages', async (event) => {
     void event
     try {
@@ -451,7 +519,7 @@ export function setupMembershipHandlers() {
   })
 }
 
-export function setupUsageHandlers() {
+export function setupUsageHandlers(): void {
   ipcMain.handle('usage:start-session', async (event, { userId, sessionType, preparationId }) => {
     void event
     try {
@@ -535,7 +603,7 @@ export function setupUsageHandlers() {
   })
 }
 
-export function setupPreparationHandlers() {
+export function setupPreparationHandlers(): void {
   ipcMain.handle('preparation:get-all', async (event, userId) => {
     void event
     try {
@@ -591,7 +659,20 @@ export function setupPreparationHandlers() {
   })
 }
 
-export function setupAllHandlers() {
+export async function setupAllHandlers() {
+  enableIpcValidation()
+
+  await Promise.all([
+    import('./ipc-handlers/window-handlers'),
+    import('./ipc-handlers/gemini-handlers'),
+    import('./ipc-handlers/audio-handlers'),
+    import('./ipc-handlers/permission-handlers'),
+    import('./ipc-handlers/debug-handlers'),
+    import('./ipc-handlers/settings-handlers'),
+    import('./ipc-handlers/payment-handlers'),
+    import('./ipc-handlers/shortcut-handlers'),
+  ])
+
   setupAuthHandlers()
   setupUserHandlers()
   setupMembershipHandlers()

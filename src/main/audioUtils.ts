@@ -1,6 +1,9 @@
 import fs from 'fs'
 import path from 'path'
 import os from 'os'
+import { createLogger } from './utils/logging'
+
+const logger = createLogger('audio-utils')
 
 // Convert raw PCM to WAV format for easier playback and verification
 export function pcmToWav(
@@ -74,9 +77,11 @@ export function analyzeAudioBuffer(buffer: Buffer, label = 'Audio') {
 
   // 临时恢复音频分析日志用于调试
   if (silencePercentage < 80) {
-    console.log(
-      `${label} Analysis: Samples: ${int16Array.length}, Silence: ${silencePercentage.toFixed(1)}%, RMS: ${rmsValue.toFixed(2)}`,
-    )
+    logger.debug(`${label} Analysis`, {
+      sampleCount: int16Array.length,
+      silencePercentage: Number(silencePercentage.toFixed(1)),
+      rmsValue: Number(rmsValue.toFixed(2)),
+    })
   }
 
   return {

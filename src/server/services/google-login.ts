@@ -1,4 +1,4 @@
-import { getSetting } from '../routes/settings'
+import { SettingsService } from './database'
 
 export interface GoogleLoginConfig {
   enabled: boolean
@@ -9,10 +9,10 @@ export interface GoogleLoginConfig {
 
 export async function getGoogleLoginConfig(): Promise<GoogleLoginConfig> {
   const [enabled, clientId, clientSecret, redirectUri] = await Promise.all([
-    getSetting('login_google_enabled'),
-    getSetting('google_login_client_id'),
-    getSetting('google_login_client_secret'),
-    getSetting('google_login_redirect_uri'),
+    SettingsService.get('login_google_enabled'),
+    SettingsService.get('google_login_client_id'),
+    SettingsService.get('google_login_client_secret'),
+    SettingsService.get('google_login_redirect_uri'),
   ])
 
   return {

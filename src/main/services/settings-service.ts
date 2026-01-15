@@ -1,4 +1,7 @@
 import { api } from '../utils/api-client'
+import { createLogger } from '../utils/logging'
+
+const logger = createLogger('settings-service')
 
 export interface AiConfig {
   provider: 'gemini' | 'doubao'
@@ -50,9 +53,9 @@ export async function checkAiConfigStatus(): Promise<{
   missingFields: string[]
 }> {
   const result = await api.settings.checkAiConfig()
-  console.log('🔍 checkAiConfig API 返回:', JSON.stringify(result))
+  logger.info('🔍 checkAiConfig API 返回', { result })
   if (result.error) {
-    console.log('❌ checkAiConfig 错误:', result.error)
+    logger.error('❌ checkAiConfig 错误', { error: result.error })
     return { configured: false, provider: '', missingFields: ['unknown'] }
   }
   return result as {

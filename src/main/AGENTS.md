@@ -7,9 +7,10 @@ Electron 主进程，承载窗口管理、AI 服务和原生音频集成。
 ```
 main/
 ├── index.ts              # 入口，启动优化/窗口/AI/DB 初始化
-├── doubao-service.ts     # 字节豆包 AI (ASR + Chat) [1222行]
+├── doubao-service.ts     # 字节豆包 AI (ASR + Chat) [1108行]
 ├── gemini-service.ts     # Google Gemini 服务 [1141行]
-├── ipc-handlers.ts       # IPC 处理中枢 (导出索引)
+├── audio-manager.ts      # 音频管理器 [608行]
+├── ipc-handlers.ts       # IPC 处理中枢 (导出索引) [603行]
 ├── ipc-handlers/         # 分模块 IPC 处理器
 ├── security/             # IPC 签名验证、加密
 ├── performance/          # 启动优化、内存监控、GC 触发
@@ -40,15 +41,18 @@ main/
 
 ## 反模式
 
-| 禁止                      | 原因                        |
-| ------------------------- | --------------------------- |
-| 直接 `console.log`        | 使用 `utils/logging.ts`     |
-| IPC 无类型参数            | 必须在 `shared/ipc.ts` 定义 |
-| 绕过 `IPCSecurityManager` | 安全风险                    |
+| 禁止                     | 原因                        |
+| ------------------------ | --------------------------- |
+| 直接 `console.log`       | 使用 `utils/logging.ts`     |
+| IPC 无类型参数           | 必须在 `shared/ipc.ts` 定义 |
+| 绕过 IPC sender 校验封装 | 安全风险                    |
 
 ## 技术债务
 
-- `doubao-service.ts`: 1222 行，6 个未使用变量
-- `gemini-service.ts`: 1141 行
-- `ipc-handlers.ts` + `ipc-handlers/`: 重构过渡态
-- `audio-manager.ts`: 626 行，3 个未使用变量
+| 文件                | 问题     | 状态   |
+| ------------------- | -------- | ------ |
+| `doubao-service.ts` | 1108 行  | 待拆分 |
+| `gemini-service.ts` | 1141 行  | 待拆分 |
+| `audio-manager.ts`  | 608 行   | 待拆分 |
+| `ipc-handlers.ts`   | 603 行   | 待拆分 |
+| `ipc-handlers/`     | 重构过渡 | 进行中 |

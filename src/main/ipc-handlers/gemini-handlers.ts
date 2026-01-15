@@ -1,15 +1,21 @@
 import { ipcMain } from 'electron'
 import { getAiProvider, getAiService, initializeAiService, checkAiReady } from '../ai-service'
+import { createLogger } from '../utils/logging'
 import type { AnalyzePreparationRequest, ExtractFileContentRequest } from '../../shared/ipc'
+
+const logger = createLogger('gemini-handlers')
 
 // 检查 AI 服务是否就绪
 ipcMain.handle('check-ai-ready', async () => {
   try {
     const result = await checkAiReady()
-    console.log('🔍 AI 就绪检查结果:', result)
+    logger.info('🔍 AI 就绪检查结果', { result })
     return result
   } catch (error) {
-    console.error('❌ AI 就绪检查失败:', error)
+    logger.error('❌ AI 就绪检查失败', {
+      error:
+        error instanceof Error ? { message: error.message, stack: error.stack } : String(error),
+    })
     return { ready: false, provider: '', missingFields: ['unknown'] }
   }
 })
@@ -19,7 +25,7 @@ ipcMain.handle(
   'initialize-ai',
   async (event, apiKey: string, customPrompt = '', profile = 'interview', language = 'cmn-CN') => {
     const provider = getAiProvider()
-    console.log(`📥 收到 initialize-${provider} 请求，参数:`, {
+    logger.info(`📥 收到 initialize-${provider} 请求`, {
       apiKeyLength: apiKey?.length || 0,
       customPromptLength: customPrompt?.length || 0,
       profile,
@@ -30,23 +36,23 @@ ipcMain.handle(
     let service = getAiService()
 
     if (!service) {
-      console.log('🆕 创建新的 AI 服务实例')
+      logger.info('🆕 创建新的 AI 服务实例')
       service = initializeAiService((eventName, data) => {
         sender.send(eventName, data)
       })
     } else {
-      console.log('♻️ 复用已有的 AI 服务实例')
+      logger.info('♻️ 复用已有的 AI 服务实例')
     }
 
     const result = await service.initializeSession(apiKey, customPrompt, profile, language)
-    console.log(`📊 ${provider} 会话初始化结果:`, result)
+    logger.info('📊 AI 会话初始化结果', { provider, result })
     return result
   },
 )
 
 // 重连 AI 会话
 ipcMain.handle('reconnect-ai', async () => {
-  console.log('收到重连请求')
+  logger.info('收到重连请求')
   const service = getAiService()
   if (service) {
     return await service.reconnect()
@@ -66,10 +72,10 @@ ipcMain.handle('disconnect-ai', () => {
 // 发送文本消息
 ipcMain.handle('send-text-message', async (event, message: string) => {
   void event
-  console.log('📤 收到要发送给 AI 的文本:', message)
+  logger.debug('📤 收到要发送给 AI 的文本', { message })
 
   if (!message || typeof message !== 'string' || message.trim().length === 0) {
-    console.error('❌ 无效的消息内容')
+    logger.warn('❌ 无效的消息内容')
     return { success: false, error: '无效的消息内容' }
   }
 
@@ -82,7 +88,7 @@ ipcMain.handle('send-text-message', async (event, message: string) => {
 
 // 手动重连
 ipcMain.handle('manual-reconnect', async () => {
-  console.log('收到手动重连请求')
+  logger.info('收到手动重连请求')
   const service = getAiService()
   if (service) {
     return await service.manualReconnect()
@@ -101,10 +107,10 @@ try {
 
       // 首次或每 50 次打印日志
       if (audioContentCount === 1 || audioContentCount % 50 === 0) {
-        console.log(
-          `📥 [主进程] 收到渲染进程音频数据 #${audioContentCount}, 长度:`,
-          data?.length || 0,
-        )
+        logger.info('📥 收到渲染进程音频数据', {
+          count: audioContentCount,
+          length: data?.length || 0,
+        })
       }
 
       if (!data || typeof data !== 'string') {
@@ -130,18 +136,23 @@ try {
 
       return { success: true }
     } catch (error) {
-      console.error('发送优化音频内容失败:', error)
+      logger.error('发送优化音频内容失败', {
+        error:
+          error instanceof Error ? { message: error.message, stack: error.stack } : String(error),
+      })
       return { success: false, error: error instanceof Error ? error.message : String(error) }
     }
   })
 } catch (error) {
-  console.error('注册 send-audio-content-optimized 处理器失败:', error)
+  logger.error('注册 send-audio-content-optimized 处理器失败', {
+    error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error),
+  })
 }
 
 // AI 分析相关的 IPC 处理器
 ipcMain.handle('analyze-preparation', async (event, preparationData: AnalyzePreparationRequest) => {
   void event
-  console.log('收到AI分析请求:', preparationData)
+  logger.info('收到AI分析请求', { preparationData })
   const service = getAiService()
   if (!service) {
     return { success: false, error: 'AI 服务未初始化' }
@@ -152,7 +163,10 @@ ipcMain.handle('analyze-preparation', async (event, preparationData: AnalyzePrep
 // 文件内容提取 IPC 处理器
 ipcMain.handle('extract-file-content', async (event, fileData: ExtractFileContentRequest) => {
   void event
-  console.log('收到文件内容提取请求:', fileData.fileName, fileData.fileType)
+  logger.info('收到文件内容提取请求', {
+    fileName: fileData.fileName,
+    fileType: fileData.fileType,
+  })
   const service = getAiService()
   if (!service) {
     return { success: false, error: 'AI 服务未初始化' }

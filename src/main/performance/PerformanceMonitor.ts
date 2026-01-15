@@ -1,11 +1,23 @@
+import { appendFileSync, mkdirSync } from 'fs'
+import { dirname } from 'path'
 import { BrowserWindow, app } from 'electron'
 import * as os from 'os'
+import { createLogger } from '../utils/logging'
+
+const monitorLogger = createLogger('performance-monitor')
 
 export enum LogLevel {
   DEBUG = 0,
   INFO = 1,
   WARN = 2,
   ERROR = 3,
+}
+
+const logLevelMap: Record<LogLevel, 'debug' | 'info' | 'warn' | 'error'> = {
+  [LogLevel.DEBUG]: 'debug',
+  [LogLevel.INFO]: 'info',
+  [LogLevel.WARN]: 'warn',
+  [LogLevel.ERROR]: 'error',
 }
 
 export interface PerformanceMetrics {
@@ -87,7 +99,7 @@ export class PerformanceMonitor {
     }, interval)
 
     if (this.debugMemory) {
-      console.log(`🔍 Performance monitoring started with ${interval}ms interval`)
+      monitorLogger.debug(`🔍 Performance monitoring started with ${interval}ms interval`)
     }
   }
 
@@ -97,7 +109,7 @@ export class PerformanceMonitor {
       this.intervalId = null
       this.isRunning = false
       if (this.debugMemory) {
-        console.log('🔍 Performance monitoring stopped')
+        monitorLogger.debug('🔍 Performance monitoring stopped')
       }
     }
   }
@@ -130,7 +142,10 @@ export class PerformanceMonitor {
       // 发送到渲染进程
       this.sendMetricsToRenderer(metrics)
     } catch (error) {
-      console.error('Error collecting system metrics:', error)
+      monitorLogger.error('Error collecting system metrics', {
+        error:
+          error instanceof Error ? { message: error.message, stack: error.stack } : String(error),
+      })
     }
   }
 
@@ -140,14 +155,14 @@ export class PerformanceMonitor {
 
     if (heapUsedMB > thresholdMB) {
       if (this.debugMemory) {
-        console.warn(`⚠️ High memory usage detected: ${heapUsedMB.toFixed(2)}MB`)
+        monitorLogger.warn(`⚠️ High memory usage detected: ${heapUsedMB.toFixed(2)}MB`)
       }
 
       // 触发垃圾回收（如果可用）
       if (global.gc) {
         global.gc()
         if (this.debugMemory) {
-          console.log('🗑️ Garbage collection triggered')
+          monitorLogger.debug('🗑️ Garbage collection triggered')
         }
       }
     }
@@ -220,9 +235,10 @@ export class AudioPerformanceMonitor {
     const threshold = 50 // 50ms阈值
     if (processingTime > threshold) {
       this.audioMetrics.bufferOverflows++
-      console.warn(
-        `🎵 Audio processing slow: ${processingTime.toFixed(2)}ms for ${bufferSize} bytes`,
-      )
+      monitorLogger.warn('🎵 Audio processing slow', {
+        processingTime: Number(processingTime.toFixed(2)),
+        bufferSize,
+      })
     }
   }
 
@@ -244,7 +260,7 @@ export class AudioPerformanceMonitor {
       lastProcessTime: 0,
       totalDataProcessed: 0,
     }
-    console.log('🎵 Audio metrics reset')
+    monitorLogger.info('🎵 Audio metrics reset')
   }
 
   getPerformanceStatus(): 'good' | 'warning' | 'critical' {
@@ -275,7 +291,7 @@ export class Logger {
     if (level < this.level) return
 
     const timestamp = new Date().toISOString()
-    const levelName = LogLevel[level]
+    const levelName = logLevelMap[level] || LogLevel[level]
     const memoryUsage = process.memoryUsage().heapUsed / 1024 / 1024
 
     const logEntry = {
@@ -287,21 +303,20 @@ export class Logger {
       memory: `${memoryUsage.toFixed(2)}MB`,
     }
 
-    // 格式化输出
-    const formattedMessage = `[${timestamp}] ${levelName}: ${message}`
+    const metadata = data === undefined ? undefined : typeof data === 'object' ? data : { data }
 
     switch (level) {
       case LogLevel.ERROR:
-        console.error(formattedMessage, data || '')
+        monitorLogger.error(message, metadata)
         break
       case LogLevel.WARN:
-        console.warn(formattedMessage, data || '')
+        monitorLogger.warn(message, metadata)
         break
       case LogLevel.INFO:
-        console.info(formattedMessage, data || '')
+        monitorLogger.info(message, metadata)
         break
       case LogLevel.DEBUG:
-        console.debug(formattedMessage, data || '')
+        monitorLogger.debug(message, metadata)
         break
     }
 
@@ -328,9 +343,18 @@ export class Logger {
   }
 
   private writeToFile(logEntry: any): void {
-    void logEntry
-    // TODO: 实现日志文件写入
-    // 可以使用fs.appendFile或者winston等日志库
+    if (!this.logFile) return
+
+    try {
+      const directory = dirname(this.logFile)
+      mkdirSync(directory, { recursive: true })
+      appendFileSync(this.logFile, `${JSON.stringify(logEntry)}\n`)
+    } catch (error) {
+      monitorLogger.error('写入日志文件失败', {
+        error:
+          error instanceof Error ? { message: error.message, stack: error.stack } : String(error),
+      })
+    }
   }
 }
 
@@ -358,7 +382,7 @@ export class CrashReporter {
       this.reportCrash('unhandledRejection', reason)
     })
 
-    console.log('💥 Crash reporter initialized')
+    monitorLogger.info('💥 Crash reporter initialized')
   }
 
   private static reportCrash(type: string, error: any): void {
@@ -393,7 +417,7 @@ export class CrashReporter {
       }
     })
 
-    console.error('💥 Crash report generated:', crashReport)
+    monitorLogger.error('💥 Crash report generated', { crashReport })
   }
 }
 

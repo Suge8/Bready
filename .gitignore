@@ -22,6 +22,8 @@ dist-electron/
 .cache/
 .vite/
 *.tsbuildinfo
+coverage/
+html/
 
 # 系统文件
 .DS_Store

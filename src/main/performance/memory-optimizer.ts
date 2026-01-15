@@ -4,6 +4,9 @@
  */
 
 import { EventEmitter } from 'events'
+import { createLogger } from '../utils/logging'
+
+const logger = createLogger('memory-optimizer')
 
 interface MemoryMetrics {
   used: number
@@ -61,7 +64,7 @@ export class MemoryOptimizer extends EventEmitter {
     }
 
     if (this.debugMemory) {
-      console.log('🧠 启动内存监控...')
+      logger.debug('🧠 启动内存监控...')
     }
 
     this.monitoringInterval = setInterval(() => {
@@ -80,7 +83,7 @@ export class MemoryOptimizer extends EventEmitter {
       clearInterval(this.monitoringInterval)
       this.monitoringInterval = null
       if (this.debugMemory) {
-        console.log('🛑 内存监控已停止')
+        logger.debug('🛑 内存监控已停止')
       }
     }
   }
@@ -120,14 +123,14 @@ export class MemoryOptimizer extends EventEmitter {
     const usedMB = metrics.heapUsed
     const now = Date.now()
 
-    const level: 'normal' | 'gc' | 'warning' | 'critical' =
-      usedMB > this.thresholds.critical
-        ? 'critical'
-        : usedMB > this.thresholds.warning
-          ? 'warning'
-          : usedMB > this.thresholds.gcTrigger
-            ? 'gc'
-            : 'normal'
+    let level: 'normal' | 'gc' | 'warning' | 'critical' = 'normal'
+    if (usedMB > this.thresholds.critical) {
+      level = 'critical'
+    } else if (usedMB > this.thresholds.warning) {
+      level = 'warning'
+    } else if (usedMB > this.thresholds.gcTrigger) {
+      level = 'gc'
+    }
 
     const levelChanged = level !== this.lastLevel
     if (levelChanged) {
@@ -138,7 +141,7 @@ export class MemoryOptimizer extends EventEmitter {
 
     if (level === 'critical') {
       if (allowLog && this.debugMemory) {
-        console.error(`🚨 内存使用严重超标: ${usedMB.toFixed(1)}MB > ${this.thresholds.critical}MB`)
+        logger.error(`🚨 内存使用严重超标: ${usedMB.toFixed(1)}MB > ${this.thresholds.critical}MB`)
       }
       if (allowLog) {
         this.lastLogAt = now
@@ -150,7 +153,7 @@ export class MemoryOptimizer extends EventEmitter {
       }
     } else if (level === 'warning') {
       if (allowLog && this.debugMemory) {
-        console.warn(`⚠️ 内存使用警告: ${usedMB.toFixed(1)}MB > ${this.thresholds.warning}MB`)
+        logger.warn(`⚠️ 内存使用警告: ${usedMB.toFixed(1)}MB > ${this.thresholds.warning}MB`)
       }
       if (allowLog) {
         this.lastLogAt = now
@@ -170,7 +173,7 @@ export class MemoryOptimizer extends EventEmitter {
    */
   private performOptimization() {
     if (this.debugMemory) {
-      console.log('🔧 执行内存优化...')
+      logger.debug('🔧 执行内存优化...')
     }
 
     // 1. 触发垃圾回收
@@ -185,7 +188,7 @@ export class MemoryOptimizer extends EventEmitter {
     this.emit('optimize-memory')
 
     if (this.debugMemory) {
-      console.log('✅ 内存优化完成')
+      logger.debug('✅ 内存优化完成')
     }
   }
 
@@ -194,7 +197,7 @@ export class MemoryOptimizer extends EventEmitter {
    */
   private performEmergencyCleanup() {
     if (this.debugMemory) {
-      console.log('🆘 执行紧急内存清理...')
+      logger.debug('🆘 执行紧急内存清理...')
     }
 
     // 1. 强制垃圾回收
@@ -211,14 +214,14 @@ export class MemoryOptimizer extends EventEmitter {
       const newMetrics = this.getCurrentMetrics()
       if (newMetrics.heapUsed > this.thresholds.critical) {
         if (this.debugMemory) {
-          console.error('🚨 紧急清理后内存仍然过高，建议重启应用')
+          logger.error('🚨 紧急清理后内存仍然过高，建议重启应用')
         }
         this.emit('restart-recommended')
       }
     }, 5000)
 
     if (this.debugMemory) {
-      console.log('✅ 紧急清理完成')
+      logger.debug('✅ 紧急清理完成')
     }
   }
 
@@ -234,7 +237,7 @@ export class MemoryOptimizer extends EventEmitter {
 
       if (!global.gc) {
         if (this.debugMemory && process.env.NODE_ENV === 'development' && !this.gcWarned) {
-          console.warn('⚠️ 垃圾回收不可用（需要--expose-gc标志）')
+          logger.warn('⚠️ 垃圾回收不可用（需要--expose-gc标志）')
           this.gcWarned = true
         }
         return
@@ -242,14 +245,17 @@ export class MemoryOptimizer extends EventEmitter {
 
       this.lastGcAt = now
       if (this.debugMemory) {
-        console.log('🗑️ 执行垃圾回收...')
+        logger.debug('🗑️ 执行垃圾回收...')
       }
       global.gc()
       if (this.debugMemory) {
-        console.log('✅ 垃圾回收完成')
+        logger.debug('✅ 垃圾回收完成')
       }
     } catch (error) {
-      console.error('❌ 垃圾回收执行失败:', error)
+      logger.error('❌ 垃圾回收执行失败', {
+        error:
+          error instanceof Error ? { message: error.message, stack: error.stack } : String(error),
+      })
     }
   }
 
@@ -348,7 +354,7 @@ export class MemoryOptimizer extends EventEmitter {
   updateThresholds(newThresholds: Partial<MemoryThresholds>) {
     this.thresholds = { ...this.thresholds, ...newThresholds }
     if (this.debugMemory) {
-      console.log('🔧 内存阈值已更新:', this.thresholds)
+      logger.debug('🔧 内存阈值已更新', { thresholds: this.thresholds })
     }
   }
 }

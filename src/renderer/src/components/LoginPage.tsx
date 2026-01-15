@@ -26,155 +26,190 @@ import logoImage from '../assets/logo-bready.png'
 import { ForgotPasswordModal } from './ForgotPasswordModal'
 import { FloatingLabelInput } from './ui/FloatingLabelInput'
 
-const FontStyles = ({ isDark }: { isDark: boolean }) => (
-  <style>{`
-    @font-face {
-      font-family: '${oppoSansFont}';
-      src: url('${oppoSansFont}') format('woff2');
-      font-display: swap;
-    }
-    @font-face {
-      font-family: '${dingTalkJinBuTiFont}';
-      src: url('${dingTalkJinBuTiFont}') format('woff2');
-      font-display: swap;
-    }
-    @font-face {
-      font-family: '${dingTalkSansFont}';
-      src: url('${dingTalkSansFont}') format('woff2');
-      font-display: swap;
-    }
-    .font-sans { font-family: '${oppoSansFont}', 'Inter', sans-serif; }
-    .font-display { font-family: '${oppoSansFont}', 'Outfit', sans-serif; }
-    .font-body { font-family: '${oppoSansFont}', 'Space Grotesk', sans-serif; }
-    .font-cn { font-family: '${oppoSansFont}', sans-serif; }
-    .font-logo { font-family: '${dingTalkJinBuTiFont}', '${oppoSansFont}', sans-serif; }
-    .font-logo-en { font-family: '${dingTalkSansFont}', 'Inter', sans-serif; }
-    input, textarea, select {
-      -webkit-appearance: none;
-    }
-    input::selection {
-      background: ${isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)'};
-    }
-  `}</style>
-)
+type FontStylesProps = {
+  isDark: boolean
+}
+
+function FontStyles({ isDark }: FontStylesProps): React.ReactElement {
+  return (
+    <style>{`
+      @font-face {
+        font-family: '${oppoSansFont}';
+        src: url('${oppoSansFont}') format('woff2');
+        font-display: swap;
+      }
+      @font-face {
+        font-family: '${dingTalkJinBuTiFont}';
+        src: url('${dingTalkJinBuTiFont}') format('woff2');
+        font-display: swap;
+      }
+      @font-face {
+        font-family: '${dingTalkSansFont}';
+        src: url('${dingTalkSansFont}') format('woff2');
+        font-display: swap;
+      }
+      .font-sans { font-family: '${oppoSansFont}', 'Inter', sans-serif; }
+      .font-display { font-family: '${oppoSansFont}', 'Outfit', sans-serif; }
+      .font-body { font-family: '${oppoSansFont}', 'Space Grotesk', sans-serif; }
+      .font-cn { font-family: '${oppoSansFont}', sans-serif; }
+      .font-logo { font-family: '${dingTalkJinBuTiFont}', '${oppoSansFont}', sans-serif; }
+      .font-logo-en { font-family: '${dingTalkSansFont}', 'Inter', sans-serif; }
+      input, textarea, select {
+        -webkit-appearance: none;
+      }
+      input::selection {
+        background: ${isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)'};
+      }
+    `}</style>
+  )
+}
 
 type LoginMode = 'email' | 'phone' | 'signup'
 
-const LoginPage: React.FC = () => {
+function LoginPage(): React.ReactElement {
   const { signIn, signUp, signInWithPhone, verifyOtp, loading } = useAuth()
   const { t, language, setLanguage, languageOptions } = useI18n()
   const { resolvedTheme } = useTheme()
+  const { toast } = useToast()
+
   const [mode, setMode] = useState<LoginMode>('email')
-  const [isExiting, setIsExiting] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [fullName, setFullName] = useState('')
-  const [phone, setPhone] = useState('')
-  const [otp, setOtp] = useState('')
-
-  const [showOtpInput, setShowOtpInput] = useState(false)
-  const [showEmailOtpInput, setShowEmailOtpInput] = useState(false)
-  const [emailOtp, setEmailOtp] = useState('')
-  const [emailVerificationEnabled, setEmailVerificationEnabled] = useState(false)
-  const [showLangMenu, setShowLangMenu] = useState(false)
-  const [showForgotModal, setShowForgotModal] = useState(false)
   const [loginConfig, setLoginConfig] = useState({
     email: true,
     phone: false,
     wechat: false,
     google: false,
   })
-  const { toast } = useToast()
+
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+    fullName: '',
+    phone: '',
+    otp: '',
+    emailOtp: '',
+  })
+
+  const [uiState, setUiState] = useState({
+    isExiting: false,
+    isSubmitting: false,
+    showOtpInput: false,
+    showEmailOtpInput: false,
+    emailVerificationEnabled: false,
+    showLangMenu: false,
+    showForgotModal: false,
+  })
+
+  function updateForm(key: keyof typeof formData, value: string): void {
+    setFormData((prev) => ({ ...prev, [key]: value }))
+  }
+
+  function updateUi(key: keyof typeof uiState, value: boolean): void {
+    setUiState((prev) => ({ ...prev, [key]: value }))
+  }
 
   const isDarkMode = resolvedTheme === 'dark'
 
   useEffect(() => {
     authService.getLoginConfigPublic().then(setLoginConfig)
     authService.getEmailVerificationConfig().then((config) => {
-      setEmailVerificationEnabled(config.enabled)
+      updateUi('emailVerificationEnabled', config.enabled)
     })
   }, [])
 
-  const validateEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  function validateEmail(email: string): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  }
 
-  const handleEmailLogin = async (e: React.FormEvent) => {
+  function isNetworkErrorMessage(message: string): boolean {
+    const normalized = message.toLowerCase()
+    return normalized.includes('fetch failed') || normalized.includes('network error')
+  }
+
+  function resolveNetworkErrorMessage(message: string, fallback: string): string {
+    if (isNetworkErrorMessage(message)) {
+      return t('login.errors.networkError')
+    }
+    return message || fallback
+  }
+
+  function getLoginErrorMessage(message: string): string {
+    const msg = message.toLowerCase()
+    if (
+      msg.includes('invalid') ||
+      msg.includes('credentials') ||
+      msg.includes('password') ||
+      msg.includes('密码')
+    ) {
+      return t('login.errors.invalidCredentials')
+    }
+    if (
+      msg.includes('not found') ||
+      msg.includes('user') ||
+      msg.includes('exist') ||
+      msg.includes('不存在')
+    ) {
+      return t('login.errors.userNotFound')
+    }
+    return t('login.errors.serverError')
+  }
+
+  async function handleEmailLogin(e: React.FormEvent): Promise<void> {
     e.preventDefault()
-    if (isSubmitting || isExiting) return
-    if (!email.trim()) {
+    if (uiState.isSubmitting || uiState.isExiting) return
+    if (!formData.email.trim()) {
       toast(t('login.errors.emailRequired'), 'error')
       return
     }
-    if (!validateEmail(email)) {
+    if (!validateEmail(formData.email)) {
       toast(t('login.errors.emailInvalid'), 'error')
       return
     }
-    if (!password) {
+    if (!formData.password) {
       toast(t('login.errors.passwordRequired'), 'error')
       return
     }
-    setIsSubmitting(true)
+    updateUi('isSubmitting', true)
     try {
-      const { error } = await signIn(email, password, 600)
+      const { error } = await signIn(formData.email, formData.password, 600)
       if (error) {
-        const msg = (error.message || '').toLowerCase()
-        if (
-          msg.includes('invalid') ||
-          msg.includes('credentials') ||
-          msg.includes('password') ||
-          msg.includes('密码')
-        ) {
-          toast(t('login.errors.invalidCredentials'), 'error')
-        } else if (
-          msg.includes('not found') ||
-          msg.includes('user') ||
-          msg.includes('exist') ||
-          msg.includes('不存在')
-        ) {
-          toast(t('login.errors.userNotFound'), 'error')
-        } else if (msg.includes('network') || msg.includes('fetch')) {
-          toast(t('login.errors.serverError'), 'error')
-        } else {
-          toast(t('login.errors.serverError'), 'error')
-        }
-        setIsSubmitting(false)
+        toast(getLoginErrorMessage(error.message || ''), 'error')
+        updateUi('isSubmitting', false)
       } else {
         toast(t('login.success.login'), 'success')
-        setIsExiting(true)
+        updateUi('isExiting', true)
       }
     } catch {
       toast(t('login.errors.serverError'), 'error')
-      setIsSubmitting(false)
+      updateUi('isSubmitting', false)
     }
   }
 
-  const handleEmailSignup = async (e: React.FormEvent) => {
+  async function handleEmailSignup(e: React.FormEvent): Promise<void> {
     e.preventDefault()
-    if (isSubmitting || isExiting) return
-    if (!fullName.trim()) {
+    if (uiState.isSubmitting || uiState.isExiting) return
+    if (!formData.fullName.trim()) {
       toast(t('login.errors.nicknameRequired'), 'error')
       return
     }
-    if (!email.trim()) {
+    if (!formData.email.trim()) {
       toast(t('login.errors.emailRequired'), 'error')
       return
     }
-    if (!validateEmail(email)) {
+    if (!validateEmail(formData.email)) {
       toast(t('login.errors.emailInvalid'), 'error')
       return
     }
-    if (!password) {
+    if (!formData.password) {
       toast(t('login.errors.passwordRequired'), 'error')
       return
     }
 
-    if (emailVerificationEnabled && !showEmailOtpInput) {
-      setIsSubmitting(true)
+    if (uiState.emailVerificationEnabled && !uiState.showEmailOtpInput) {
+      updateUi('isSubmitting', true)
       try {
-        const result = await authService.sendEmailCode(email)
+        const result = await authService.sendEmailCode(formData.email)
         if (result.success) {
-          setShowEmailOtpInput(true)
+          updateUi('showEmailOtpInput', true)
           toast(t('login.success.codeSent') || '验证码已发送', 'success')
         } else {
           toast(result.error || t('login.errors.sendCodeFailed'), 'error')
@@ -182,35 +217,37 @@ const LoginPage: React.FC = () => {
       } catch (err: any) {
         toast(err.message || t('login.errors.sendCodeFailed'), 'error')
       } finally {
-        setIsSubmitting(false)
+        updateUi('isSubmitting', false)
       }
       return
     }
 
-    if (emailVerificationEnabled && showEmailOtpInput) {
-      if (!emailOtp || emailOtp.length < 6) {
+    if (uiState.emailVerificationEnabled && uiState.showEmailOtpInput) {
+      if (!formData.emailOtp || formData.emailOtp.length < 6) {
         toast(t('login.errors.otpRequired') || '请输入验证码', 'error')
         return
       }
-      setIsSubmitting(true)
+      updateUi('isSubmitting', true)
       try {
-        const verifyResult = await authService.verifyEmailCode(email, emailOtp)
+        const verifyResult = await authService.verifyEmailCode(formData.email, formData.emailOtp)
         if (!verifyResult.success) {
           toast(verifyResult.error || t('login.errors.verifyFailed'), 'error')
-          setIsSubmitting(false)
+          updateUi('isSubmitting', false)
           return
         }
       } catch (err: any) {
         toast(err.message || t('login.errors.verifyFailed'), 'error')
-        setIsSubmitting(false)
+        updateUi('isSubmitting', false)
         return
       }
     } else {
-      setIsSubmitting(true)
+      updateUi('isSubmitting', true)
     }
 
     try {
-      const { error } = await signUp(email, password, { full_name: fullName })
+      const { error } = await signUp(formData.email, formData.password, {
+        full_name: formData.fullName,
+      })
       if (error) {
         const msg = (error.message || '').toLowerCase()
         if (
@@ -224,30 +261,26 @@ const LoginPage: React.FC = () => {
         } else {
           toast(error.message, 'error')
         }
-        setIsSubmitting(false)
+        updateUi('isSubmitting', false)
       } else {
         toast(t('login.success.signup'), 'success')
         await new Promise((resolve) => setTimeout(resolve, 800))
-        const { error: signInError } = await signIn(email, password, 600)
+        const { error: signInError } = await signIn(formData.email, formData.password, 600)
         if (signInError) {
           toast(signInError.message, 'error')
-          setIsSubmitting(false)
+          updateUi('isSubmitting', false)
         } else {
-          setIsExiting(true)
+          updateUi('isExiting', true)
         }
       }
     } catch (err: any) {
-      const msg = err.message || ''
-      if (msg.includes('fetch failed') || msg.includes('network error')) {
-        toast(t('login.errors.networkError'), 'error')
-      } else {
-        toast(msg || t('login.errors.signupFailed'), 'error')
-      }
-      setIsSubmitting(false)
+      const message = err?.message ? String(err.message) : ''
+      toast(resolveNetworkErrorMessage(message, t('login.errors.signupFailed')), 'error')
+      updateUi('isSubmitting', false)
     }
   }
 
-  const handleWeChatLogin = async () => {
+  async function handleWeChatLogin(): Promise<void> {
     try {
       const result = await authService.getWechatAuthUrl()
       if (result.success && result.authUrl) {
@@ -260,7 +293,7 @@ const LoginPage: React.FC = () => {
     }
   }
 
-  const handleGoogleLogin = async () => {
+  async function handleGoogleLogin(): Promise<void> {
     try {
       const result = await authService.getGoogleAuthUrl()
       if (result.success && result.authUrl) {
@@ -273,49 +306,41 @@ const LoginPage: React.FC = () => {
     }
   }
 
-  const handlePhoneLogin = async (e: React.FormEvent) => {
+  async function handlePhoneLogin(e: React.FormEvent): Promise<void> {
     e.preventDefault()
-    if (!phone.trim()) {
+    if (!formData.phone.trim()) {
       toast(t('login.errors.phoneRequired'), 'error')
       return
     }
-    if (!/^1[3-9]\d{9}$/.test(phone)) {
+    if (!/^1[3-9]\d{9}$/.test(formData.phone)) {
       toast(t('login.errors.phoneInvalid'), 'error')
       return
     }
     try {
-      const { error } = await signInWithPhone(phone)
+      const { error } = await signInWithPhone(formData.phone)
       if (error) {
         toast(error.message, 'error')
       } else {
-        setShowOtpInput(true)
+        updateUi('showOtpInput', true)
       }
     } catch (err: any) {
-      const msg = err.message || ''
-      if (msg.includes('fetch failed') || msg.includes('network error')) {
-        toast(t('login.errors.networkError'), 'error')
-      } else {
-        toast(msg || t('login.errors.sendCodeFailed'), 'error')
-      }
+      const message = err?.message ? String(err.message) : ''
+      toast(resolveNetworkErrorMessage(message, t('login.errors.sendCodeFailed')), 'error')
     }
   }
 
-  const handleOtpVerify = async (e: React.FormEvent) => {
+  async function handleOtpVerify(e: React.FormEvent): Promise<void> {
     e.preventDefault()
-    if (!otp || otp.length < 6) {
+    if (!formData.otp || formData.otp.length < 6) {
       toast(t('login.errors.otpRequired'), 'error')
       return
     }
     try {
-      const { error } = await verifyOtp(phone, otp)
+      const { error } = await verifyOtp(formData.phone, formData.otp)
       if (error) toast(error.message, 'error')
     } catch (err: any) {
-      const msg = err.message || ''
-      if (msg.includes('fetch failed') || msg.includes('network error')) {
-        toast(t('login.errors.networkError'), 'error')
-      } else {
-        toast(msg || t('login.errors.verifyFailed'), 'error')
-      }
+      const message = err?.message ? String(err.message) : ''
+      toast(resolveNetworkErrorMessage(message, t('login.errors.verifyFailed')), 'error')
     }
   }
 
@@ -386,7 +411,7 @@ const LoginPage: React.FC = () => {
           alt="Bready Hero"
           variants={heroImageVariants}
           initial="hidden"
-          animate={isExiting ? 'exit' : 'visible'}
+          animate={uiState.isExiting ? 'exit' : 'visible'}
           whileHover={{ scale: 1.08, y: -10, zIndex: 100 }}
           whileTap={{ scale: 0.95, rotate: -2 }}
           transition={{ type: 'spring', stiffness: 200, damping: 15 }}
@@ -394,7 +419,11 @@ const LoginPage: React.FC = () => {
         />
 
         <div className="absolute top-12 right-12 z-20 max-w-md text-right">
-          <motion.div initial="hidden" animate={isExiting ? 'exit' : 'visible'} variants={stagger}>
+          <motion.div
+            initial="hidden"
+            animate={uiState.isExiting ? 'exit' : 'visible'}
+            variants={stagger}
+          >
             <motion.h1
               variants={fadeUp}
               whileHover={{ scale: 1.08, x: -5 }}
@@ -456,7 +485,7 @@ const LoginPage: React.FC = () => {
           <div>
             <motion.div
               initial="hidden"
-              animate={isExiting ? 'exit' : 'visible'}
+              animate={uiState.isExiting ? 'exit' : 'visible'}
               variants={stagger}
               className="space-y-3"
             >
@@ -512,7 +541,7 @@ const LoginPage: React.FC = () => {
 
         <motion.div
           initial={{ opacity: 0 }}
-          animate={isExiting ? { opacity: 0 } : { opacity: 1 }}
+          animate={uiState.isExiting ? { opacity: 0 } : { opacity: 1 }}
           transition={{ duration: 0.3 }}
           className={`absolute bottom-4 right-6 text-[10px] z-20 ${isDarkMode ? 'text-[#333]' : 'text-[#BBB]'}`}
         >
@@ -526,7 +555,7 @@ const LoginPage: React.FC = () => {
             layout
             variants={cardVariants}
             initial="hidden"
-            animate={isExiting ? 'exit' : 'visible'}
+            animate={uiState.isExiting ? 'exit' : 'visible'}
             transition={{
               layout: { duration: 0.3, type: 'spring', stiffness: 300, damping: 30 },
             }}
@@ -540,7 +569,7 @@ const LoginPage: React.FC = () => {
               <div className="absolute top-6 right-6">
                 <div className="relative">
                   <button
-                    onClick={() => setShowLangMenu(!showLangMenu)}
+                    onClick={() => updateUi('showLangMenu', !uiState.showLangMenu)}
                     className={`p-2 rounded-xl transition-all duration-200 cursor-pointer ${
                       isDarkMode
                         ? 'hover:bg-[#222] text-[#666] hover:text-white'
@@ -550,7 +579,7 @@ const LoginPage: React.FC = () => {
                     <Globe className="w-4 h-4" />
                   </button>
                   <AnimatePresence>
-                    {showLangMenu && (
+                    {uiState.showLangMenu && (
                       <motion.div
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -565,7 +594,7 @@ const LoginPage: React.FC = () => {
                             key={opt.value}
                             onClick={() => {
                               setLanguage(opt.value)
-                              setShowLangMenu(false)
+                              updateUi('showLangMenu', false)
                             }}
                             className={`w-full text-left px-4 py-2.5 text-sm transition-colors cursor-pointer ${
                               isDarkMode
@@ -626,7 +655,7 @@ const LoginPage: React.FC = () => {
                           key={m}
                           onClick={() => {
                             setMode(m as LoginMode)
-                            setShowOtpInput(false)
+                            updateUi('showOtpInput', false)
                           }}
                           className={`relative py-2.5 text-xs font-medium rounded-xl transition-all duration-300 cursor-pointer ${
                             mode === m
@@ -684,8 +713,8 @@ const LoginPage: React.FC = () => {
                         >
                           <FloatingLabelInput
                             label={t('login.nickname')}
-                            value={fullName}
-                            onChange={setFullName}
+                            value={formData.fullName}
+                            onChange={(v) => updateForm('fullName', v)}
                             placeholder={t('login.placeholders.nickname')}
                           />
                         </motion.div>
@@ -695,8 +724,8 @@ const LoginPage: React.FC = () => {
                     <motion.div layout>
                       <FloatingLabelInput
                         label={t('login.email')}
-                        value={email}
-                        onChange={setEmail}
+                        value={formData.email}
+                        onChange={(v) => updateForm('email', v)}
                         placeholder={t('login.placeholders.email')}
                       />
                     </motion.div>
@@ -705,15 +734,15 @@ const LoginPage: React.FC = () => {
                       <FloatingLabelInput
                         label={t('login.password')}
                         type="password"
-                        value={password}
-                        onChange={setPassword}
+                        value={formData.password}
+                        onChange={(v) => updateForm('password', v)}
                         placeholder={t('login.placeholders.password')}
                       />
                       {mode === 'email' && (
                         <div className="flex justify-end mt-1">
                           <button
                             type="button"
-                            onClick={() => setShowForgotModal(true)}
+                            onClick={() => updateUi('showForgotModal', true)}
                             className={`text-xs cursor-pointer transition-colors ${
                               isDarkMode
                                 ? 'text-gray-500 hover:text-white'
@@ -727,26 +756,28 @@ const LoginPage: React.FC = () => {
                     </motion.div>
 
                     <AnimatePresence mode="popLayout" initial={false}>
-                      {mode === 'signup' && emailVerificationEnabled && showEmailOtpInput && (
-                        <motion.div
-                          key="email-otp-field"
-                          layout
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: 'auto', opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.2 }}
-                          className="overflow-hidden"
-                        >
-                          <FloatingLabelInput
-                            label={t('login.verificationCode') || '验证码'}
-                            value={emailOtp}
-                            onChange={setEmailOtp}
-                            placeholder={
-                              t('login.placeholders.verificationCode') || '请输入6位验证码'
-                            }
-                          />
-                        </motion.div>
-                      )}
+                      {mode === 'signup' &&
+                        uiState.emailVerificationEnabled &&
+                        uiState.showEmailOtpInput && (
+                          <motion.div
+                            key="email-otp-field"
+                            layout
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="overflow-hidden"
+                          >
+                            <FloatingLabelInput
+                              label={t('login.verificationCode') || '验证码'}
+                              value={formData.emailOtp}
+                              onChange={(v) => updateForm('emailOtp', v)}
+                              placeholder={
+                                t('login.placeholders.verificationCode') || '请输入6位验证码'
+                              }
+                            />
+                          </motion.div>
+                        )}
                     </AnimatePresence>
 
                     <motion.button
@@ -754,26 +785,34 @@ const LoginPage: React.FC = () => {
                       type="submit"
                       disabled={
                         loading ||
-                        (mode === 'signup' ? !email || !password || !fullName : !email || !password)
+                        (mode === 'signup'
+                          ? !formData.email || !formData.password || !formData.fullName
+                          : !formData.email || !formData.password)
                       }
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.3, delay: 0.1 }}
                       whileHover={
                         loading ||
-                        (mode === 'signup' ? !email || !password || !fullName : !email || !password)
+                        (mode === 'signup'
+                          ? !formData.email || !formData.password || !formData.fullName
+                          : !formData.email || !formData.password)
                           ? {}
                           : { scale: 1.02, y: -1 }
                       }
                       whileTap={
                         loading ||
-                        (mode === 'signup' ? !email || !password || !fullName : !email || !password)
+                        (mode === 'signup'
+                          ? !formData.email || !formData.password || !formData.fullName
+                          : !formData.email || !formData.password)
                           ? {}
                           : { scale: 0.95 }
                       }
                       className={`w-full h-11 mt-2 rounded-xl text-sm font-display font-semibold transition-all duration-300 ${
                         loading ||
-                        (mode === 'signup' ? !email || !password || !fullName : !email || !password)
+                        (mode === 'signup'
+                          ? !formData.email || !formData.password || !formData.fullName
+                          : !formData.email || !formData.password)
                           ? isDarkMode
                             ? 'bg-[#333] text-gray-500 cursor-not-allowed'
                             : 'bg-gray-200 text-gray-400 cursor-not-allowed'
@@ -793,7 +832,7 @@ const LoginPage: React.FC = () => {
                   </motion.form>
                 )}
 
-                {mode === 'phone' && !showOtpInput && (
+                {mode === 'phone' && !uiState.showOtpInput && (
                   <motion.form
                     key="phone-form"
                     initial={{ opacity: 0 }}
@@ -806,20 +845,20 @@ const LoginPage: React.FC = () => {
                     <FloatingLabelInput
                       label={t('login.phone')}
                       type="tel"
-                      value={phone}
-                      onChange={setPhone}
+                      value={formData.phone}
+                      onChange={(v) => updateForm('phone', v)}
                       placeholder={t('login.placeholders.phone')}
                     />
                     <motion.button
                       type="submit"
-                      disabled={loading || !phone}
+                      disabled={loading || !formData.phone}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.3, delay: 0.1 }}
-                      whileHover={loading || !phone ? {} : { scale: 1.02, y: -1 }}
-                      whileTap={loading || !phone ? {} : { scale: 0.95 }}
+                      whileHover={loading || !formData.phone ? {} : { scale: 1.02, y: -1 }}
+                      whileTap={loading || !formData.phone ? {} : { scale: 0.95 }}
                       className={`w-full h-11 mt-2 rounded-xl text-sm font-display font-semibold transition-all duration-300 ${
-                        loading || !phone
+                        loading || !formData.phone
                           ? isDarkMode
                             ? 'bg-[#333] text-gray-500 cursor-not-allowed'
                             : 'bg-gray-200 text-gray-400 cursor-not-allowed'
@@ -833,7 +872,7 @@ const LoginPage: React.FC = () => {
                   </motion.form>
                 )}
 
-                {mode === 'phone' && showOtpInput && (
+                {mode === 'phone' && uiState.showOtpInput && (
                   <motion.form
                     key="otp-form"
                     initial={{ opacity: 0 }}
@@ -847,7 +886,9 @@ const LoginPage: React.FC = () => {
                       className={`text-center text-sm mb-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}
                     >
                       {t('login.codeSentTo') || 'Code sent to'}{' '}
-                      <span className={isDarkMode ? 'text-white' : 'text-black'}>{phone}</span>
+                      <span className={isDarkMode ? 'text-white' : 'text-black'}>
+                        {formData.phone}
+                      </span>
                     </div>
 
                     <div className="space-y-1.5">
@@ -860,8 +901,8 @@ const LoginPage: React.FC = () => {
                       >
                         <input
                           type="text"
-                          value={otp}
-                          onChange={(e) => setOtp(e.target.value)}
+                          value={formData.otp}
+                          onChange={(e) => updateForm('otp', e.target.value)}
                           placeholder="••••••"
                           maxLength={6}
                           className="w-full h-14 px-4 bg-transparent border-none outline-none text-2xl font-mono text-center tracking-[0.5em] placeholder:tracking-normal placeholder:text-gray-400/30"
@@ -872,14 +913,20 @@ const LoginPage: React.FC = () => {
 
                     <motion.button
                       type="submit"
-                      disabled={loading || !otp || otp.length < 6}
+                      disabled={loading || !formData.otp || formData.otp.length < 6}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.3, delay: 0.1 }}
-                      whileHover={loading || !otp || otp.length < 6 ? {} : { scale: 1.02, y: -1 }}
-                      whileTap={loading || !otp || otp.length < 6 ? {} : { scale: 0.95 }}
+                      whileHover={
+                        loading || !formData.otp || formData.otp.length < 6
+                          ? {}
+                          : { scale: 1.02, y: -1 }
+                      }
+                      whileTap={
+                        loading || !formData.otp || formData.otp.length < 6 ? {} : { scale: 0.95 }
+                      }
                       className={`w-full h-11 mt-2 rounded-xl text-sm font-display font-semibold transition-all duration-300 ${
-                        loading || !otp || otp.length < 6
+                        loading || !formData.otp || formData.otp.length < 6
                           ? isDarkMode
                             ? 'bg-[#333] text-gray-500 cursor-not-allowed'
                             : 'bg-gray-200 text-gray-400 cursor-not-allowed'
@@ -893,7 +940,7 @@ const LoginPage: React.FC = () => {
 
                     <button
                       type="button"
-                      onClick={() => setShowOtpInput(false)}
+                      onClick={() => updateUi('showOtpInput', false)}
                       className={`w-full text-xs py-2 cursor-pointer transition-colors duration-200 ${
                         isDarkMode
                           ? 'text-gray-500 hover:text-white'
@@ -984,7 +1031,10 @@ const LoginPage: React.FC = () => {
           </motion.div>
         </div>
       </div>
-      <ForgotPasswordModal isOpen={showForgotModal} onClose={() => setShowForgotModal(false)} />
+      <ForgotPasswordModal
+        isOpen={uiState.showForgotModal}
+        onClose={() => updateUi('showForgotModal', false)}
+      />
     </div>
   )
 }

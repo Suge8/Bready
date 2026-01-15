@@ -7,7 +7,9 @@ import { systemPreferences } from 'electron'
 import { EventEmitter } from 'events'
 import type { AudioCaptureOptions, AudioMode, AudioStatus } from '../../shared/ipc'
 import { getAiProvider } from '../ai-service'
+import { createLogger } from '../utils/logging'
 
+const logger = createLogger('electron-native-capture')
 const debugAudio = process.env.DEBUG_AUDIO === '1'
 const GEMINI_SAMPLE_RATE = 24000
 const DOUBAO_SAMPLE_RATE = 16000
@@ -47,14 +49,14 @@ export class ElectronNativeAudioCapture extends EventEmitter {
   async startCapture(): Promise<boolean> {
     if (this.isCapturing) {
       if (debugAudio) {
-        console.log('🎵 音频捕获已在运行')
+        logger.debug('🎵 音频捕获已在运行')
       }
       return true
     }
 
     try {
       if (debugAudio) {
-        console.log('🚀 启动音频捕获协调器...')
+        logger.debug('🚀 启动音频捕获协调器...')
       }
 
       // 检查权限
@@ -72,14 +74,14 @@ export class ElectronNativeAudioCapture extends EventEmitter {
           options: this.options,
         }
         if (debugAudio) {
-          console.log('📡 主进程发送音频捕获启动事件到渲染进程:', eventData)
+          logger.debug('📡 主进程发送音频捕获启动事件到渲染进程', { eventData })
         }
         this.mainWindow.webContents.send('audio-capture-start', eventData)
         if (debugAudio) {
-          console.log('📡 音频捕获启动事件已发送')
+          logger.debug('📡 音频捕获启动事件已发送')
         }
       } else {
-        console.error('❌ 主窗口不可用，无法发送音频捕获事件')
+        logger.error('❌ 主窗口不可用，无法发送音频捕获事件')
         throw new Error('主窗口不可用')
       }
 
@@ -88,7 +90,10 @@ export class ElectronNativeAudioCapture extends EventEmitter {
 
       return true
     } catch (error) {
-      console.error('❌ 音频捕获启动失败:', error)
+      logger.error('❌ 音频捕获启动失败', {
+        error:
+          error instanceof Error ? { message: error.message, stack: error.stack } : String(error),
+      })
       this.emit('error', error)
       return false
     }
@@ -100,18 +105,18 @@ export class ElectronNativeAudioCapture extends EventEmitter {
   private async checkPermissions(): Promise<boolean> {
     try {
       if (debugAudio) {
-        console.log(`🔐 检查 ${this.options.mode} 模式所需权限...`)
+        logger.debug(`🔐 检查 ${this.options.mode} 模式所需权限...`)
       }
 
       if (this.options.mode === 'system') {
         // 检查屏幕录制权限
         const screenPermission = systemPreferences.getMediaAccessStatus('screen')
         if (debugAudio) {
-          console.log(`🔐 屏幕录制权限状态: ${screenPermission}`)
+          logger.debug(`🔐 屏幕录制权限状态: ${screenPermission}`)
         }
         if (screenPermission !== 'granted') {
           if (debugAudio) {
-            console.log('🔐 需要屏幕录制权限用于系统音频捕获')
+            logger.debug('🔐 需要屏幕录制权限用于系统音频捕获')
           }
           // 在实际应用中，这里会触发权限请求
           return false
@@ -120,25 +125,28 @@ export class ElectronNativeAudioCapture extends EventEmitter {
         // 检查麦克风权限
         const micPermission = systemPreferences.getMediaAccessStatus('microphone')
         if (debugAudio) {
-          console.log(`🔐 麦克风权限状态: ${micPermission}`)
+          logger.debug(`🔐 麦克风权限状态: ${micPermission}`)
         }
         if (micPermission !== 'granted') {
           if (debugAudio) {
-            console.log('🔐 请求麦克风权限...')
+            logger.debug('🔐 请求麦克风权限...')
           }
           const granted = await systemPreferences.askForMediaAccess('microphone')
           if (debugAudio) {
-            console.log(`🔐 麦克风权限请求结果: ${granted ? '已授予' : '被拒绝'}`)
+            logger.debug(`🔐 麦克风权限请求结果: ${granted ? '已授予' : '被拒绝'}`)
           }
           return granted
         }
         if (debugAudio) {
-          console.log('✅ 麦克风权限已授予')
+          logger.debug('✅ 麦克风权限已授予')
         }
       }
       return true
     } catch (error) {
-      console.error('权限检查失败:', error)
+      logger.error('权限检查失败', {
+        error:
+          error instanceof Error ? { message: error.message, stack: error.stack } : String(error),
+      })
       return false
     }
   }
@@ -157,29 +165,29 @@ export class ElectronNativeAudioCapture extends EventEmitter {
    */
   stopCapture(): void {
     if (debugAudio) {
-      console.log('⏹️ 停止音频捕获...')
-      console.log('📊 当前模式:', this.options.mode)
+      logger.debug('⏹️ 停止音频捕获...')
+      logger.debug('📊 当前模式', { mode: this.options.mode })
     }
 
     // 发送停止事件到渲染进程
     if (this.mainWindow && !this.mainWindow.isDestroyed()) {
       if (debugAudio) {
-        console.log('📡 主进程发送音频捕获停止事件到渲染进程')
+        logger.debug('📡 主进程发送音频捕获停止事件到渲染进程')
       }
       this.mainWindow.webContents.send('audio-capture-stop')
       if (debugAudio) {
-        console.log('📡 音频捕获停止事件已发送')
+        logger.debug('📡 音频捕获停止事件已发送')
       }
     } else {
       if (debugAudio) {
-        console.warn('⚠️ 主窗口不可用，无法发送音频捕获停止事件')
+        logger.warn('⚠️ 主窗口不可用，无法发送音频捕获停止事件')
       }
     }
 
     this.isCapturing = false
     this.emit('stopped')
     if (debugAudio) {
-      console.log('✅ 音频捕获已停止')
+      logger.debug('✅ 音频捕获已停止')
     }
   }
 
@@ -189,20 +197,20 @@ export class ElectronNativeAudioCapture extends EventEmitter {
   async switchMode(mode: AudioMode): Promise<boolean> {
     if (this.options.mode === mode) {
       if (debugAudio) {
-        console.log(`🔄 已经是 ${mode} 模式，无需切换`)
+        logger.debug(`🔄 已经是 ${mode} 模式，无需切换`)
       }
       return true
     }
 
     if (debugAudio) {
-      console.log(`🔄 切换音频模式: ${this.options.mode} → ${mode}`)
-      console.log(`🔄 当前捕获状态: ${this.isCapturing ? '运行中' : '已停止'}`)
+      logger.debug(`🔄 切换音频模式: ${this.options.mode} → ${mode}`)
+      logger.debug(`🔄 当前捕获状态: ${this.isCapturing ? '运行中' : '已停止'}`)
     }
 
     const wasCapturing = this.isCapturing
     if (wasCapturing) {
       if (debugAudio) {
-        console.log('⏸️ 暂停当前音频捕获...')
+        logger.debug('⏸️ 暂停当前音频捕获...')
       }
       this.stopCapture()
       // 等待一小段时间确保停止完成
@@ -211,16 +219,16 @@ export class ElectronNativeAudioCapture extends EventEmitter {
 
     this.options.mode = mode
     if (debugAudio) {
-      console.log(`✅ 音频模式已更新为: ${mode}`)
+      logger.debug(`✅ 音频模式已更新为: ${mode}`)
     }
 
     if (wasCapturing) {
       if (debugAudio) {
-        console.log('▶️ 重新启动音频捕获...')
+        logger.debug('▶️ 重新启动音频捕获...')
       }
       const result = await this.startCapture()
       if (debugAudio) {
-        console.log(`🔄 重新启动结果: ${result ? '成功' : '失败'}`)
+        logger.debug(`🔄 重新启动结果: ${result ? '成功' : '失败'}`)
       }
       return result
     }

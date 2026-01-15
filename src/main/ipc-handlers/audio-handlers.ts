@@ -9,8 +9,10 @@ import {
 } from '../audio-manager'
 import { electronAudioCapture } from '../audio/electron-native-capture'
 import { broadcastToAllWindows } from '../window-manager'
+import { createLogger } from '../utils/logging'
 import type { AudioMode } from '../../shared/ipc'
 
+const logger = createLogger('audio-handlers')
 const debugAudio = process.env.DEBUG_AUDIO === '1'
 
 // 音频捕获处理
@@ -51,14 +53,17 @@ ipcMain.on('audio-data', (event, audioPacket) => {
       // 兼容格式：ArrayBuffer或Buffer
       buffer = Buffer.from(audioPacket)
     } else {
-      console.warn('⚠️ 未知的音频数据格式:', typeof audioPacket)
+      logger.warn('⚠️ 未知的音频数据格式', { type: typeof audioPacket })
       return
     }
 
     // 发送给音频处理器
     electronAudioCapture.onAudioData(buffer)
   } catch (error) {
-    console.error('处理音频数据失败:', error)
+    logger.error('处理音频数据失败', {
+      error:
+        error instanceof Error ? { message: error.message, stack: error.stack } : String(error),
+    })
   }
 })
 
@@ -66,7 +71,7 @@ ipcMain.on('audio-data', (event, audioPacket) => {
 ipcMain.on('audio-mode-fallback', (event, fallbackInfo) => {
   void event
   if (debugAudio) {
-    console.log('🔄 音频模式降级:', fallbackInfo)
+    logger.debug('🔄 音频模式降级', { fallbackInfo })
   }
   const { reason } = fallbackInfo
 
@@ -107,7 +112,7 @@ ipcMain.handle('check-system-audio-dump-available', async () => {
     const exists = fs.existsSync(systemAudioPath)
     if (!exists) {
       if (debugAudio) {
-        console.log('❌ SystemAudioDump 文件不存在:', systemAudioPath)
+        logger.warn('❌ SystemAudioDump 文件不存在', { path: systemAudioPath })
       }
       return { available: false, reason: 'SystemAudioDump 文件不存在' }
     }
@@ -115,7 +120,7 @@ ipcMain.handle('check-system-audio-dump-available', async () => {
     // 检查是否为 macOS 平台
     if (process.platform !== 'darwin') {
       if (debugAudio) {
-        console.log('❌ SystemAudioDump 仅支持 macOS')
+        logger.warn('❌ SystemAudioDump 仅支持 macOS')
       }
       return { available: false, reason: 'SystemAudioDump 仅支持 macOS' }
     }
@@ -124,18 +129,23 @@ ipcMain.handle('check-system-audio-dump-available', async () => {
     try {
       fs.accessSync(systemAudioPath, fs.constants.F_OK | fs.constants.X_OK)
       if (debugAudio) {
-        console.log('✅ SystemAudioDump 可用:', systemAudioPath)
+        logger.info('✅ SystemAudioDump 可用', { path: systemAudioPath })
       }
       return { available: true, path: systemAudioPath }
     } catch (permError) {
       if (debugAudio) {
-        console.log('❌ SystemAudioDump 权限不足:', permError)
+        logger.warn('❌ SystemAudioDump 权限不足', {
+          error:
+            permError instanceof Error
+              ? { message: permError.message, stack: permError.stack }
+              : String(permError),
+        })
       }
       return { available: false, reason: 'SystemAudioDump 权限不足' }
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
-    console.error('检查 SystemAudioDump 可用性失败:', errorMessage)
+    logger.error('检查 SystemAudioDump 可用性失败', { error: errorMessage })
     return { available: false, reason: errorMessage }
   }
 })

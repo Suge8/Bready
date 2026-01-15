@@ -1,4 +1,4 @@
-import { getSetting } from '../routes/settings'
+import { SettingsService } from './database'
 
 interface WechatLoginConfig {
   enabled: boolean
@@ -9,10 +9,10 @@ interface WechatLoginConfig {
 
 export async function getWechatLoginConfig(): Promise<WechatLoginConfig> {
   const [enabled, appId, appSecret, redirectUri] = await Promise.all([
-    getSetting('wechat_login_enabled'),
-    getSetting('wechat_login_app_id'),
-    getSetting('wechat_login_app_secret'),
-    getSetting('wechat_login_redirect_uri'),
+    SettingsService.get('wechat_login_enabled'),
+    SettingsService.get('wechat_login_app_id'),
+    SettingsService.get('wechat_login_app_secret'),
+    SettingsService.get('wechat_login_redirect_uri'),
   ])
 
   return {

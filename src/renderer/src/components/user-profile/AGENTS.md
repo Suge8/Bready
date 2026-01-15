@@ -44,5 +44,7 @@ user-profile/
 
 ## 技术债务
 
-- `SecuritySettings.tsx`: 580 行
-- `UserProfileModal.tsx`: 574 行
+| 文件                   | 问题   | 状态   |
+| ---------------------- | ------ | ------ |
+| `SecuritySettings.tsx` | 580 行 | 待拆分 |
+| `UserProfileModal.tsx` | 574 行 | 待拆分 |

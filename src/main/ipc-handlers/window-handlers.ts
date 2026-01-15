@@ -1,73 +1,56 @@
 import { ipcMain } from 'electron'
 import { createFloatingWindow, getMainWindow, getFloatingWindow } from '../window-manager'
+import { createLogger } from '../utils/logging'
 
+const logger = createLogger('window-handlers')
 const debugApp = process.env.DEBUG_APP === '1'
 
-// 协作模式处理
 ipcMain.handle('enter-collaboration-mode', () => {
   try {
-    if (debugApp) {
-      console.log('进入协作模式...')
-    }
+    if (debugApp) logger.debug('进入协作模式')
     const mainWindow = getMainWindow()
     if (mainWindow) {
-      // 协作模式保持和主页相同的窗口大小，保持原位置
-      if (debugApp) {
-        console.log('协作模式保持主窗口尺寸')
-      }
+      if (debugApp) logger.debug('协作模式保持主窗口尺寸')
       return true
     }
     return false
   } catch (error) {
-    console.error('进入协作模式失败:', error)
+    logger.error('进入协作模式失败', { error })
     return false
   }
 })
 
 ipcMain.handle('exit-collaboration-mode', () => {
   try {
-    if (debugApp) {
-      console.log('退出协作模式...')
-    }
+    if (debugApp) logger.debug('退出协作模式')
     const mainWindow = getMainWindow()
     if (mainWindow) {
-      // 保持用户当前窗口大小，不强制改变
-      // 避免窗口跳变，提供更好的用户体验
-      if (debugApp) {
-        console.log('退出协作模式，保持当前窗口尺寸')
-      }
+      if (debugApp) logger.debug('退出协作模式，保持当前窗口尺寸')
       return true
     }
     return false
   } catch (error) {
-    console.error('退出协作模式失败:', error)
+    logger.error('退出协作模式失败', { error })
     return false
   }
 })
 
-// 浮窗处理
 ipcMain.handle('create-floating-window', () => {
   try {
-    if (debugApp) {
-      console.log('正在创建浮窗...')
-    }
+    if (debugApp) logger.debug('正在创建浮窗')
     let floatingWindow = getFloatingWindow()
     if (!floatingWindow) {
       floatingWindow = createFloatingWindow()
-      if (debugApp) {
-        console.log('浮窗创建结果:', !!floatingWindow)
-      }
+      if (debugApp) logger.debug('浮窗创建结果', { created: !!floatingWindow })
       return true
     } else {
-      if (debugApp) {
-        console.log('浮窗已存在')
-      }
+      if (debugApp) logger.debug('浮窗已存在')
       floatingWindow.show()
       floatingWindow.focus()
       return true
     }
   } catch (error) {
-    console.error('创建浮窗失败:', error)
+    logger.error('创建浮窗失败', { error })
     return false
   }
 })

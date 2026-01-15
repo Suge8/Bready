@@ -3,8 +3,10 @@ import { exec } from 'child_process'
 import { promisify } from 'util'
 import { electronAudioCapture } from '../audio/electron-native-capture'
 import { checkAiConfigStatus } from '../services/settings-service'
+import { createLogger } from '../utils/logging'
 import type { PermissionStatus, SystemPermissions } from '../../shared/ipc'
 
+const logger = createLogger('permission-handlers')
 const debugAudio = process.env.DEBUG_AUDIO === '1'
 const execAsync = promisify(exec)
 
@@ -32,7 +34,10 @@ async function checkScreenRecordingPermission(): Promise<PermissionStatus> {
       message: '需要屏幕录制权限以捕获系统音频',
     }
   } catch (error) {
-    console.error('检查屏幕录制权限时出错:', error)
+    logger.error('检查屏幕录制权限时出错', {
+      error:
+        error instanceof Error ? { message: error.message, stack: error.stack } : String(error),
+    })
     return {
       granted: false,
       canRequest: false,
@@ -66,7 +71,10 @@ async function checkMicrophonePermission(): Promise<PermissionStatus> {
       message: canRequest ? '麦克风权限已授予' : '需要麦克风权限',
     }
   } catch (error) {
-    console.error('检查麦克风权限时出错:', error)
+    logger.error('检查麦克风权限时出错', {
+      error:
+        error instanceof Error ? { message: error.message, stack: error.stack } : String(error),
+    })
     return {
       granted: false,
       canRequest: false,
@@ -95,7 +103,10 @@ async function checkApiKeyStatus(): Promise<PermissionStatus> {
       message: `AI 配置未完成，缺少: ${missingStr}`,
     }
   } catch (error) {
-    console.error('检查API密钥时出错:', error)
+    logger.error('检查API密钥时出错', {
+      error:
+        error instanceof Error ? { message: error.message, stack: error.stack } : String(error),
+    })
     return {
       granted: false,
       canRequest: true,
@@ -123,7 +134,10 @@ async function checkAudioDeviceStatus(): Promise<PermissionStatus> {
       message: '需要屏幕录制或麦克风权限以启用音频捕获',
     }
   } catch (error) {
-    console.error('检查音频设备时出错:', error)
+    logger.error('检查音频设备时出错', {
+      error:
+        error instanceof Error ? { message: error.message, stack: error.stack } : String(error),
+    })
     return {
       granted: false,
       canRequest: true,
@@ -171,7 +185,10 @@ async function openSystemPreferences(pane: string): Promise<boolean> {
     await execAsync(command)
     return true
   } catch (error) {
-    console.error('打开系统偏好设置失败:', error)
+    logger.error('打开系统偏好设置失败', {
+      error:
+        error instanceof Error ? { message: error.message, stack: error.stack } : String(error),
+    })
     return false
   }
 }
@@ -184,7 +201,7 @@ async function testAudioCapture(): Promise<{
   recommendation?: string
 }> {
   try {
-    console.log('🧪 测试 Electron 原生音频捕获...')
+    logger.info('🧪 测试 Electron 原生音频捕获...')
 
     const status = electronAudioCapture.getStatus()
 
@@ -241,7 +258,12 @@ async function testAudioCapture(): Promise<{
                 })
               }
             } catch (error) {
-              console.error('音频测试清理错误:', error)
+              logger.error('音频测试清理错误', {
+                error:
+                  error instanceof Error
+                    ? { message: error.message, stack: error.stack }
+                    : String(error),
+              })
               resolve({
                 success: false,
                 message: '音频测试清理失败',
@@ -251,7 +273,12 @@ async function testAudioCapture(): Promise<{
           }, 3000)
         })
         .catch((error) => {
-          console.error('音频测试启动失败:', error)
+          logger.error('音频测试启动失败', {
+            error:
+              error instanceof Error
+                ? { message: error.message, stack: error.stack }
+                : String(error),
+          })
           electronAudioCapture.removeListener('audioData', testListener)
           resolve({
             success: false,
@@ -319,20 +346,20 @@ ipcMain.handle('get-desktop-sources-safe', async (event, options) => {
     const screenStatus = systemPreferences.getMediaAccessStatus('screen')
     if (screenStatus !== 'granted') {
       if (debugAudio) {
-        console.warn('⚠️ 屏幕录制权限未授予，无法获取桌面源')
+        logger.warn('⚠️ 屏幕录制权限未授予，无法获取桌面源')
       }
       return []
     }
 
     if (!options || typeof options !== 'object') {
       if (debugAudio) {
-        console.warn('⚠️ 获取桌面源: 无效的 options 参数')
+        logger.warn('⚠️ 获取桌面源: 无效的 options 参数')
       }
       return []
     }
 
     if (debugAudio) {
-      console.log('📡 正在安全获取桌面源...', options)
+      logger.debug('📡 正在安全获取桌面源', { options })
     }
 
     const safeOptions = {
@@ -350,13 +377,13 @@ ipcMain.handle('get-desktop-sources-safe', async (event, options) => {
     ])
 
     if (debugAudio) {
-      console.log('✅ 安全获取桌面源成功:', sources?.length || 0, '个')
+      logger.debug('✅ 安全获取桌面源成功', { count: sources?.length || 0 })
     }
     return sources || []
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
     if (debugAudio) {
-      console.error('❌ 安全获取桌面源失败:', errorMessage)
+      logger.error('❌ 安全获取桌面源失败', { error: errorMessage })
     }
 
     if (
@@ -365,7 +392,7 @@ ipcMain.handle('get-desktop-sources-safe', async (event, options) => {
       errorMessage.includes('bad IPC')
     ) {
       if (debugAudio) {
-        console.log('🔒 权限或IPC错误，返回空数组')
+        logger.debug('🔒 权限或IPC错误，返回空数组')
       }
     }
 
@@ -379,20 +406,20 @@ ipcMain.handle('get-desktop-sources', async (event, options) => {
     const screenStatus = systemPreferences.getMediaAccessStatus('screen')
     if (screenStatus !== 'granted') {
       if (debugAudio) {
-        console.warn('⚠️ 屏幕录制权限未授予，无法获取桌面源')
+        logger.warn('⚠️ 屏幕录制权限未授予，无法获取桌面源')
       }
       return []
     }
 
     if (!options || typeof options !== 'object') {
       if (debugAudio) {
-        console.warn('⚠️ 获取桌面源: 无效的 options 参数')
+        logger.warn('⚠️ 获取桌面源: 无效的 options 参数')
       }
       return []
     }
 
     if (debugAudio) {
-      console.log('📡 正在获取桌面源...', options)
+      logger.debug('📡 正在获取桌面源', { options })
     }
 
     const safeOptions = {
@@ -403,19 +430,19 @@ ipcMain.handle('get-desktop-sources', async (event, options) => {
 
     const sources = await desktopCapturer.getSources(safeOptions)
     if (debugAudio) {
-      console.log('✅ 成功获取桌面源:', sources?.length || 0, '个')
+      logger.debug('✅ 成功获取桌面源', { count: sources?.length || 0 })
     }
 
     return sources || []
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
     if (debugAudio) {
-      console.error('❌ 获取桌面源失败:', errorMessage)
+      logger.error('❌ 获取桌面源失败', { error: errorMessage })
     }
 
     if (errorMessage.includes('permission') || errorMessage.includes('access')) {
       if (debugAudio) {
-        console.log('🔒 权限错误，返回空数组')
+        logger.debug('🔒 权限错误，返回空数组')
       }
     }
 

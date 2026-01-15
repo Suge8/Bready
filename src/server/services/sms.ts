@@ -1,5 +1,5 @@
 import crypto from 'crypto'
-import { getSetting } from '../routes/settings'
+import { SettingsService } from './database'
 
 export type SmsProvider = 'aliyun' | 'tencent' | ''
 
@@ -33,16 +33,16 @@ export async function getSmsConfig(): Promise<SmsConfig> {
     tencentSign,
     tencentTemplate,
   ] = await Promise.all([
-    getSetting('sms_provider'),
-    getSetting('sms_aliyun_access_key_id'),
-    getSetting('sms_aliyun_access_key_secret'),
-    getSetting('sms_aliyun_sign_name'),
-    getSetting('sms_aliyun_template_code'),
-    getSetting('sms_tencent_secret_id'),
-    getSetting('sms_tencent_secret_key'),
-    getSetting('sms_tencent_app_id'),
-    getSetting('sms_tencent_sign_name'),
-    getSetting('sms_tencent_template_id'),
+    SettingsService.get('sms_provider'),
+    SettingsService.get('sms_aliyun_access_key_id'),
+    SettingsService.get('sms_aliyun_access_key_secret'),
+    SettingsService.get('sms_aliyun_sign_name'),
+    SettingsService.get('sms_aliyun_template_code'),
+    SettingsService.get('sms_tencent_secret_id'),
+    SettingsService.get('sms_tencent_secret_key'),
+    SettingsService.get('sms_tencent_app_id'),
+    SettingsService.get('sms_tencent_sign_name'),
+    SettingsService.get('sms_tencent_template_id'),
   ])
 
   return {

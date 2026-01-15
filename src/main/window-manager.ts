@@ -125,7 +125,8 @@ function createFloatingWindow(): BrowserWindow {
   try {
     floatingWindow.setContentProtection(true)
   } catch (error) {
-    console.log('setContentProtection 不可用:', error)
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    log('warn', 'setContentProtection 不可用', errorMessage)
   }
 
   try {

@@ -1,60 +1,36 @@
 import { Router } from 'express'
-import { query } from '../services/database'
+import { SettingsService } from '../services/database'
 import { authMiddleware, adminMiddleware, type AuthenticatedRequest } from '../middleware/auth'
-import crypto from 'crypto'
 import { testSmtpConnection, saveSmtpConfig, getSmtpConfig } from '../services/email-service'
 
 const router = Router()
 
-const ENCRYPTION_KEY =
-  process.env.ENCRYPTION_KEY || process.env.JWT_SECRET || 'default-key-32chars-long-here!!'
-const IV_LENGTH = 16
+const AI_CONFIG_KEYS = [
+  'ai_provider',
+  'ai_gemini_api_key',
+  'ai_doubao_chat_api_key',
+  'ai_doubao_asr_app_id',
+  'ai_doubao_asr_access_key',
+]
 
-function encrypt(text: string): string {
-  if (!text) return ''
-  const iv = crypto.randomBytes(IV_LENGTH)
-  const key = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32)
-  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv)
-  let encrypted = cipher.update(text, 'utf8', 'hex')
-  encrypted += cipher.final('hex')
-  const authTag = cipher.getAuthTag()
-  return iv.toString('hex') + ':' + authTag.toString('hex') + ':' + encrypted
-}
+const LOGIN_ENABLED_KEYS = [
+  'login_email_enabled',
+  'login_phone_enabled',
+  'login_wechat_enabled',
+  'login_google_enabled',
+]
 
-function decrypt(text: string): string {
-  if (!text) return ''
-  try {
-    const parts = text.split(':')
-    if (parts.length !== 3) return ''
-    const iv = Buffer.from(parts[0], 'hex')
-    const authTag = Buffer.from(parts[1], 'hex')
-    const encrypted = parts[2]
-    const key = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32)
-    const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv)
-    decipher.setAuthTag(authTag)
-    let decrypted = decipher.update(encrypted, 'hex', 'utf8')
-    decrypted += decipher.final('utf8')
-    return decrypted
-  } catch {
-    return ''
-  }
-}
+const LOGIN_CONFIG_KEYS = [
+  ...LOGIN_ENABLED_KEYS,
+  'google_login_client_id',
+  'google_login_client_secret',
+  'google_login_redirect_uri',
+  'wechat_login_app_id',
+  'wechat_login_app_secret',
+  'wechat_login_redirect_uri',
+]
 
-async function getSetting(key: string): Promise<string> {
-  const result = await query('SELECT value, encrypted FROM system_settings WHERE key = $1', [key])
-  if (result.rows.length === 0) return ''
-  const row = result.rows[0]
-  return row.encrypted ? decrypt(row.value || '') : row.value || ''
-}
-
-async function setSetting(key: string, value: string, encrypted: boolean): Promise<void> {
-  const storedValue = encrypted ? encrypt(value) : value
-  await query(
-    `INSERT INTO system_settings (key, value, encrypted) VALUES ($1, $2, $3)
-     ON CONFLICT (key) DO UPDATE SET value = $2, encrypted = $3, updated_at = NOW()`,
-    [key, storedValue, encrypted],
-  )
-}
+const maskValue = (v: string) => (v ? '••••••••' : '')
 
 router.get(
   '/ai-config',
@@ -62,23 +38,16 @@ router.get(
   adminMiddleware,
   async (_req: AuthenticatedRequest, res) => {
     try {
-      const [provider, geminiKey, doubaoKey, asrAppId, asrAccessKey] = await Promise.all([
-        getSetting('ai_provider'),
-        getSetting('ai_gemini_api_key'),
-        getSetting('ai_doubao_chat_api_key'),
-        getSetting('ai_doubao_asr_app_id'),
-        getSetting('ai_doubao_asr_access_key'),
-      ])
-
+      const c = await SettingsService.getMultiple(AI_CONFIG_KEYS)
       res.json({
         data: {
-          provider: provider || 'doubao',
-          hasGeminiKey: !!geminiKey,
-          hasDoubaoKey: !!doubaoKey,
-          geminiApiKey: geminiKey ? '••••••••' : '',
-          doubaoChatApiKey: doubaoKey ? '••••••••' : '',
-          doubaoAsrAppId: asrAppId ? '••••••••' : '',
-          doubaoAsrAccessKey: asrAccessKey ? '••••••••' : '',
+          provider: c.ai_provider || 'doubao',
+          hasGeminiKey: !!c.ai_gemini_api_key,
+          hasDoubaoKey: !!c.ai_doubao_chat_api_key,
+          geminiApiKey: maskValue(c.ai_gemini_api_key),
+          doubaoChatApiKey: maskValue(c.ai_doubao_chat_api_key),
+          doubaoAsrAppId: maskValue(c.ai_doubao_asr_app_id),
+          doubaoAsrAccessKey: maskValue(c.ai_doubao_asr_access_key),
         },
       })
     } catch (error: any) {
@@ -98,19 +67,19 @@ router.put(
       const updates: Promise<void>[] = []
 
       if (provider !== undefined) {
-        updates.push(setSetting('ai_provider', provider, false))
+        updates.push(SettingsService.set('ai_provider', provider, false))
       }
       if (geminiApiKey && geminiApiKey !== '••••••••') {
-        updates.push(setSetting('ai_gemini_api_key', geminiApiKey, true))
+        updates.push(SettingsService.set('ai_gemini_api_key', geminiApiKey, true))
       }
       if (doubaoChatApiKey && doubaoChatApiKey !== '••••••••') {
-        updates.push(setSetting('ai_doubao_chat_api_key', doubaoChatApiKey, true))
+        updates.push(SettingsService.set('ai_doubao_chat_api_key', doubaoChatApiKey, true))
       }
       if (doubaoAsrAppId && doubaoAsrAppId !== '••••••••') {
-        updates.push(setSetting('ai_doubao_asr_app_id', doubaoAsrAppId, true))
+        updates.push(SettingsService.set('ai_doubao_asr_app_id', doubaoAsrAppId, true))
       }
       if (doubaoAsrAccessKey && doubaoAsrAccessKey !== '••••••••') {
-        updates.push(setSetting('ai_doubao_asr_access_key', doubaoAsrAccessKey, true))
+        updates.push(SettingsService.set('ai_doubao_asr_access_key', doubaoAsrAccessKey, true))
       }
 
       await Promise.all(updates)
@@ -123,52 +92,34 @@ router.put(
 
 router.get('/check-ai-config', async (_req, res) => {
   try {
-    const [provider, geminiKey, doubaoKey, asrAppId, asrAccessKey] = await Promise.all([
-      getSetting('ai_provider'),
-      getSetting('ai_gemini_api_key'),
-      getSetting('ai_doubao_chat_api_key'),
-      getSetting('ai_doubao_asr_app_id'),
-      getSetting('ai_doubao_asr_access_key'),
-    ])
-
+    const c = await SettingsService.getMultiple(AI_CONFIG_KEYS)
     const missingFields: string[] = []
-    const resolvedProvider = provider || 'doubao'
+    const provider = c.ai_provider || 'doubao'
 
-    if (resolvedProvider === 'gemini' && !geminiKey) {
+    if (provider === 'gemini' && !c.ai_gemini_api_key) {
       missingFields.push('geminiApiKey')
-    } else if (resolvedProvider === 'doubao') {
-      if (!doubaoKey) missingFields.push('doubaoChatApiKey')
-      if (!asrAppId) missingFields.push('doubaoAsrAppId')
-      if (!asrAccessKey) missingFields.push('doubaoAsrAccessKey')
+    } else if (provider === 'doubao') {
+      if (!c.ai_doubao_chat_api_key) missingFields.push('doubaoChatApiKey')
+      if (!c.ai_doubao_asr_app_id) missingFields.push('doubaoAsrAppId')
+      if (!c.ai_doubao_asr_access_key) missingFields.push('doubaoAsrAccessKey')
     }
 
-    res.json({
-      configured: missingFields.length === 0,
-      provider: resolvedProvider,
-      missingFields,
-    })
-  } catch (error: any) {
+    res.json({ configured: missingFields.length === 0, provider, missingFields })
+  } catch {
     res.status(400).json({ configured: false, provider: '', missingFields: ['unknown'] })
   }
 })
 
 router.get('/ai-config-full', async (_req, res) => {
   try {
-    const [provider, geminiKey, doubaoKey, asrAppId, asrAccessKey] = await Promise.all([
-      getSetting('ai_provider'),
-      getSetting('ai_gemini_api_key'),
-      getSetting('ai_doubao_chat_api_key'),
-      getSetting('ai_doubao_asr_app_id'),
-      getSetting('ai_doubao_asr_access_key'),
-    ])
-
+    const c = await SettingsService.getMultiple(AI_CONFIG_KEYS)
     res.json({
       data: {
-        provider: provider || 'doubao',
-        geminiApiKey: geminiKey || '',
-        doubaoChatApiKey: doubaoKey || '',
-        doubaoAsrAppId: asrAppId || '',
-        doubaoAsrAccessKey: asrAccessKey || '',
+        provider: c.ai_provider || 'doubao',
+        geminiApiKey: c.ai_gemini_api_key || '',
+        doubaoChatApiKey: c.ai_doubao_chat_api_key || '',
+        doubaoAsrAppId: c.ai_doubao_asr_app_id || '',
+        doubaoAsrAccessKey: c.ai_doubao_asr_access_key || '',
       },
     })
   } catch (error: any) {
@@ -185,7 +136,7 @@ router.get('/payment-config', async (_req, res) => {
       'payment_epay_key',
       'payment_epay_api_url',
     ]
-    const values = await Promise.all(keys.map((k) => getSetting(k)))
+    const values = await Promise.all(keys.map((k) => SettingsService.get(k)))
 
     res.json({
       data: {
@@ -209,16 +160,18 @@ router.put('/payment-config', async (req, res) => {
     const updates: Promise<void>[] = []
 
     if (config.provider !== undefined) {
-      updates.push(setSetting('payment_provider', config.provider, false))
+      updates.push(SettingsService.set('payment_provider', config.provider, false))
     }
     if (config.notifyUrl !== undefined) {
-      updates.push(setSetting('payment_notify_url', config.notifyUrl, false))
+      updates.push(SettingsService.set('payment_notify_url', config.notifyUrl, false))
     }
     if (config.epay) {
-      if (config.epay.pid) updates.push(setSetting('payment_epay_pid', config.epay.pid, true))
-      if (config.epay.key) updates.push(setSetting('payment_epay_key', config.epay.key, true))
+      if (config.epay.pid)
+        updates.push(SettingsService.set('payment_epay_pid', config.epay.pid, true))
+      if (config.epay.key)
+        updates.push(SettingsService.set('payment_epay_key', config.epay.key, true))
       if (config.epay.apiUrl)
-        updates.push(setSetting('payment_epay_api_url', config.epay.apiUrl, false))
+        updates.push(SettingsService.set('payment_epay_api_url', config.epay.apiUrl, false))
     }
 
     await Promise.all(updates)
@@ -246,7 +199,7 @@ router.get(
         'sms_tencent_sign_name',
         'sms_tencent_template_id',
       ]
-      const values = await Promise.all(keys.map((k) => getSetting(k)))
+      const values = await Promise.all(keys.map((k) => SettingsService.get(k)))
 
       res.json({
         data: {
@@ -284,30 +237,31 @@ router.put(
       const updates: Promise<void>[] = []
 
       if (config.provider !== undefined) {
-        updates.push(setSetting('sms_provider', config.provider, false))
+        updates.push(SettingsService.set('sms_provider', config.provider, false))
       }
       if (config.aliyun) {
         const a = config.aliyun
         if (a.accessKeyId && a.accessKeyId !== '••••••••')
-          updates.push(setSetting('sms_aliyun_access_key_id', a.accessKeyId, true))
+          updates.push(SettingsService.set('sms_aliyun_access_key_id', a.accessKeyId, true))
         if (a.accessKeySecret && a.accessKeySecret !== '••••••••')
-          updates.push(setSetting('sms_aliyun_access_key_secret', a.accessKeySecret, true))
+          updates.push(SettingsService.set('sms_aliyun_access_key_secret', a.accessKeySecret, true))
         if (a.signName !== undefined)
-          updates.push(setSetting('sms_aliyun_sign_name', a.signName, false))
+          updates.push(SettingsService.set('sms_aliyun_sign_name', a.signName, false))
         if (a.templateCode !== undefined)
-          updates.push(setSetting('sms_aliyun_template_code', a.templateCode, false))
+          updates.push(SettingsService.set('sms_aliyun_template_code', a.templateCode, false))
       }
       if (config.tencent) {
         const t = config.tencent
         if (t.secretId && t.secretId !== '••••••••')
-          updates.push(setSetting('sms_tencent_secret_id', t.secretId, true))
+          updates.push(SettingsService.set('sms_tencent_secret_id', t.secretId, true))
         if (t.secretKey && t.secretKey !== '••••••••')
-          updates.push(setSetting('sms_tencent_secret_key', t.secretKey, true))
-        if (t.appId !== undefined) updates.push(setSetting('sms_tencent_app_id', t.appId, false))
+          updates.push(SettingsService.set('sms_tencent_secret_key', t.secretKey, true))
+        if (t.appId !== undefined)
+          updates.push(SettingsService.set('sms_tencent_app_id', t.appId, false))
         if (t.signName !== undefined)
-          updates.push(setSetting('sms_tencent_sign_name', t.signName, false))
+          updates.push(SettingsService.set('sms_tencent_sign_name', t.signName, false))
         if (t.templateId !== undefined)
-          updates.push(setSetting('sms_tencent_template_id', t.templateId, false))
+          updates.push(SettingsService.set('sms_tencent_template_id', t.templateId, false))
       }
 
       await Promise.all(updates)
@@ -325,10 +279,10 @@ router.get(
   async (_req: AuthenticatedRequest, res) => {
     try {
       const [enabled, appId, appSecret, redirectUri] = await Promise.all([
-        getSetting('wechat_login_enabled'),
-        getSetting('wechat_login_app_id'),
-        getSetting('wechat_login_app_secret'),
-        getSetting('wechat_login_redirect_uri'),
+        SettingsService.get('wechat_login_enabled'),
+        SettingsService.get('wechat_login_app_id'),
+        SettingsService.get('wechat_login_app_secret'),
+        SettingsService.get('wechat_login_redirect_uri'),
       ])
 
       res.json({
@@ -356,16 +310,16 @@ router.put(
       const updates: Promise<void>[] = []
 
       if (enabled !== undefined) {
-        updates.push(setSetting('wechat_login_enabled', String(enabled), false))
+        updates.push(SettingsService.set('wechat_login_enabled', String(enabled), false))
       }
       if (appId && appId !== '••••••••') {
-        updates.push(setSetting('wechat_login_app_id', appId, true))
+        updates.push(SettingsService.set('wechat_login_app_id', appId, true))
       }
       if (appSecret && appSecret !== '••••••••') {
-        updates.push(setSetting('wechat_login_app_secret', appSecret, true))
+        updates.push(SettingsService.set('wechat_login_app_secret', appSecret, true))
       }
       if (redirectUri !== undefined) {
-        updates.push(setSetting('wechat_login_redirect_uri', redirectUri, false))
+        updates.push(SettingsService.set('wechat_login_redirect_uri', redirectUri, false))
       }
 
       await Promise.all(updates)
@@ -382,42 +336,24 @@ router.get(
   adminMiddleware,
   async (_req: AuthenticatedRequest, res) => {
     try {
-      const [emailEnabled, phoneEnabled, wechatEnabled, googleEnabled] = await Promise.all([
-        getSetting('login_email_enabled'),
-        getSetting('login_phone_enabled'),
-        getSetting('login_wechat_enabled'),
-        getSetting('login_google_enabled'),
-      ])
-
-      const [googleClientId, googleClientSecret, googleRedirectUri] = await Promise.all([
-        getSetting('google_login_client_id'),
-        getSetting('google_login_client_secret'),
-        getSetting('google_login_redirect_uri'),
-      ])
-
-      const [wechatAppId, wechatAppSecret, wechatRedirectUri] = await Promise.all([
-        getSetting('wechat_login_app_id'),
-        getSetting('wechat_login_app_secret'),
-        getSetting('wechat_login_redirect_uri'),
-      ])
-
+      const c = await SettingsService.getMultiple(LOGIN_CONFIG_KEYS)
       res.json({
         data: {
-          email: { enabled: emailEnabled !== 'false' },
-          phone: { enabled: phoneEnabled === 'true' },
+          email: { enabled: c.login_email_enabled !== 'false' },
+          phone: { enabled: c.login_phone_enabled === 'true' },
           wechat: {
-            enabled: wechatEnabled === 'true',
-            appId: wechatAppId ? '••••••••' : '',
-            appSecret: wechatAppSecret ? '••••••••' : '',
-            redirectUri: wechatRedirectUri || '',
-            hasCredentials: !!(wechatAppId && wechatAppSecret),
+            enabled: c.login_wechat_enabled === 'true',
+            appId: maskValue(c.wechat_login_app_id),
+            appSecret: maskValue(c.wechat_login_app_secret),
+            redirectUri: c.wechat_login_redirect_uri || '',
+            hasCredentials: !!(c.wechat_login_app_id && c.wechat_login_app_secret),
           },
           google: {
-            enabled: googleEnabled === 'true',
-            clientId: googleClientId ? '••••••••' : '',
-            clientSecret: googleClientSecret ? '••••••••' : '',
-            redirectUri: googleRedirectUri || '',
-            hasCredentials: !!(googleClientId && googleClientSecret),
+            enabled: c.login_google_enabled === 'true',
+            clientId: maskValue(c.google_login_client_id),
+            clientSecret: maskValue(c.google_login_client_secret),
+            redirectUri: c.google_login_redirect_uri || '',
+            hasCredentials: !!(c.google_login_client_id && c.google_login_client_secret),
           },
         },
       })
@@ -437,44 +373,44 @@ router.put(
       const updates: Promise<void>[] = []
 
       if (phone?.enabled !== undefined) {
-        updates.push(setSetting('login_phone_enabled', String(phone.enabled), false))
+        updates.push(SettingsService.set('login_phone_enabled', String(phone.enabled), false))
       }
 
       if (wechat) {
         if (wechat.enabled !== undefined) {
-          updates.push(setSetting('login_wechat_enabled', String(wechat.enabled), false))
+          updates.push(SettingsService.set('login_wechat_enabled', String(wechat.enabled), false))
         }
         if (wechat.appId && wechat.appId !== '••••••••') {
-          updates.push(setSetting('wechat_login_app_id', wechat.appId, true))
+          updates.push(SettingsService.set('wechat_login_app_id', wechat.appId, true))
         }
         if (wechat.appSecret && wechat.appSecret !== '••••••••') {
-          updates.push(setSetting('wechat_login_app_secret', wechat.appSecret, true))
+          updates.push(SettingsService.set('wechat_login_app_secret', wechat.appSecret, true))
         }
         if (wechat.redirectUri !== undefined) {
-          updates.push(setSetting('wechat_login_redirect_uri', wechat.redirectUri, false))
+          updates.push(SettingsService.set('wechat_login_redirect_uri', wechat.redirectUri, false))
         }
       }
 
       if (google) {
         if (google.enabled !== undefined) {
-          updates.push(setSetting('login_google_enabled', String(google.enabled), false))
+          updates.push(SettingsService.set('login_google_enabled', String(google.enabled), false))
           if (google.enabled) {
-            updates.push(setSetting('login_wechat_enabled', 'false', false))
+            updates.push(SettingsService.set('login_wechat_enabled', 'false', false))
           }
         }
         if (google.clientId && google.clientId !== '••••••••') {
-          updates.push(setSetting('google_login_client_id', google.clientId, true))
+          updates.push(SettingsService.set('google_login_client_id', google.clientId, true))
         }
         if (google.clientSecret && google.clientSecret !== '••••••••') {
-          updates.push(setSetting('google_login_client_secret', google.clientSecret, true))
+          updates.push(SettingsService.set('google_login_client_secret', google.clientSecret, true))
         }
         if (google.redirectUri !== undefined) {
-          updates.push(setSetting('google_login_redirect_uri', google.redirectUri, false))
+          updates.push(SettingsService.set('google_login_redirect_uri', google.redirectUri, false))
         }
       }
 
       if (wechat?.enabled === true) {
-        updates.push(setSetting('login_google_enabled', 'false', false))
+        updates.push(SettingsService.set('login_google_enabled', 'false', false))
       }
 
       await Promise.all(updates)
@@ -487,25 +423,17 @@ router.put(
 
 router.get('/login-config-public', async (_req, res) => {
   try {
-    const [emailEnabled, phoneEnabled, wechatEnabled, googleEnabled] = await Promise.all([
-      getSetting('login_email_enabled'),
-      getSetting('login_phone_enabled'),
-      getSetting('login_wechat_enabled'),
-      getSetting('login_google_enabled'),
-    ])
-
+    const c = await SettingsService.getMultiple(LOGIN_ENABLED_KEYS)
     res.json({
       data: {
-        email: emailEnabled !== 'false',
-        phone: phoneEnabled === 'true',
-        wechat: wechatEnabled === 'true',
-        google: googleEnabled === 'true',
+        email: c.login_email_enabled !== 'false',
+        phone: c.login_phone_enabled === 'true',
+        wechat: c.login_wechat_enabled === 'true',
+        google: c.login_google_enabled === 'true',
       },
     })
   } catch {
-    res.json({
-      data: { email: true, phone: false, wechat: false, google: false },
-    })
+    res.json({ data: { email: true, phone: false, wechat: false, google: false } })
   }
 })
 
@@ -567,5 +495,5 @@ router.post(
   },
 )
 
-export { getSetting, setSetting }
+export { SettingsService }
 export default router

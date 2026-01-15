@@ -1,3 +1,6 @@
+import { createLogger } from './logging'
+
+const logger = createLogger('api-client')
 const API_BASE_URL = process.env.API_SERVER_URL || 'http://localhost:3001'
 
 interface UserData {
@@ -51,7 +54,10 @@ async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promi
 
     return data
   } catch (error: any) {
-    console.error(`API request failed: ${endpoint}`, error)
+    logger.error(`API request failed: ${endpoint}`, {
+      error:
+        error instanceof Error ? { message: error.message, stack: error.stack } : String(error),
+    })
     return { error: error.message || '网络请求失败' }
   }
 }

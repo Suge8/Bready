@@ -18,6 +18,12 @@ import {
 
 const router = Router()
 const PASSWORD_RESET_TTL_MS = 30 * 60 * 1000
+const SESSION_COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'strict' as const,
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+}
 
 const phoneCodeStore = new Map<string, { code: string; expiresAt: number; lastSentAt: number }>()
 const emailCodeStore = new Map<string, { code: string; expiresAt: number; lastSentAt: number }>()
@@ -26,9 +32,29 @@ const PHONE_CODE_COOLDOWN_MS = 60 * 1000
 const EMAIL_CODE_TTL_MS = 5 * 60 * 1000
 const EMAIL_CODE_COOLDOWN_MS = 60 * 1000
 
-const isValidPhone = (phone: string) => /^1\d{10}$/.test(phone)
+function isValidPhone(phone: string): boolean {
+  return /^1\d{10}$/.test(phone)
+}
 
-function purgeExpiredCodes(now: number) {
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+}
+
+function normalizeEmail(email: unknown): string {
+  return String(email ?? '')
+    .trim()
+    .toLowerCase()
+}
+
+function setSessionCookie(res: any, token: string): void {
+  res.cookie('session_token', token, SESSION_COOKIE_OPTIONS)
+}
+
+function getTokenFromRequest(req: any): string | undefined {
+  return req.body?.token || req.cookies?.session_token
+}
+
+function purgeExpiredCodes(now: number): void {
   for (const [key, entry] of phoneCodeStore.entries()) {
     if (entry.expiresAt <= now) phoneCodeStore.delete(key)
   }
@@ -49,15 +75,10 @@ router.post('/sign-up', async (req, res) => {
 
 router.post('/send-email-code', async (req, res) => {
   try {
-    const { email } = req.body
-    const trimmedEmail = String(email || '')
-      .trim()
-      .toLowerCase()
+    const trimmedEmail = normalizeEmail(req.body?.email)
 
-    if (!trimmedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
-      res.status(400).json({ success: false, error: '邮箱格式不正确' })
-      return
-    }
+    if (!trimmedEmail || !isValidEmail(trimmedEmail))
+      return res.status(400).json({ success: false, error: '邮箱格式不正确' })
 
     const now = Date.now()
     purgeExpiredCodes(now)
@@ -91,15 +112,11 @@ router.post('/send-email-code', async (req, res) => {
 
 router.post('/verify-email-code', async (req, res) => {
   try {
-    const { email, code } = req.body
-    const trimmedEmail = String(email || '')
-      .trim()
-      .toLowerCase()
+    const { code } = req.body
+    const trimmedEmail = normalizeEmail(req.body?.email)
 
-    if (!trimmedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
-      res.status(400).json({ success: false, error: '邮箱格式不正确' })
-      return
-    }
+    if (!trimmedEmail || !isValidEmail(trimmedEmail))
+      return res.status(400).json({ success: false, error: '邮箱格式不正确' })
 
     purgeExpiredCodes(Date.now())
     const entry = emailCodeStore.get(trimmedEmail)
@@ -127,12 +144,7 @@ router.post('/sign-in', async (req, res) => {
     const { email, password } = req.body
     const result = await AuthService.signIn(email, password)
 
-    res.cookie('session_token', result.token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    })
+    setSessionCookie(res, result.token)
 
     res.json({ data: result })
   } catch (error: any) {
@@ -142,11 +154,8 @@ router.post('/sign-in', async (req, res) => {
 
 router.post('/verify-session', async (req, res) => {
   try {
-    const token = req.body.token || req.cookies?.session_token
-    if (!token) {
-      res.json({ data: null })
-      return
-    }
+    const token = getTokenFromRequest(req)
+    if (!token) return res.json({ data: null })
     const user = await AuthService.verifySession(token)
     res.json({ data: user })
   } catch (error) {
@@ -156,7 +165,7 @@ router.post('/verify-session', async (req, res) => {
 
 router.post('/sign-out', async (req, res) => {
   try {
-    const token = req.body.token || req.cookies?.session_token
+    const token = getTokenFromRequest(req)
     if (token) {
       await AuthService.signOut(token)
     }
@@ -170,19 +179,11 @@ router.post('/sign-out', async (req, res) => {
 router.post('/change-password', async (req, res) => {
   try {
     const { token, oldPassword, newPassword } = req.body
-    if (!token) {
-      res.status(401).json({ error: '未登录' })
-      return
-    }
+    if (!token) return res.status(401).json({ error: '未登录' })
     const user = await AuthService.verifySession(token)
-    if (!user) {
-      res.status(401).json({ error: '会话已失效' })
-      return
-    }
-    if (!newPassword || newPassword.length < 6) {
-      res.status(400).json({ error: '新密码格式不正确' })
-      return
-    }
+    if (!user) return res.status(401).json({ error: '会话已失效' })
+    if (!newPassword || newPassword.length < 6)
+      return res.status(400).json({ error: '新密码格式不正确' })
     await AuthService.changePassword(user.id, oldPassword, newPassword)
     res.json({ success: true })
   } catch (error: any) {
@@ -193,15 +194,9 @@ router.post('/change-password', async (req, res) => {
 router.post('/update-phone', async (req, res) => {
   try {
     const { token, phone } = req.body
-    if (!token) {
-      res.status(401).json({ error: '未登录' })
-      return
-    }
+    if (!token) return res.status(401).json({ error: '未登录' })
     const user = await AuthService.verifySession(token)
-    if (!user) {
-      res.status(401).json({ error: '会话已失效' })
-      return
-    }
+    if (!user) return res.status(401).json({ error: '会话已失效' })
     await AuthService.updatePhone(user.id, phone)
     res.json({ success: true })
   } catch (error: any) {
@@ -212,15 +207,9 @@ router.post('/update-phone', async (req, res) => {
 router.post('/update-email', async (req, res) => {
   try {
     const { token, email } = req.body
-    if (!token) {
-      res.status(401).json({ error: '未登录' })
-      return
-    }
+    if (!token) return res.status(401).json({ error: '未登录' })
     const user = await AuthService.verifySession(token)
-    if (!user) {
-      res.status(401).json({ error: '会话已失效' })
-      return
-    }
+    if (!user) return res.status(401).json({ error: '会话已失效' })
     await AuthService.updateEmail(user.id, email)
     res.json({ success: true })
   } catch (error: any) {
@@ -233,10 +222,8 @@ router.post('/send-phone-code', async (req, res) => {
     const { phone } = req.body
     const trimmedPhone = String(phone || '').trim()
 
-    if (!isValidPhone(trimmedPhone)) {
-      res.status(400).json({ success: false, error: '手机号格式不正确' })
-      return
-    }
+    if (!isValidPhone(trimmedPhone))
+      return res.status(400).json({ success: false, error: '手机号格式不正确' })
 
     const now = Date.now()
     purgeExpiredCodes(now)
@@ -273,10 +260,7 @@ router.post('/sign-in-phone', async (req, res) => {
     const { phone, code } = req.body
     const trimmedPhone = String(phone || '').trim()
 
-    if (!isValidPhone(trimmedPhone)) {
-      res.status(400).json({ error: '手机号格式不正确' })
-      return
-    }
+    if (!isValidPhone(trimmedPhone)) return res.status(400).json({ error: '手机号格式不正确' })
 
     purgeExpiredCodes(Date.now())
     const entry = phoneCodeStore.get(trimmedPhone)
@@ -296,12 +280,7 @@ router.post('/sign-in-phone', async (req, res) => {
 
     const result = await AuthService.signInOrCreateByPhone(trimmedPhone)
 
-    res.cookie('session_token', result.token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    })
+    setSessionCookie(res, result.token)
 
     res.json({ data: result })
   } catch (error: any) {
@@ -312,10 +291,7 @@ router.post('/sign-in-phone', async (req, res) => {
 router.get('/wechat/auth-url', async (_req, res) => {
   try {
     const config = await getWechatLoginConfig()
-    if (!config.enabled || !config.appId) {
-      res.status(400).json({ error: '微信登录未启用' })
-      return
-    }
+    if (!config.enabled || !config.appId) return res.status(400).json({ error: '微信登录未启用' })
 
     const state = randomInt(100000000, 999999999).toString()
     const authUrl = getWechatAuthUrl(config, state)
@@ -330,28 +306,18 @@ router.post('/wechat/callback', async (req, res) => {
   try {
     const { code } = req.body
 
-    if (!code) {
-      res.status(400).json({ error: '缺少授权码' })
-      return
-    }
+    if (!code) return res.status(400).json({ error: '缺少授权码' })
 
     const config = await getWechatLoginConfig()
-    if (!config.enabled || !config.appId || !config.appSecret) {
-      res.status(400).json({ error: '微信登录未配置' })
-      return
-    }
+    if (!config.enabled || !config.appId || !config.appSecret)
+      return res.status(400).json({ error: '微信登录未配置' })
 
     const tokenRes = await getWechatAccessToken(code, config)
-    if (tokenRes.errcode || !tokenRes.access_token || !tokenRes.openid) {
-      res.status(400).json({ error: tokenRes.errmsg || '获取微信授权失败' })
-      return
-    }
+    if (tokenRes.errcode || !tokenRes.access_token || !tokenRes.openid)
+      return res.status(400).json({ error: tokenRes.errmsg || '获取微信授权失败' })
 
     const userInfo = await getWechatUserInfo(tokenRes.access_token, tokenRes.openid)
-    if (!userInfo) {
-      res.status(400).json({ error: '获取微信用户信息失败' })
-      return
-    }
+    if (!userInfo) return res.status(400).json({ error: '获取微信用户信息失败' })
 
     const result = await AuthService.signInOrCreateByWechat(
       tokenRes.openid,
@@ -360,12 +326,7 @@ router.post('/wechat/callback', async (req, res) => {
       userInfo.headimgurl,
     )
 
-    res.cookie('session_token', result.token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    })
+    setSessionCookie(res, result.token)
 
     res.json({ data: result })
   } catch (error: any) {
@@ -389,10 +350,8 @@ router.get('/wechat/config-status', async (_req, res) => {
 router.get('/google/auth-url', async (_req, res) => {
   try {
     const config = await getGoogleLoginConfig()
-    if (!config.enabled || !config.clientId) {
-      res.status(400).json({ error: 'Google 登录未启用' })
-      return
-    }
+    if (!config.enabled || !config.clientId)
+      return res.status(400).json({ error: 'Google 登录未启用' })
 
     const state = randomInt(100000000, 999999999).toString()
     const authUrl = getGoogleAuthUrl(config, state)
@@ -407,28 +366,18 @@ router.post('/google/callback', async (req, res) => {
   try {
     const { code } = req.body
 
-    if (!code) {
-      res.status(400).json({ error: '缺少授权码' })
-      return
-    }
+    if (!code) return res.status(400).json({ error: '缺少授权码' })
 
     const config = await getGoogleLoginConfig()
-    if (!config.enabled || !config.clientId || !config.clientSecret) {
-      res.status(400).json({ error: 'Google 登录未配置' })
-      return
-    }
+    if (!config.enabled || !config.clientId || !config.clientSecret)
+      return res.status(400).json({ error: 'Google 登录未配置' })
 
     const tokenRes = await getGoogleAccessToken(code, config)
-    if (tokenRes.error || !tokenRes.access_token) {
-      res.status(400).json({ error: tokenRes.error_description || '获取 Google 授权失败' })
-      return
-    }
+    if (tokenRes.error || !tokenRes.access_token)
+      return res.status(400).json({ error: tokenRes.error_description || '获取 Google 授权失败' })
 
     const userInfo = await getGoogleUserInfo(tokenRes.access_token)
-    if (!userInfo) {
-      res.status(400).json({ error: '获取 Google 用户信息失败' })
-      return
-    }
+    if (!userInfo) return res.status(400).json({ error: '获取 Google 用户信息失败' })
 
     const result = await AuthService.signInOrCreateByGoogle(
       userInfo.sub,
@@ -437,12 +386,7 @@ router.post('/google/callback', async (req, res) => {
       userInfo.picture,
     )
 
-    res.cookie('session_token', result.token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    })
+    setSessionCookie(res, result.token)
 
     res.json({ data: result })
   } catch (error: any) {
@@ -465,13 +409,11 @@ router.get('/google/config-status', async (_req, res) => {
 
 router.post('/forgot-password', async (req, res) => {
   try {
-    const { email } = req.body
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      res.status(400).json({ error: '请输入有效的邮箱地址' })
-      return
-    }
+    const trimmedEmail = normalizeEmail(req.body?.email)
+    if (!trimmedEmail || !isValidEmail(trimmedEmail))
+      return res.status(400).json({ success: false, error: '邮箱格式不正确' })
 
-    const userId = await AuthService.getUserIdByEmail(email)
+    const userId = await AuthService.getUserIdByEmail(trimmedEmail)
     if (!userId) {
       res.json({ success: true })
       return
@@ -484,7 +426,7 @@ router.post('/forgot-password', async (req, res) => {
     await AuthService.createPasswordResetToken(userId, tokenHash, expiresAt)
 
     const baseUrl = process.env.APP_BASE_URL || `http://localhost:${process.env.PORT || 3001}`
-    const emailResult = await sendPasswordResetEmail(email, token, baseUrl)
+    const emailResult = await sendPasswordResetEmail(trimmedEmail, token, baseUrl)
 
     if (!emailResult.success) {
       console.error('Failed to send password reset email:', emailResult.error)

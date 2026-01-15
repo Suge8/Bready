@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer'
-import { getSetting, setSetting } from '../routes/settings'
+import { SettingsService } from './database'
 
 export interface SmtpConfig {
   host: string
@@ -13,13 +13,13 @@ export interface SmtpConfig {
 
 export async function getSmtpConfig(): Promise<SmtpConfig> {
   const [host, port, secure, user, pass, fromName, fromEmail] = await Promise.all([
-    getSetting('smtp_host'),
-    getSetting('smtp_port'),
-    getSetting('smtp_secure'),
-    getSetting('smtp_user'),
-    getSetting('smtp_pass'),
-    getSetting('smtp_from_name'),
-    getSetting('smtp_from_email'),
+    SettingsService.get('smtp_host'),
+    SettingsService.get('smtp_port'),
+    SettingsService.get('smtp_secure'),
+    SettingsService.get('smtp_user'),
+    SettingsService.get('smtp_pass'),
+    SettingsService.get('smtp_from_name'),
+    SettingsService.get('smtp_from_email'),
   ])
 
   return {
@@ -41,12 +41,12 @@ export async function saveSmtpConfig(config: {
   pass: string
 }): Promise<void> {
   await Promise.all([
-    setSetting('smtp_host', config.host, false),
-    setSetting('smtp_port', config.port, false),
-    setSetting('smtp_secure', String(config.secure), false),
-    setSetting('smtp_user', config.user, false),
-    setSetting('smtp_pass', config.pass, true),
-    setSetting('smtp_from_email', config.user, false),
+    SettingsService.set('smtp_host', config.host, false),
+    SettingsService.set('smtp_port', config.port, false),
+    SettingsService.set('smtp_secure', String(config.secure), false),
+    SettingsService.set('smtp_user', config.user, false),
+    SettingsService.set('smtp_pass', config.pass, true),
+    SettingsService.set('smtp_from_email', config.user, false),
   ])
 }
 

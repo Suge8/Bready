@@ -49,7 +49,12 @@ interface MainPageProps {
   isLoading?: boolean
 }
 
-const AnimatedScore = ({ score, color }: { score: number; color: string }) => {
+type AnimatedScoreProps = {
+  score: number
+  color: string
+}
+
+function AnimatedScore({ score, color }: AnimatedScoreProps): React.ReactElement {
   const motionValue = useMotionValue(0)
   const rounded = useTransform(motionValue, (v) => Math.round(v))
   const [displayValue, setDisplayValue] = React.useState(0)
@@ -71,7 +76,12 @@ const AnimatedScore = ({ score, color }: { score: number; color: string }) => {
   return <div className={`text-2xl font-bold tabular-nums ${color}`}>{displayValue}</div>
 }
 
-const AnimatedProgressBar = ({ score, color }: { score: number; color: string }) => {
+type AnimatedProgressBarProps = {
+  score: number
+  color: string
+}
+
+function AnimatedProgressBar({ score, color }: AnimatedProgressBarProps): React.ReactElement {
   const widthValue = useMotionValue(0)
   const width = useTransform(widthValue, (v) => `${v}%`)
 
@@ -91,31 +101,31 @@ const AnimatedProgressBar = ({ score, color }: { score: number; color: string })
   )
 }
 
-const getPreparationIcon = (index: number) => {
+function getPreparationIcon(index: number): typeof FileText {
   const icons = [FileText, Users, Code, Briefcase]
   return icons[index % icons.length]
 }
 
-const getIconColor = (index: number, isDark: boolean) => {
+function getIconColor(index: number, isDark: boolean): string {
   const colors = isDark
     ? ['text-blue-400', 'text-emerald-400', 'text-violet-400', 'text-amber-400']
     : ['text-blue-500', 'text-emerald-500', 'text-violet-500', 'text-amber-500']
   return colors[index % colors.length]
 }
 
-const getIconBgColor = (index: number, isDark: boolean) => {
+function getIconBgColor(index: number, isDark: boolean): string {
   const colors = isDark
     ? ['bg-blue-500/10', 'bg-emerald-500/10', 'bg-violet-500/10', 'bg-amber-500/10']
     : ['bg-blue-50', 'bg-emerald-50', 'bg-violet-50', 'bg-amber-50']
   return colors[index % colors.length]
 }
 
-const formatDate = (dateString: string) => {
+function formatDate(dateString: string): string {
   const date = new Date(dateString)
   return new Intl.DateTimeFormat('zh-CN', { month: 'short', day: 'numeric' }).format(date)
 }
 
-const FontStyles = () => {
+function FontStyles(): React.ReactElement {
   return (
     <style>{`
       @font-face {
@@ -149,44 +159,55 @@ const FontStyles = () => {
   )
 }
 
-const MainPage: React.FC<MainPageProps> = ({
+function MainPage({
   preparations,
   setPreparations,
   onReloadData,
   isLoading = false,
-}) => {
+}: MainPageProps): React.ReactElement {
   const navigate = useNavigate()
   const { profile, isSigningOut } = useAuth()
   const { t, list } = useI18n()
   const { resolvedTheme } = useTheme()
   const { showToast } = useToast()
 
-  const [showSelectModal, setShowSelectModal] = useState(false)
-  const [showAllPreparationsModal, setShowAllPreparationsModal] = useState(false)
-  const [showUserProfileModal, setShowUserProfileModal] = useState(false)
-  const [showAdminPanelModal, setShowAdminPanelModal] = useState(false)
-  const [showCreateTypeModal, setShowCreateTypeModal] = useState(false)
-  const [showPermissionsSetup, setShowPermissionsSetup] = useState(false)
+  const [modals, setModals] = useState({
+    select: false,
+    allPreparations: false,
+    userProfile: false,
+    adminPanel: false,
+    createType: false,
+    permissionsSetup: false,
+  })
+
+  const [prepState, setPrepState] = useState<{
+    viewing: Preparation | null
+    lastViewed: Preparation | null
+    editing: Preparation | null | undefined
+    editingSales: Preparation | null | undefined
+    editingMeeting: Preparation | null | undefined
+  }>({
+    viewing: null,
+    lastViewed: null,
+    editing: undefined,
+    editingSales: undefined,
+    editingMeeting: undefined,
+  })
 
   const [isEnteringMode, setIsEnteringMode] = useState(false)
-  const [viewingPreparation, setViewingPreparation] = useState<Preparation | null>(null)
-  const [lastViewedPreparation, setLastViewedPreparation] = useState<Preparation | null>(null)
-
-  const [editingPreparation, setEditingPreparation] = useState<Preparation | null | undefined>(
-    undefined,
-  )
-  const [editingSalesPreparation, setEditingSalesPreparation] = useState<
-    Preparation | null | undefined
-  >(undefined)
-  const [editingMeetingPreparation, setEditingMeetingPreparation] = useState<
-    Preparation | null | undefined
-  >(undefined)
-
   const [pendingCollaboration, setPendingCollaboration] = useState<{
     preparation: Preparation | null
     language: string
     purpose: string
   } | null>(null)
+
+  function toggleModal(key: keyof typeof modals, value: boolean): void {
+    setModals((prev) => ({ ...prev, [key]: value }))
+  }
+
+  function updatePrepState(updates: Partial<typeof prepState>): void {
+    setPrepState((prev) => ({ ...prev, ...updates }))
+  }
 
   const isDarkMode = resolvedTheme === 'dark'
   const animateState = isSigningOut ? 'exit' : 'visible'
@@ -205,22 +226,27 @@ const MainPage: React.FC<MainPageProps> = ({
 
   const filteredPreparations = preparations
 
-  const handleStartInterview = () => setShowSelectModal(true)
-  const handleCreateNew = () => setShowCreateTypeModal(true)
-
-  const handleSelectPreparationType = (type: PreparationType) => {
-    setShowCreateTypeModal(false)
-    if (type === 'interview') setEditingPreparation(null)
-    else if (type === 'sales') setEditingSalesPreparation(null)
-    else if (type === 'meeting') setEditingMeetingPreparation(null)
+  function handleStartInterview(): void {
+    toggleModal('select', true)
   }
 
-  const handleViewPreparation = (id: string) => {
+  function handleCreateNew(): void {
+    toggleModal('createType', true)
+  }
+
+  function handleSelectPreparationType(type: PreparationType): void {
+    toggleModal('createType', false)
+    if (type === 'interview') updatePrepState({ editing: null })
+    else if (type === 'sales') updatePrepState({ editingSales: null })
+    else if (type === 'meeting') updatePrepState({ editingMeeting: null })
+  }
+
+  function handleViewPreparation(id: string): void {
     const prep = preparations.find((p) => p.id === id)
-    if (prep) setViewingPreparation(prep)
+    if (prep) updatePrepState({ viewing: prep })
   }
 
-  const handleDeletePreparation = async (id: string) => {
+  async function handleDeletePreparation(id: string): Promise<void> {
     if (confirm(t('alerts.deletePreparation'))) {
       try {
         await preparationService.delete(id)
@@ -384,7 +410,7 @@ const MainPage: React.FC<MainPageProps> = ({
                 ? 'bg-gradient-to-br from-violet-500/25 to-fuchsia-500/25 hover:from-violet-500/35 hover:to-fuchsia-500/35'
                 : 'bg-gradient-to-br from-violet-100 to-fuchsia-100 hover:from-violet-200 hover:to-fuchsia-200'
             }`}
-            onClick={() => setShowUserProfileModal(true)}
+            onClick={() => toggleModal('userProfile', true)}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
@@ -538,7 +564,7 @@ const MainPage: React.FC<MainPageProps> = ({
               <div className="flex items-center gap-2">
                 {filteredPreparations.length > 4 && (
                   <motion.button
-                    onClick={() => setShowAllPreparationsModal(true)}
+                    onClick={() => toggleModal('allPreparations', true)}
                     className={`text-xs px-3 py-1.5 rounded-full font-medium transition-all duration-150 cursor-pointer ${
                       isDarkMode
                         ? 'text-zinc-400 hover:text-white hover:bg-zinc-800'
@@ -746,10 +772,10 @@ const MainPage: React.FC<MainPageProps> = ({
       </main>
 
       <SelectPreparationModal
-        isOpen={showSelectModal}
+        isOpen={modals.select}
         preparations={preparations}
         isLoading={isEnteringMode}
-        onClose={() => !isEnteringMode && setShowSelectModal(false)}
+        onClose={() => !isEnteringMode && toggleModal('select', false)}
         onSelect={async (preparation, language, purpose) => {
           if ((profile?.remaining_interview_minutes ?? 0) <= 0) {
             showToast(t('alerts.noRemainingTime'), 'error')
@@ -773,8 +799,8 @@ const MainPage: React.FC<MainPageProps> = ({
 
               if (!corePermissionsGranted) {
                 setPendingCollaboration({ preparation, language, purpose })
-                setShowPermissionsSetup(true)
-                setShowSelectModal(false)
+                toggleModal('permissionsSetup', true)
+                toggleModal('select', false)
                 setIsEnteringMode(false)
                 return
               }
@@ -798,7 +824,7 @@ const MainPage: React.FC<MainPageProps> = ({
 
             await new Promise((resolve) => setTimeout(resolve, 300))
             navigate('/collaboration')
-            setShowSelectModal(false)
+            toggleModal('select', false)
             setIsEnteringMode(false)
           } catch (error) {
             console.error('Failed to enter collaboration mode:', error)
@@ -809,30 +835,30 @@ const MainPage: React.FC<MainPageProps> = ({
       />
 
       <AllPreparationsModal
-        isOpen={showAllPreparationsModal}
+        isOpen={modals.allPreparations}
         preparations={filteredPreparations}
-        onClose={() => setShowAllPreparationsModal(false)}
+        onClose={() => toggleModal('allPreparations', false)}
         onDelete={handleDeletePreparation}
-        onView={(preparation) => setViewingPreparation(preparation)}
+        onView={(preparation) => updatePrepState({ viewing: preparation })}
       />
 
       <UserProfileModal
-        isOpen={showUserProfileModal}
-        onClose={() => setShowUserProfileModal(false)}
+        isOpen={modals.userProfile}
+        onClose={() => toggleModal('userProfile', false)}
         onOpenAdminPanel={() => {
-          setShowUserProfileModal(false)
-          setShowAdminPanelModal(true)
+          toggleModal('userProfile', false)
+          toggleModal('adminPanel', true)
         }}
       />
 
       <PermissionsSetup
-        isOpen={showPermissionsSetup}
+        isOpen={modals.permissionsSetup}
         onClose={() => {
-          setShowPermissionsSetup(false)
+          toggleModal('permissionsSetup', false)
           setPendingCollaboration(null)
         }}
         onComplete={async () => {
-          setShowPermissionsSetup(false)
+          toggleModal('permissionsSetup', false)
           if (pendingCollaboration && window.bready) {
             if ((profile?.remaining_interview_minutes ?? 0) <= 0) {
               showToast(t('alerts.noRemainingTime'), 'error')
@@ -859,81 +885,76 @@ const MainPage: React.FC<MainPageProps> = ({
         }}
       />
 
-      {showAdminPanelModal && (
+      {modals.adminPanel && (
         <AdminPanelModal
-          onClose={() => setShowAdminPanelModal(false)}
+          onClose={() => toggleModal('adminPanel', false)}
           onBack={() => {
-            setShowAdminPanelModal(false)
-            setShowUserProfileModal(true)
+            toggleModal('adminPanel', false)
+            toggleModal('userProfile', true)
           }}
         />
       )}
 
-      {(viewingPreparation || lastViewedPreparation) && (
+      {(prepState.viewing || prepState.lastViewed) && (
         <PreparationDetailModal
-          isOpen={!!viewingPreparation}
-          preparation={(viewingPreparation || lastViewedPreparation)!}
+          isOpen={!!prepState.viewing}
+          preparation={(prepState.viewing || prepState.lastViewed)!}
           preparations={preparations}
           setPreparations={setPreparations}
           onReloadData={onReloadData}
           onClose={() => {
-            setLastViewedPreparation(viewingPreparation)
-            setViewingPreparation(null)
+            updatePrepState({ lastViewed: prepState.viewing, viewing: null })
           }}
           onEdit={() => {
-            setEditingPreparation(viewingPreparation)
-            setViewingPreparation(null)
+            updatePrepState({ editing: prepState.viewing, viewing: null })
           }}
         />
       )}
 
-      {editingPreparation !== undefined && (
+      {prepState.editing !== undefined && (
         <EditPreparationModal
-          preparation={editingPreparation || undefined}
+          preparation={prepState.editing || undefined}
           preparations={preparations}
           setPreparations={setPreparations}
           onReloadData={onReloadData}
-          onClose={() => setEditingPreparation(undefined)}
+          onClose={() => updatePrepState({ editing: undefined })}
           onSaved={(savedPreparation) => {
-            setEditingPreparation(undefined)
-            setViewingPreparation(savedPreparation)
+            updatePrepState({ editing: undefined, viewing: savedPreparation })
           }}
         />
       )}
 
       <AnimatePresence>
-        {showCreateTypeModal && (
+        {modals.createType && (
           <CreatePreparationTypeModal
-            onClose={() => setShowCreateTypeModal(false)}
+            onClose={() => toggleModal('createType', false)}
             onSelect={handleSelectPreparationType}
           />
         )}
       </AnimatePresence>
 
-      {editingSalesPreparation !== undefined && (
+      {prepState.editingSales !== undefined && (
         <EditSalesPreparationModal
-          preparation={editingSalesPreparation || undefined}
+          preparation={prepState.editingSales || undefined}
           preparations={preparations}
           setPreparations={setPreparations}
           onReloadData={onReloadData}
-          onClose={() => setEditingSalesPreparation(undefined)}
+          onClose={() => updatePrepState({ editingSales: undefined })}
           onSaved={(savedPreparation) => {
-            setEditingSalesPreparation(undefined)
-            setViewingPreparation(savedPreparation)
+            updatePrepState({ editingSales: undefined, viewing: savedPreparation })
           }}
         />
       )}
 
-      {editingMeetingPreparation !== undefined && (
+      {prepState.editingMeeting !== undefined && (
         <EditMeetingPreparationModal
-          preparation={editingMeetingPreparation || undefined}
+          preparation={prepState.editingMeeting || undefined}
           preparations={preparations}
           setPreparations={setPreparations}
           onReloadData={onReloadData}
-          onClose={() => setEditingMeetingPreparation(undefined)}
+          onClose={() => updatePrepState({ editingMeeting: undefined })}
           onSaved={(savedPreparation) => {
-            setEditingMeetingPreparation(undefined)
-            setViewingPreparation(savedPreparation)
+            updatePrepState({ editingMeeting: undefined, viewing: savedPreparation })
           }}
         />
       )}
