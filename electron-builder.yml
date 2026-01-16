@@ -23,10 +23,13 @@ mac:
       arch: [arm64, x64]
   hardenedRuntime: true
   gatekeeperAssess: false
-  # macOS 权限配置
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
-  # 扩展 Info.plist
+  extraResources:
+    - from: assets/SystemAudioDump
+      to: SystemAudioDump
+      filter:
+        - '**/*'
   extendInfo:
     NSMicrophoneUsageDescription: '面宝需要访问麦克风以进行语音面试对话和实时反馈。'
     NSCameraUsageDescription: '面宝需要访问摄像头以进行模拟面试（可选功能）。'
@@ -49,6 +52,22 @@ dmg:
 win:
   target:
     - nsis
+  icon: build/icon.ico
+  extraResources:
+    - from: assets/winscap.exe
+      to: winscap.exe
+      filter:
+        - '**/*'
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+  installerHeaderIcon: build/icon.ico
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: 面宝
 
 # Linux 配置
 linux:

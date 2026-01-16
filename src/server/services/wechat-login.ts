@@ -9,7 +9,7 @@ interface WechatLoginConfig {
 
 export async function getWechatLoginConfig(): Promise<WechatLoginConfig> {
   const [enabled, appId, appSecret, redirectUri] = await Promise.all([
-    SettingsService.get('wechat_login_enabled'),
+    SettingsService.get('login_wechat_enabled'),
     SettingsService.get('wechat_login_app_id'),
     SettingsService.get('wechat_login_app_secret'),
     SettingsService.get('wechat_login_redirect_uri'),

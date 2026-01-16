@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { useI18n } from '../../../contexts/I18nContext'
 import { useToast } from '../../../contexts/ToastContext'
 
@@ -57,6 +57,16 @@ export function useAudioMode(isConnected: boolean) {
     },
     [currentAudioMode, isConnected, t],
   )
+
+  useEffect(() => {
+    if (!window.bready?.onAudioModeChanged) return
+
+    return window.bready.onAudioModeChanged((modeInfo) => {
+      if (modeInfo?.mode && modeInfo.mode !== currentAudioMode) {
+        setCurrentAudioMode(modeInfo.mode)
+      }
+    })
+  }, [currentAudioMode])
 
   const handleMicrophoneDeviceChange = useCallback(
     async (deviceId: string, label: string) => {

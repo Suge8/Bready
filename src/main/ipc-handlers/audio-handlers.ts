@@ -7,6 +7,7 @@ import {
   startSystemAudioDump,
   stopSystemAudioDump,
 } from '../audio-manager'
+import { createAudioCaptureProvider } from '../audio'
 import { electronAudioCapture } from '../audio/electron-native-capture'
 import { broadcastToAllWindows } from '../window-manager'
 import { createLogger } from '../utils/logging'
@@ -93,59 +94,26 @@ ipcMain.on('audio-device-changed', (event, deviceInfo) => {
 
 // SystemAudioDump 相关 IPC 处理器
 
-// 检查 SystemAudioDump 是否可用
 ipcMain.handle('check-system-audio-dump-available', async () => {
   try {
-    const fs = require('fs')
-    const path = require('path')
-    const app = require('electron').app
+    const provider = createAudioCaptureProvider()
+    const available = await provider.isAvailable()
 
-    // 获取 SystemAudioDump 路径
-    let systemAudioPath: string
-    if (app.isPackaged) {
-      systemAudioPath = path.join(process.resourcesPath, 'SystemAudioDump')
-    } else {
-      systemAudioPath = path.join(__dirname, '../../assets', 'SystemAudioDump')
+    if (!available) {
+      const platformName = process.platform === 'darwin' ? 'SystemAudioDump' : 'WindowsAudioDump'
+      if (debugAudio) {
+        logger.warn(`❌ ${platformName} 不可用`)
+      }
+      return { available: false, reason: `${platformName} 不可用` }
     }
 
-    // 检查文件是否存在且可执行
-    const exists = fs.existsSync(systemAudioPath)
-    if (!exists) {
-      if (debugAudio) {
-        logger.warn('❌ SystemAudioDump 文件不存在', { path: systemAudioPath })
-      }
-      return { available: false, reason: 'SystemAudioDump 文件不存在' }
+    if (debugAudio) {
+      logger.info('✅ 系统音频捕获可用', { platform: process.platform })
     }
-
-    // 检查是否为 macOS 平台
-    if (process.platform !== 'darwin') {
-      if (debugAudio) {
-        logger.warn('❌ SystemAudioDump 仅支持 macOS')
-      }
-      return { available: false, reason: 'SystemAudioDump 仅支持 macOS' }
-    }
-
-    // 检查文件权限
-    try {
-      fs.accessSync(systemAudioPath, fs.constants.F_OK | fs.constants.X_OK)
-      if (debugAudio) {
-        logger.info('✅ SystemAudioDump 可用', { path: systemAudioPath })
-      }
-      return { available: true, path: systemAudioPath }
-    } catch (permError) {
-      if (debugAudio) {
-        logger.warn('❌ SystemAudioDump 权限不足', {
-          error:
-            permError instanceof Error
-              ? { message: permError.message, stack: permError.stack }
-              : String(permError),
-        })
-      }
-      return { available: false, reason: 'SystemAudioDump 权限不足' }
-    }
+    return { available: true, platform: process.platform }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
-    logger.error('检查 SystemAudioDump 可用性失败', { error: errorMessage })
+    logger.error('检查系统音频可用性失败', { error: errorMessage })
     return { available: false, reason: errorMessage }
   }
 })

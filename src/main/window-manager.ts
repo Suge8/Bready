@@ -174,22 +174,15 @@ function broadcastToAllWindows(channel: string, data?: any): void {
   }
 
   windows.forEach((window) => {
-    if (
-      window &&
-      !window.isDestroyed() &&
-      window.webContents &&
-      !window.webContents.isDestroyed()
-    ) {
+    if (window && !window.isDestroyed()) {
       try {
+        if (window.webContents.isDestroyed() || !window.webContents.mainFrame) {
+          return
+        }
         if (window.webContents.getURL()) {
           batcher.send(window, channel, data)
         }
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error)
-        if (!errorMessage?.includes('disposed') && !errorMessage?.includes('destroyed')) {
-          log('warn', `⚠️ 发送 IPC 消息失败 (${channel}):`, errorMessage)
-        }
-      }
+      } catch {}
     }
   })
 }

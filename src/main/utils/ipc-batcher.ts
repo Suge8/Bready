@@ -97,10 +97,19 @@ export class IPCBatcher {
    * 立即发送所有待处理消息
    */
   flush(window: BrowserWindow | null): void {
-    if (!window || window.isDestroyed() || window.webContents.isDestroyed()) {
+    if (!window || window.isDestroyed()) {
       if (window?.webContents?.id) {
         this.clearEntry(window.webContents.id)
       }
+      return
+    }
+
+    try {
+      if (window.webContents.isDestroyed() || !window.webContents.mainFrame) {
+        this.clearEntry(window.webContents.id)
+        return
+      }
+    } catch {
       return
     }
 
@@ -118,14 +127,19 @@ export class IPCBatcher {
     const grouped = this.groupByChannel(messages)
 
     for (const [channel, dataList] of Object.entries(grouped)) {
-      if (dataList.length === 1 || this.shouldSendAll(channel)) {
-        for (const item of dataList) {
-          window.webContents.send(channel, item)
+      try {
+        if (window.isDestroyed() || window.webContents.isDestroyed()) break
+        if (dataList.length === 1 || this.shouldSendAll(channel)) {
+          for (const item of dataList) {
+            window.webContents.send(channel, item)
+            this.sentCount += 1
+          }
+        } else {
+          window.webContents.send(channel, dataList[dataList.length - 1])
           this.sentCount += 1
         }
-      } else {
-        window.webContents.send(channel, dataList[dataList.length - 1])
-        this.sentCount += 1
+      } catch {
+        break
       }
     }
 

@@ -284,7 +284,21 @@ function LoginPage(): React.ReactElement {
     try {
       const result = await authService.getWechatAuthUrl()
       if (result.success && result.authUrl) {
-        window.open(result.authUrl, '_blank')
+        window.open(result.authUrl, 'wechat_login', 'width=600,height=600')
+        const handleMessage = async (event: MessageEvent) => {
+          if (event.data?.type === 'oauth-callback') {
+            window.removeEventListener('message', handleMessage)
+            if (event.data.error) {
+              toast(event.data.error, 'error')
+            } else if (event.data.token) {
+              localStorage.setItem('auth_token', event.data.token)
+              toast(t('login.success.login'), 'success')
+              updateUi('isExiting', true)
+              window.location.reload()
+            }
+          }
+        }
+        window.addEventListener('message', handleMessage)
       } else {
         toast(result.error || t('login.errors.wechatUnavailable'), 'error')
       }
@@ -297,7 +311,21 @@ function LoginPage(): React.ReactElement {
     try {
       const result = await authService.getGoogleAuthUrl()
       if (result.success && result.authUrl) {
-        window.open(result.authUrl, '_blank')
+        window.open(result.authUrl, 'google_login', 'width=600,height=600')
+        const handleMessage = async (event: MessageEvent) => {
+          if (event.data?.type === 'oauth-callback') {
+            window.removeEventListener('message', handleMessage)
+            if (event.data.error) {
+              toast(event.data.error, 'error')
+            } else if (event.data.token) {
+              localStorage.setItem('auth_token', event.data.token)
+              toast(t('login.success.login'), 'success')
+              updateUi('isExiting', true)
+              window.location.reload()
+            }
+          }
+        }
+        window.addEventListener('message', handleMessage)
       } else {
         toast(result.error || t('login.errors.googleFailed'), 'error')
       }

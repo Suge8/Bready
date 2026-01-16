@@ -63,6 +63,27 @@ function purgeExpiredCodes(now: number): void {
   }
 }
 
+function renderOAuthCallbackPage(data: {
+  token?: string
+  user?: any
+  provider?: string
+  error?: string
+}): string {
+  const payload = JSON.stringify(data)
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>登录中...</title></head><body>
+<script>
+(function(){
+  var data = ${payload};
+  if (window.opener) {
+    window.opener.postMessage({ type: 'oauth-callback', ...data }, '*');
+    window.close();
+  } else {
+    document.body.innerHTML = data.error ? '<p>登录失败: ' + data.error + '</p>' : '<p>登录成功，请返回应用</p>';
+  }
+})();
+</script></body></html>`
+}
+
 router.post('/sign-up', async (req, res) => {
   try {
     const { email, password, userData } = req.body
@@ -347,6 +368,42 @@ router.get('/wechat/config-status', async (_req, res) => {
   }
 })
 
+// OAuth GET 回调 - 微信重定向到此处
+router.get('/wechat/callback', async (req, res) => {
+  const { code } = req.query
+  if (!code) {
+    return res.status(400).send(renderOAuthCallbackPage({ error: '缺少授权码' }))
+  }
+  try {
+    const config = await getWechatLoginConfig()
+    if (!config.enabled || !config.appId || !config.appSecret) {
+      return res.status(400).send(renderOAuthCallbackPage({ error: '微信登录未配置' }))
+    }
+    const tokenRes = await getWechatAccessToken(String(code), config)
+    if (tokenRes.errcode || !tokenRes.access_token || !tokenRes.openid) {
+      return res
+        .status(400)
+        .send(renderOAuthCallbackPage({ error: tokenRes.errmsg || '获取微信授权失败' }))
+    }
+    const userInfo = await getWechatUserInfo(tokenRes.access_token, tokenRes.openid)
+    if (!userInfo) {
+      return res.status(400).send(renderOAuthCallbackPage({ error: '获取微信用户信息失败' }))
+    }
+    const result = await AuthService.signInOrCreateByWechat(
+      tokenRes.openid,
+      tokenRes.unionid,
+      userInfo.nickname,
+      userInfo.headimgurl,
+    )
+    setSessionCookie(res, result.token)
+    res.send(
+      renderOAuthCallbackPage({ token: result.token, user: result.user, provider: 'wechat' }),
+    )
+  } catch (error: any) {
+    res.status(400).send(renderOAuthCallbackPage({ error: error.message }))
+  }
+})
+
 router.get('/google/auth-url', async (_req, res) => {
   try {
     const config = await getGoogleLoginConfig()
@@ -404,6 +461,43 @@ router.get('/google/config-status', async (_req, res) => {
     })
   } catch {
     res.json({ data: { enabled: false } })
+  }
+})
+
+router.get('/google/callback', async (req, res) => {
+  const { code } = req.query
+  if (!code) {
+    return res.status(400).send(renderOAuthCallbackPage({ error: '缺少授权码' }))
+  }
+  try {
+    const config = await getGoogleLoginConfig()
+    if (!config.enabled || !config.clientId || !config.clientSecret) {
+      return res.status(400).send(renderOAuthCallbackPage({ error: 'Google 登录未配置' }))
+    }
+    const tokenRes = await getGoogleAccessToken(String(code), config)
+    if (tokenRes.error || !tokenRes.access_token) {
+      return res
+        .status(400)
+        .send(
+          renderOAuthCallbackPage({ error: tokenRes.error_description || '获取 Google 授权失败' }),
+        )
+    }
+    const userInfo = await getGoogleUserInfo(tokenRes.access_token)
+    if (!userInfo) {
+      return res.status(400).send(renderOAuthCallbackPage({ error: '获取 Google 用户信息失败' }))
+    }
+    const result = await AuthService.signInOrCreateByGoogle(
+      userInfo.sub,
+      userInfo.email,
+      userInfo.name,
+      userInfo.picture,
+    )
+    setSessionCookie(res, result.token)
+    res.send(
+      renderOAuthCallbackPage({ token: result.token, user: result.user, provider: 'google' }),
+    )
+  } catch (error: any) {
+    res.status(400).send(renderOAuthCallbackPage({ error: error.message }))
   }
 })
 

@@ -1,4 +1,4 @@
-import React, { memo, useRef, useEffect, useState } from 'react'
+import React, { memo, useRef } from 'react'
 
 const getDynamicFontSize = (textLength: number, isInput: boolean = false) => {
   if (isInput) {
@@ -18,10 +18,6 @@ interface StreamingTextProps {
   isInput?: boolean
 }
 
-const CharSpan = memo(({ char }: { char: string }) => (
-  <span style={{ whiteSpace: char === ' ' ? 'pre' : 'normal' }}>{char}</span>
-))
-
 const NewCharSpan = memo(({ char }: { char: string }) => (
   <span className="animate-char-pop" style={{ whiteSpace: char === ' ' ? 'pre' : 'normal' }}>
     {char}
@@ -31,45 +27,36 @@ const NewCharSpan = memo(({ char }: { char: string }) => (
 export const StreamingText: React.FC<StreamingTextProps> = memo(
   ({ text, className = '', isInput = false }) => {
     const prevTextRef = useRef('')
-    const [stableText, setStableText] = useState('')
-    const [newText, setNewText] = useState('')
 
-    useEffect(() => {
-      const prevText = prevTextRef.current
+    const prevText = prevTextRef.current
+    let stableText: string
+    let newText: string
 
-      if (text.startsWith(prevText) && text.length > prevText.length) {
-        setStableText(prevText)
-        setNewText(text.slice(prevText.length))
-      } else if (text !== prevText) {
-        setStableText('')
-        setNewText(text)
-      }
+    if (text.startsWith(prevText) && text.length > prevText.length) {
+      stableText = prevText
+      newText = text.slice(prevText.length)
+    } else if (text !== prevText) {
+      stableText = ''
+      newText = text
+    } else {
+      stableText = text
+      newText = ''
+    }
 
-      // 立即更新 ref，确保下次比较时能正确识别新增字符
-      prevTextRef.current = text
-
-      const timer = setTimeout(() => {
-        setStableText(text)
-        setNewText('')
-      }, 200)
-
-      return () => clearTimeout(timer)
-    }, [text])
+    prevTextRef.current = text
 
     const dynamicSize = getDynamicFontSize(text.length, isInput)
+    const hasNewText = newText.length > 0
 
     return (
       <span
         className={`${className} ${dynamicSize} text-left inline-block`}
         style={{ transition: 'font-size 0.3s ease-out' }}
       >
-        {stableText.split('').map((char, i) => (
-          <CharSpan key={i} char={char} />
-        ))}
-        {newText.split('').map((char, i) => (
-          <NewCharSpan key={`new-${i}`} char={char} />
-        ))}
-        {(newText.length > 0 || isInput) && <span className="streaming-cursor" />}
+        {stableText && <span style={{ whiteSpace: 'pre-wrap' }}>{stableText}</span>}
+        {hasNewText &&
+          newText.split('').map((char, i) => <NewCharSpan key={`new-${i}`} char={char} />)}
+        {(hasNewText || isInput) && <span className="streaming-cursor" />}
       </span>
     )
   },

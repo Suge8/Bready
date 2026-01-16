@@ -244,16 +244,10 @@ class RendererAudioCapture {
       }
     }
 
-    // 策略2: 降级到 desktopCapturer (但采用安全方式)
-    try {
-      return await this.tryDesktopCapturer()
-    } catch (desktopCapturerError) {
-      if (debugAudio) {
-        console.log('⚠️ desktopCapturer 也失败，最终降级到麦克风模式')
-        console.log('desktopCapturer 错误:', desktopCapturerError)
-      }
-      throw new Error('系统音频捕获完全失败，已自动降级到麦克风模式')
-    }
+    // ❌ 禁用 desktopCapturer - 已知会导致渲染进程崩溃 (Electron #47512)
+    // getUserMedia + chromeMediaSource: 'desktop' 会触发 reason 263 错误
+    // 直接抛出错误，让上层降级到麦克风模式
+    throw new Error('系统音频捕获不可用，请使用麦克风模式')
   }
 
   /**
@@ -305,77 +299,6 @@ class RendererAudioCapture {
         console.log('检查 SystemAudioDump 可用性失败:', error)
       }
       return false
-    }
-  }
-
-  /**
-   * 尝试使用 desktopCapturer (安全方式)
-   */
-  private async tryDesktopCapturer(): Promise<MediaStream> {
-    if (debugAudio) {
-      console.log('🖥️ 尝试使用 desktopCapturer...')
-    }
-
-    try {
-      // 检查 IPC 是否可用
-      if (!(window as any).bready?.ipcRenderer?.invoke) {
-        throw new Error('IPC renderer 不可用')
-      }
-
-      if (debugAudio) {
-        console.log('📡 正在请求桌面音频源...')
-      }
-
-      // 使用更安全的超时和错误处理机制
-      const sources = await Promise.race([
-        (window as any).bready.ipcRenderer.invoke('get-desktop-sources-safe', {
-          types: ['screen'],
-          fetchWindowIcons: false,
-        }),
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('获取桌面源超时')), 3000),
-        ),
-      ])
-
-      if (debugAudio) {
-        console.log('🔍 获取到桌面源:', sources?.length || 0, '个')
-      }
-
-      if (!sources || sources.length === 0) {
-        throw new Error('无法获取桌面音频源')
-      }
-
-      if (debugAudio) {
-        console.log('🎵 创建系统音频流...')
-      }
-
-      // 使用更安全的 getUserMedia 调用
-      const stream = await Promise.race([
-        navigator.mediaDevices.getUserMedia({
-          audio: {
-            mandatory: {
-              chromeMediaSource: 'desktop',
-              chromeMediaSourceId: sources[0].id,
-              echoCancellation: false,
-              noiseSuppression: false,
-              autoGainControl: false,
-            },
-          } as any,
-          video: false,
-        }),
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('创建音频流超时')), 3000),
-        ),
-      ])
-
-      if (debugAudio) {
-        console.log('✅ desktopCapturer 系统音频流创建成功')
-      }
-      return stream
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error)
-      console.error('❌ desktopCapturer 失败:', errorMessage)
-      throw error
     }
   }
 
